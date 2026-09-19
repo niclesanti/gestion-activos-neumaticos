@@ -62,6 +62,16 @@ Architecture/stack notes:
 - ESLint (flat config) in each package: `js.configs.recommended` + `typescript-eslint` recommended + `react-hooks` + `react-refresh` (Vite-aware).
 - TypeScript: root `tsconfig.json` sets shared strict compiler options (`ES2022`, `bundler` resolution, `strict: true`); each package/app has its own `tsconfig*.json` extending/refining this.
 
+## Codebase memory (MCP)
+
+This repo is configured (`.mcp.json`) with the `codebase-memory-mcp` MCP server (https://github.com/DeusData/codebase-memory-mcp), a local code-intelligence graph indexer — no API keys, nothing leaves the machine. Before starting a non-trivial request (exploring unfamiliar code, tracing a call path, checking what references something, planning a change), prefer its tools over ad-hoc grepping/reading when they're available in the session:
+- `index_repository` / `index_status` to (re-)index `backend/gestion-neumaticos/` or `frontend/` (index each separately — they are independent projects).
+- `search_graph`, `search_code`, `get_code_snippet` to find symbols/code without reading whole files.
+- `trace_path`, `detect_changes`, `get_architecture` to understand relationships and structural impact before editing.
+- `query_graph` for anything more specific (Cypher-like queries).
+
+If these tools aren't showing up in a session, the MCP server likely needs approval/reload — mention it rather than silently falling back to manual exploration for everything.
+
 ## Attribution
 
 Commit messages in this repo so far follow a short `type: Sentence.` style (e.g. `feat: Creación backend.`) with Spanish descriptions.
