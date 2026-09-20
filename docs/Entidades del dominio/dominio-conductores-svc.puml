@@ -1,0 +1,35 @@
+@startuml dominio-conductores-svc
+
+title Diagrama de Entidades — módulo "conductores-svc"
+
+skinparam class {
+    BackgroundColor<<Auditable>> #F9F9F9
+    BorderColor<<Auditable>> #9b9934
+    HeaderBackgroundColor<<Auditable>> #e9e77a
+}
+
+' Agregado raíz del módulo. Único escritor de sus propios datos.
+' No tiene asociaciones salientes: es referenciado por id desde
+' unidades-transporte-svc (validación vía api) y por
+' trazabilidad-svc (id + snapshot en los eventos), pero nunca al revés.
+class Conductor <<Entity>> <<Auditable>> {
+  - id: Long
+  - publicId: UUID <<unique>>
+  - dni: String
+  - nombre: String
+}
+
+package "common" as common {
+  abstract class AuditableEntity <<MappedSuperclass>> <<Compartida>> {
+    - createdAt: Instant
+    - updatedAt: Instant
+    - deletedAt: Instant
+    - createdBy: String
+    - updatedBy: String
+    - deletedBy: String
+  }
+}
+
+Conductor --|> AuditableEntity
+
+@enduml

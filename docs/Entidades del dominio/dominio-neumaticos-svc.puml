@@ -1,0 +1,104 @@
+@startuml dominio-neumaticos-svc
+
+title Diagrama de Entidades — módulo "neumaticos-svc"
+
+skinparam class {
+    BackgroundColor<<Auditable>> #F9F9F9
+    BorderColor<<Auditable>> #9b9934
+    HeaderBackgroundColor<<Auditable>> #e9e77a
+}
+
+class MarcaNeumatico <<Entity>> {
+  - id: Long
+  - nombre: String
+}
+
+' Agregado raíz del módulo. Único escritor del estado operativo del
+' neumático (estadoActual, situacionOperativaVigente, nodoUbicacion,
+' kilometraje) — ver criterio 3 de vista-de-modulos.md.
+class Neumatico <<Entity>> <<Auditable>> {
+  - id: Long
+  - publicId: UUID <<unique>>
+  - numeroSerie: String
+  - estadoActual: EstadoNeumatico
+  - enEspera: Boolean
+  - kilometraje: Float
+  - tipoOrigen: TipoEjeUnidadTransporte
+  - cantidadRecapados: Integer
+  - situacionOperativaVigente: SituacionOperativa
+  - nodoUbicacion: String
+  - comentario: String
+  - slotMontadoId: Long
+  - centroAlmacenamientoId: Long
+  - servicioReparacionId: Long
+  + setCalculoKm(kmAntes: Float, kmDespues: Float): void
+  + agregarNeumaticoStock(idCentroAlmacenamiento: Long): void
+  + removerNeumaticoStock(): void
+  + enviarNeumaticoReparacion(idServicioReparacion: Long): void
+  + reingresarNeumatico(): void
+}
+
+enum EstadoNeumatico {
+  NUEVO
+  NUEVO_USADO
+  HOMBROS
+  RECAPADO
+  RECAPADO_USADO
+  RECAPADO_SIN_GARANTIA
+  DE_BAJA
+}
+
+enum SituacionOperativa {
+  EN_STOCK
+  MONTADO
+  EN_REPARACION
+  EN_ESPERA
+  DE_BAJA
+}
+
+enum TipoEjeUnidadTransporte {
+  DIRECCION
+  TRACCION
+  ARRASTRE
+  AUXILIO
+}
+
+package "common" as common {
+  abstract class AuditableEntity <<MappedSuperclass>> <<Compartida>> {
+    - createdAt: Instant
+    - updatedAt: Instant
+    - deletedAt: Instant
+    - createdBy: String
+    - updatedBy: String
+    - deletedBy: String
+  }
+
+  class Provincia <<Entity>> <<Compartida>> {
+    - id: Long
+    - nombre: String
+  }
+
+  class Localidad <<Entity>> <<Compartida>> {
+    - id: Long
+    - nombre: String
+    - codigoPostal: String
+  }
+
+  ' Atributo compuesto (calle + altura + localidad) unique a nivel de negocio
+  class Domicilio <<Entity>> <<Compartida>> {
+    - id: Long
+    - calle: String
+    - altura: String
+    - piso: String
+    - departamento: String
+  }
+}
+
+Neumatico --|> AuditableEntity
+Neumatico "*" --> "1" MarcaNeumatico : marca >
+Neumatico "*" --> "0..1" Domicilio : nodoDomicilio >
+
+Localidad "*" --> "1" Provincia : provincia >
+Domicilio "*" --> "1" Localidad : localidad >
+
+@enduml
