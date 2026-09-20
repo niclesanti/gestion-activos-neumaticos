@@ -1,0 +1,48 @@
+@startuml dominio-usuarios-svc
+
+title Diagrama de Entidades — módulo "usuarios-svc"
+
+skinparam class {
+    BackgroundColor<<Auditable>> #F9F9F9
+    BorderColor<<Auditable>> #9b9934
+    HeaderBackgroundColor<<Auditable>> #e9e77a
+}
+
+' Agregado raíz del módulo. Único escritor de sus propios datos.
+class User <<Entity>> <<Auditable>> {
+  - id: Long
+  - publicId: UUID <<unique>>
+  - username: String
+  - name: String
+  - surname: String
+  - email: String
+  - password: String
+  - role: Role
+}
+
+enum Role {
+  ROLE_ADMIN
+  ROLE_WRITER
+  ROLE_READER
+}
+
+package "common" as common {
+  abstract class AuditableEntity <<MappedSuperclass>> <<Compartida>> {
+    - createdAt: Instant
+    - updatedAt: Instant
+    - deletedAt: Instant
+    - createdBy: String
+    - updatedBy: String
+    - deletedBy: String
+  }
+}
+
+User --|> AuditableEntity
+
+note right of User
+  <b>publicId (UUID):</b> identificador expuesto en
+  API/URLs y en el JWT. El "id" (Long) es de uso
+  interno (PK, joins) y nunca viaja fuera del módulo.
+endnote
+
+@enduml
