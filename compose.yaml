@@ -19,7 +19,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend/gestion-neumaticos
     ports:
       - "3000:80"
     depends_on:
