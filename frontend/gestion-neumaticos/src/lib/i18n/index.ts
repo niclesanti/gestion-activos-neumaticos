@@ -9,14 +9,18 @@ import {
   NAMESPACES,
   SUPPORTED_LANGUAGES,
 } from "@/lib/i18n/config"
+import enAudit from "@/lib/i18n/locales/en/audit.json"
 import enAuth from "@/lib/i18n/locales/en/auth.json"
 import enCommon from "@/lib/i18n/locales/en/common.json"
+import enSettings from "@/lib/i18n/locales/en/settings.json"
+import esAudit from "@/lib/i18n/locales/es/audit.json"
 import esAuth from "@/lib/i18n/locales/es/auth.json"
 import esCommon from "@/lib/i18n/locales/es/common.json"
+import esSettings from "@/lib/i18n/locales/es/settings.json"
 
 export const resources = {
-  es: { common: esCommon, auth: esAuth },
-  en: { common: enCommon, auth: enAuth },
+  es: { common: esCommon, auth: esAuth, settings: esSettings, audit: esAudit },
+  en: { common: enCommon, auth: enAuth, settings: enSettings, audit: enAudit },
 } as const
 
 i18n

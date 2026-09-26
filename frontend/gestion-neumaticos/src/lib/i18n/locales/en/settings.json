@@ -1,0 +1,13 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage the catalogs and the less frequently used entities of the platform.",
+  "catalogs": {
+    "label": "Catalogs",
+    "users": "Users",
+    "drivers": "Drivers",
+    "suppliers": "Suppliers",
+    "repairServices": "Repair services",
+    "storageCenters": "Storage centers"
+  },
+  "empty": "There is no content for this catalog yet."
+}

@@ -15,9 +15,14 @@
   "nav": {
     "group": {
       "platform": "Plataforma",
+      "operations": "Operaciones",
       "system": "Sistema"
     },
     "home": "Inicio",
+    "transportUnits": "Unidades de transporte",
+    "tires": "Neumáticos",
+    "repairs": "Reparaciones",
+    "storage": "Almacenamiento",
     "settings": "Configuración",
     "audit": "Auditoría"
   },

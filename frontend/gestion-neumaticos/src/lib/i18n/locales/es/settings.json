@@ -1,0 +1,13 @@
+{
+  "title": "Configuración",
+  "subtitle": "Administrá los catálogos y las entidades de uso menos frecuente de la plataforma.",
+  "catalogs": {
+    "label": "Catálogos",
+    "users": "Usuarios",
+    "drivers": "Conductores",
+    "suppliers": "Proveedores",
+    "repairServices": "Servicios de reparación",
+    "storageCenters": "Centros de almacenamiento"
+  },
+  "empty": "Todavía no hay contenido para este catálogo."
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Audit",
+  "subtitle": "Review the history of changes recorded for each entity of the platform.",
+  "entities": {
+    "users": "Users",
+    "transportUnits": "Transport units",
+    "repairServices": "Repair services",
+    "suppliers": "Suppliers",
+    "tires": "Tires",
+    "drivers": "Drivers",
+    "storageCenters": "Storage centers"
+  },
+  "empty": "There are no audit records for this entity yet."
+}

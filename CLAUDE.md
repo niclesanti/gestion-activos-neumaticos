@@ -71,9 +71,10 @@ Architecture/stack notes:
 - `src/lib/utils.ts` re-exports `cn` from the `cn` package — it is not the usual local `clsx` + `tailwind-merge` helper. Existing components import from either `@/lib/utils` or `"cn"` directly.
 
 Code organization:
-- `src/features/<feature>/{components,pages}/` holds feature code (currently `features/auth/pages/LoginPage.tsx` and `features/auth/components/LoginCard.tsx`). Feature files are **PascalCase**; shared files under `src/components/`, `src/lib/`, `src/hooks/` are **kebab-case** (shadcn's convention). Keep new code on the matching side of that split.
+- `src/features/<feature>/{components,pages}/` holds feature code: `auth` (real, has `LoginPage`/`LoginCard`) plus route-scaffold placeholders `home`, `transport-units`, `tires`, `repairs`, `storage`, `settings`, `audit` (each just a `pages/<Name>Page.tsx` stub, no real functionality yet — build these out against the matching backend module once it exists). Feature files are **PascalCase**; shared files under `src/components/`, `src/lib/`, `src/hooks/` are **kebab-case** (shadcn's convention). Keep new code on the matching side of that split.
 - `src/components/brand/` holds the app identity (`AppLogo`, `TireIcon`); `src/lib/constants.ts` holds `APP_NAME`.
-- Routes live in `src/App.tsx`. Everything currently redirects to `/login`.
+- `src/layouts/app-layout.tsx` wraps all authenticated routes with `src/components/layout/` (`app-sidebar`, `app-header`, `nav-breadcrumb`, `nav-user`). `src/lib/navigation.ts` is the single source of truth for nav structure (grouped `NavItem`s with i18n `labelKey`s) — sidebar and breadcrumb both read from it, so add new routes there rather than hand-editing either component.
+- Routes live in `src/App.tsx`: `/login` is standalone; everything else (`/home`, `/transport-units`, `/tires`, `/repairs`, `/storage`, `/settings`, `/audit`) renders inside `AppLayout`. `/` and unmatched paths redirect to `/home` (a `TODO` notes this should go back to redirecting to `/login` once protected routes/auth exist).
 
 Theming:
 - `src/components/theme-provider.tsx` is a hand-written provider (not `next-themes`): it toggles the `light`/`dark` class on `<html>`, persists to `localStorage` under the `theme` key, follows the system `prefers-color-scheme` when set to `"system"`, syncs across tabs via the `storage` event, suppresses CSS transitions during a switch, and binds a bare **`d` keypress** as a light/dark toggle (ignored while typing in an editable element). `useTheme()` throws outside the provider. `ThemeToggle` (`src/components/theme-toggle.tsx`) is the dropdown UI for it.
@@ -95,7 +96,7 @@ Deployment: the frontend `Dockerfile` is a two-stage node:22-alpine build → ng
 
 ## Current state
 
-The active work (branch `feature/login`) is the login screen. `LoginCard` is UI-only: `handleSubmit` has a `TODO` where the backend auth call belongs, and the backend has no authentication wired up yet either — real login means building out the backend `security/` package and the `usuarios` module first.
+Branch `feature/login` has grown beyond the login screen into the app shell: `LoginCard` is still UI-only (`handleSubmit` has a `TODO` where the backend auth call belongs), and now sits alongside a real sidebar/header/breadcrumb layout (`src/layouts/app-layout.tsx`, `src/components/layout/`) and route-scaffold pages for every planned frontend section (home, transport-units, tires, repairs, storage, settings, audit) — each currently a placeholder page with no real functionality. On the backend, only `usuarios`, `security`, `config`, and `exception` scaffolding exists (all module package directories are still empty). Real login means building out the backend `security/` package and the `usuarios` module first; the other domain modules (`neumaticos`, `conductores`, `proveedores`, `reparacion`, `trazabilidad`, `unidades_transporte`, `almacenamiento`) have no code yet, matching their still-placeholder frontend pages.
 
 ## Codebase memory (MCP)
 
