@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Gestión de Neumáticos"
+    "name": "Gestión de Neumáticos",
+    "company": "Empresa"
   },
   "theme": {
     "toggle": "Cambiar tema",
@@ -10,6 +11,25 @@
   },
   "language": {
     "toggle": "Cambiar idioma"
+  },
+  "nav": {
+    "group": {
+      "platform": "Plataforma",
+      "system": "Sistema"
+    },
+    "home": "Inicio",
+    "settings": "Configuración",
+    "audit": "Auditoría"
+  },
+  "sidebar": {
+    "toggle": "Abrir o cerrar la barra lateral"
+  },
+  "breadcrumb": {
+    "label": "Ruta de navegación"
+  },
+  "user": {
+    "menu": "Menú de usuario",
+    "logout": "Cerrar sesión"
   },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"

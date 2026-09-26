@@ -64,7 +64,7 @@ npm run preview   # vite preview
 ```
 
 Architecture/stack notes:
-- Vite 8 + React 19 + TypeScript, Tailwind CSS 4 (via `@tailwindcss/vite`), shadcn/ui components (`components.json`: `style: "base-luma"`, `baseColor: "neutral"`, icon library `lucide`). Entry `src/main.tsx` → `ThemeProvider` → `src/App.tsx`. Path alias `@/*` → `./src/*` (declared in both `vite.config.ts` and `tsconfig.app.json`).
+- Vite 8 + React 19 + TypeScript, Tailwind CSS 4 (via `@tailwindcss/vite`), shadcn/ui components (`components.json`: `style: "base-luma"`, `baseColor: "neutral"`, icon library `lucide`). Entry `src/main.tsx` → `ThemeProvider` → `LanguageProvider` → `src/App.tsx`. Path alias `@/*` → `./src/*` (declared in both `vite.config.ts` and `tsconfig.app.json`).
 - `@base-ui/react` (Base UI) underlies the shadcn `base-luma` style — these components are **not** Radix-based. Composition uses Base UI's `render` prop (e.g. `<DropdownMenuTrigger render={<Button … />}>`), not Radix's `asChild`. Don't copy Radix-era shadcn snippets verbatim.
 - To add a shadcn/ui component, run `npx shadcn@latest add <component>` from `frontend/gestion-neumaticos/`.
 - Chosen libraries, already installed and to be preferred over alternatives: `react-router-dom` v7 (routing), `@tanstack/react-query` (+ devtools) for server state, `axios` for HTTP, `react-hook-form` + `zod` + `@hookform/resolvers` for forms/validation, `zustand` for client state, `@tanstack/react-table` for tables, `sonner` for toasts, `date-fns` for dates, `lucide-react` for icons.
@@ -81,6 +81,11 @@ Theming:
 - Prettier (`.prettierrc`): no semicolons, double quotes, 2-space tabs, 80 print width, `trailingComma: es5`, LF; `prettier-plugin-tailwindcss` sorts classes using `src/index.css` as the stylesheet and also sorts inside `cn()` and `cva()` calls.
 - ESLint flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended + `react-hooks` + `react-refresh` (Vite-aware).
 - TypeScript: project-references setup (`tsconfig.json` → `tsconfig.app.json` / `tsconfig.node.json`).
+
+Internationalization:
+- `i18next` + `react-i18next` + `i18next-browser-languagedetector`, es/en, initialized in `src/lib/i18n/index.ts` (imported once, for side effects, from `main.tsx`) and configured in `src/lib/i18n/config.ts` (supported languages, fallback language, namespaces, the `LANGUAGE_STORAGE_KEY` localStorage key). Resources are namespaced JSON bundled at build time (`src/lib/i18n/locales/{es,en}/{common,auth}.json`, no lazy backend) — add a new feature's strings as its own namespace file in both locales rather than growing `common.json`.
+- `LanguageProvider` (`src/components/language-provider.tsx`) mirrors `ThemeProvider`'s pattern: i18next is the source of truth for the language itself, and the provider only syncs side effects outside React — setting `<html lang>` and reacting to the `storage` event so a language change in one tab applies in others. `LanguageToggle` (`src/components/language-toggle.tsx`) is the dropdown UI for it, alongside `ThemeToggle`.
+- Detection order is `localStorage` → `navigator` → `htmlTag`, cached to `localStorage`. `src/lib/i18n/i18next.d.ts` augments the `react-i18next` module types for the configured resources/namespaces.
 
 Brand assets (generated — do not hand-edit):
 - `npm run icons` runs `scripts/generate-icons.mjs`, which traces `assets/brand/source-tire.jpg` (sharp + potrace + png-to-ico) and writes `src/components/brand/tire-icon-path.ts` plus the whole `public/` icon set (`favicon.svg`, `favicon.ico`, `logo-light.svg`, `logo-dark.svg`, `icon-{192,512}[-dark].png`, `icon-maskable-512.png`, `apple-touch-icon.png`). Change the source image and rerun the script instead of editing any of those outputs.
