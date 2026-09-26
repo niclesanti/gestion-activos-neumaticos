@@ -24,7 +24,8 @@
     "repairs": "Reparaciones",
     "storage": "Almacenamiento",
     "settings": "Configuración",
-    "audit": "Auditoría"
+    "audit": "Auditoría",
+    "mobileNav": "Navegación rápida"
   },
   "sidebar": {
     "toggle": "Abrir o cerrar la barra lateral"

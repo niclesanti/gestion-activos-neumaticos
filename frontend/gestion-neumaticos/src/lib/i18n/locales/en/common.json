@@ -24,7 +24,8 @@
     "repairs": "Repairs",
     "storage": "Storage",
     "settings": "Settings",
-    "audit": "Audit"
+    "audit": "Audit",
+    "mobileNav": "Quick navigation"
   },
   "sidebar": {
     "toggle": "Toggle sidebar"

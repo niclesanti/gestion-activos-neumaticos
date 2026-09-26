@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom"
 
 import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 /** Nombre de la cookie que escribe SidebarProvider al abrir/cerrar la sidebar. */
@@ -32,9 +33,10 @@ function AppLayout() {
       <AppSidebar />
       <SidebarInset className="h-svh overflow-hidden">
         <AppHeader />
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 pb-24 md:pb-4">
           <Outlet />
         </div>
+        <MobileBottomNav />
       </SidebarInset>
     </SidebarProvider>
   )

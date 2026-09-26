@@ -68,3 +68,12 @@ export const ROUTE_LABELS: Record<string, NavLabelKey> = Object.fromEntries(
     group.items.map((item) => [item.to, item.labelKey])
   )
 )
+
+/**
+ * Accesos rápidos para el menú flotante inferior (mobile-only): inicio y el
+ * grupo de operaciones, en el mismo orden que la sidebar.
+ */
+export const MOBILE_NAV_ITEMS: NavItem[] = [
+  ...NAV_GROUPS[0].items,
+  ...NAV_GROUPS[1].items,
+]
