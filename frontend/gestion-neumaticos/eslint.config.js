@@ -19,4 +19,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // src/components/ui es código vendorizado de shadcn: por diseño exporta
+  // hooks y variantes (useSidebar, buttonVariants) junto a los componentes.
+  {
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

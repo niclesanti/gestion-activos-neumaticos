@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Tire Management"
+    "name": "Tire Management",
+    "company": "Company"
   },
   "theme": {
     "toggle": "Change theme",
@@ -10,6 +11,31 @@
   },
   "language": {
     "toggle": "Change language"
+  },
+  "nav": {
+    "group": {
+      "platform": "Platform",
+      "operations": "Operations",
+      "system": "System"
+    },
+    "home": "Home",
+    "transportUnits": "Transport units",
+    "tires": "Tires",
+    "repairs": "Repairs",
+    "storage": "Storage",
+    "settings": "Settings",
+    "audit": "Audit",
+    "mobileNav": "Quick navigation"
+  },
+  "sidebar": {
+    "toggle": "Toggle sidebar"
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb"
+  },
+  "user": {
+    "menu": "User menu",
+    "logout": "Log out"
   },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"

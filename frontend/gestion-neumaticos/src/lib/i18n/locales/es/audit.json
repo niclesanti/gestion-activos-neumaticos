@@ -1,0 +1,14 @@
+{
+  "title": "Auditoría",
+  "subtitle": "Consultá el historial de cambios registrados sobre cada entidad de la plataforma.",
+  "entities": {
+    "users": "Usuarios",
+    "transportUnits": "Unidades de transporte",
+    "repairServices": "Servicios de reparación",
+    "suppliers": "Proveedores",
+    "tires": "Neumáticos",
+    "drivers": "Conductores",
+    "storageCenters": "Centros de almacenamiento"
+  },
+  "empty": "Todavía no hay registros de auditoría para esta entidad."
+}

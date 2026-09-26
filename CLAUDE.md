@@ -64,16 +64,17 @@ npm run preview   # vite preview
 ```
 
 Architecture/stack notes:
-- Vite 8 + React 19 + TypeScript, Tailwind CSS 4 (via `@tailwindcss/vite`), shadcn/ui components (`components.json`: `style: "base-luma"`, `baseColor: "neutral"`, icon library `lucide`). Entry `src/main.tsx` → `ThemeProvider` → `src/App.tsx`. Path alias `@/*` → `./src/*` (declared in both `vite.config.ts` and `tsconfig.app.json`).
+- Vite 8 + React 19 + TypeScript, Tailwind CSS 4 (via `@tailwindcss/vite`), shadcn/ui components (`components.json`: `style: "base-luma"`, `baseColor: "neutral"`, icon library `lucide`). Entry `src/main.tsx` → `ThemeProvider` → `LanguageProvider` → `src/App.tsx`. Path alias `@/*` → `./src/*` (declared in both `vite.config.ts` and `tsconfig.app.json`).
 - `@base-ui/react` (Base UI) underlies the shadcn `base-luma` style — these components are **not** Radix-based. Composition uses Base UI's `render` prop (e.g. `<DropdownMenuTrigger render={<Button … />}>`), not Radix's `asChild`. Don't copy Radix-era shadcn snippets verbatim.
 - To add a shadcn/ui component, run `npx shadcn@latest add <component>` from `frontend/gestion-neumaticos/`.
 - Chosen libraries, already installed and to be preferred over alternatives: `react-router-dom` v7 (routing), `@tanstack/react-query` (+ devtools) for server state, `axios` for HTTP, `react-hook-form` + `zod` + `@hookform/resolvers` for forms/validation, `zustand` for client state, `@tanstack/react-table` for tables, `sonner` for toasts, `date-fns` for dates, `lucide-react` for icons.
 - `src/lib/utils.ts` re-exports `cn` from the `cn` package — it is not the usual local `clsx` + `tailwind-merge` helper. Existing components import from either `@/lib/utils` or `"cn"` directly.
 
 Code organization:
-- `src/features/<feature>/{components,pages}/` holds feature code (currently `features/auth/pages/LoginPage.tsx` and `features/auth/components/LoginCard.tsx`). Feature files are **PascalCase**; shared files under `src/components/`, `src/lib/`, `src/hooks/` are **kebab-case** (shadcn's convention). Keep new code on the matching side of that split.
+- `src/features/<feature>/{components,pages}/` holds feature code: `auth` (real, has `LoginPage`/`LoginCard`) plus route-scaffold placeholders `home`, `transport-units`, `tires`, `repairs`, `storage`, `settings`, `audit` (each just a `pages/<Name>Page.tsx` stub, no real functionality yet — build these out against the matching backend module once it exists). Feature files are **PascalCase**; shared files under `src/components/`, `src/lib/`, `src/hooks/` are **kebab-case** (shadcn's convention). Keep new code on the matching side of that split.
 - `src/components/brand/` holds the app identity (`AppLogo`, `TireIcon`); `src/lib/constants.ts` holds `APP_NAME`.
-- Routes live in `src/App.tsx`. Everything currently redirects to `/login`.
+- `src/layouts/app-layout.tsx` wraps all authenticated routes with `src/components/layout/` (`app-sidebar`, `app-header`, `nav-breadcrumb`, `nav-user`). `src/lib/navigation.ts` is the single source of truth for nav structure (grouped `NavItem`s with i18n `labelKey`s) — sidebar and breadcrumb both read from it, so add new routes there rather than hand-editing either component.
+- Routes live in `src/App.tsx`: `/login` is standalone; everything else (`/home`, `/transport-units`, `/tires`, `/repairs`, `/storage`, `/settings`, `/audit`) renders inside `AppLayout`. `/` and unmatched paths redirect to `/home` (a `TODO` notes this should go back to redirecting to `/login` once protected routes/auth exist).
 
 Theming:
 - `src/components/theme-provider.tsx` is a hand-written provider (not `next-themes`): it toggles the `light`/`dark` class on `<html>`, persists to `localStorage` under the `theme` key, follows the system `prefers-color-scheme` when set to `"system"`, syncs across tabs via the `storage` event, suppresses CSS transitions during a switch, and binds a bare **`d` keypress** as a light/dark toggle (ignored while typing in an editable element). `useTheme()` throws outside the provider. `ThemeToggle` (`src/components/theme-toggle.tsx`) is the dropdown UI for it.
@@ -81,6 +82,11 @@ Theming:
 - Prettier (`.prettierrc`): no semicolons, double quotes, 2-space tabs, 80 print width, `trailingComma: es5`, LF; `prettier-plugin-tailwindcss` sorts classes using `src/index.css` as the stylesheet and also sorts inside `cn()` and `cva()` calls.
 - ESLint flat config (`eslint.config.js`): `js.configs.recommended` + `typescript-eslint` recommended + `react-hooks` + `react-refresh` (Vite-aware).
 - TypeScript: project-references setup (`tsconfig.json` → `tsconfig.app.json` / `tsconfig.node.json`).
+
+Internationalization:
+- `i18next` + `react-i18next` + `i18next-browser-languagedetector`, es/en, initialized in `src/lib/i18n/index.ts` (imported once, for side effects, from `main.tsx`) and configured in `src/lib/i18n/config.ts` (supported languages, fallback language, namespaces, the `LANGUAGE_STORAGE_KEY` localStorage key). Resources are namespaced JSON bundled at build time (`src/lib/i18n/locales/{es,en}/{common,auth}.json`, no lazy backend) — add a new feature's strings as its own namespace file in both locales rather than growing `common.json`.
+- `LanguageProvider` (`src/components/language-provider.tsx`) mirrors `ThemeProvider`'s pattern: i18next is the source of truth for the language itself, and the provider only syncs side effects outside React — setting `<html lang>` and reacting to the `storage` event so a language change in one tab applies in others. `LanguageToggle` (`src/components/language-toggle.tsx`) is the dropdown UI for it, alongside `ThemeToggle`.
+- Detection order is `localStorage` → `navigator` → `htmlTag`, cached to `localStorage`. `src/lib/i18n/i18next.d.ts` augments the `react-i18next` module types for the configured resources/namespaces.
 
 Brand assets (generated — do not hand-edit):
 - `npm run icons` runs `scripts/generate-icons.mjs`, which traces `assets/brand/source-tire.jpg` (sharp + potrace + png-to-ico) and writes `src/components/brand/tire-icon-path.ts` plus the whole `public/` icon set (`favicon.svg`, `favicon.ico`, `logo-light.svg`, `logo-dark.svg`, `icon-{192,512}[-dark].png`, `icon-maskable-512.png`, `apple-touch-icon.png`). Change the source image and rerun the script instead of editing any of those outputs.
@@ -90,7 +96,7 @@ Deployment: the frontend `Dockerfile` is a two-stage node:22-alpine build → ng
 
 ## Current state
 
-The active work (branch `feature/login`) is the login screen. `LoginCard` is UI-only: `handleSubmit` has a `TODO` where the backend auth call belongs, and the backend has no authentication wired up yet either — real login means building out the backend `security/` package and the `usuarios` module first.
+Branch `feature/login` has grown beyond the login screen into the app shell: `LoginCard` is still UI-only (`handleSubmit` has a `TODO` where the backend auth call belongs), and now sits alongside a real sidebar/header/breadcrumb layout (`src/layouts/app-layout.tsx`, `src/components/layout/`) and route-scaffold pages for every planned frontend section (home, transport-units, tires, repairs, storage, settings, audit) — each currently a placeholder page with no real functionality. On the backend, only `usuarios`, `security`, `config`, and `exception` scaffolding exists (all module package directories are still empty). Real login means building out the backend `security/` package and the `usuarios` module first; the other domain modules (`neumaticos`, `conductores`, `proveedores`, `reparacion`, `trazabilidad`, `unidades_transporte`, `almacenamiento`) have no code yet, matching their still-placeholder frontend pages.
 
 ## Codebase memory (MCP)
 
