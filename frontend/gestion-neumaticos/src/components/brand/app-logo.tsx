@@ -1,13 +1,16 @@
 import { cn } from "cn"
+import { useTranslation } from "react-i18next"
 
 import { TireIcon } from "@/components/brand/tire-icon"
-import { APP_NAME } from "@/lib/constants"
 
 function AppLogo({
   className,
   showText = true,
   ...props
 }: React.ComponentProps<"div"> & { showText?: boolean }) {
+  const { t } = useTranslation()
+  const appName = t("app.name")
+
   return (
     <div
       data-slot="app-logo"
@@ -19,10 +22,10 @@ function AppLogo({
       </span>
       {showText ? (
         <span className="font-heading text-base font-semibold max-sm:sr-only">
-          {APP_NAME}
+          {appName}
         </span>
       ) : (
-        <span className="sr-only">{APP_NAME}</span>
+        <span className="sr-only">{appName}</span>
       )}
     </div>
   )

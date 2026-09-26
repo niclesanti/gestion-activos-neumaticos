@@ -1,0 +1,17 @@
+{
+  "app": {
+    "name": "Gestión de Neumáticos"
+  },
+  "theme": {
+    "toggle": "Cambiar tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "language": {
+    "toggle": "Cambiar idioma"
+  },
+  "footer": {
+    "copyright": "© {{year}} · {{appName}}"
+  }
+}

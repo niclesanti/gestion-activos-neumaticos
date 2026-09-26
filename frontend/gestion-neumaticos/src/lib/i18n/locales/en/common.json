@@ -1,0 +1,17 @@
+{
+  "app": {
+    "name": "Tire Management"
+  },
+  "theme": {
+    "toggle": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "toggle": "Change language"
+  },
+  "footer": {
+    "copyright": "© {{year}} · {{appName}}"
+  }
+}
