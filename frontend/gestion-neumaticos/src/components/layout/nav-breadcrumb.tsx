@@ -1,4 +1,5 @@
 import * as React from "react"
+
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 
@@ -23,7 +24,7 @@ function toTitleCase(segment: string) {
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
-function NavBreadcrumb() {
+export function NavBreadcrumb() {
   const { t } = useTranslation()
   const { pathname } = useLocation()
 
@@ -84,5 +85,3 @@ function NavBreadcrumb() {
     </Breadcrumb>
   )
 }
-
-export { NavBreadcrumb }

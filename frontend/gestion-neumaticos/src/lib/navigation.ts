@@ -9,24 +9,30 @@ import {
   WrenchIcon,
 } from "lucide-react"
 
+import { ROUTES, type AppRoute } from "@/lib/routes"
+
 /** Claves de traducción válidas del namespace `common`. */
 export type NavLabelKey = ParseKeys<"common">
 
+/** Identificador estable de cada grupo: se filtra por id y no por posición. */
+export type NavGroupId = "platform" | "operations" | "system"
+
 export type NavItem = {
-  to: string
+  to: AppRoute
   /** Clave del namespace `common` de i18next. */
   labelKey: NavLabelKey
   icon: React.ElementType
 }
 
 export type NavGroup = {
+  id: NavGroupId
   labelKey: NavLabelKey
   items: NavItem[]
 }
 
 /**
- * Única fuente de verdad de la navegación: la consumen tanto la sidebar como
- * el breadcrumb, para que no puedan quedar desincronizados.
+ * Única fuente de verdad de la navegación: la consumen la sidebar, el breadcrumb
+ * y el menú inferior de mobile, para que no puedan quedar desincronizados.
  *
  * El orden de los grupos sigue la frecuencia de uso: primero el inicio, después
  * las operaciones del día a día y al final lo administrativo. Los ABM de
@@ -34,33 +40,36 @@ export type NavGroup = {
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
+    id: "platform",
     labelKey: "nav.group.platform",
-    items: [{ to: "/home", labelKey: "nav.home", icon: HomeIcon }],
+    items: [{ to: ROUTES.home, labelKey: "nav.home", icon: HomeIcon }],
   },
   {
+    id: "operations",
     labelKey: "nav.group.operations",
     items: [
       {
-        to: "/transport-units",
+        to: ROUTES.transportUnits,
         labelKey: "nav.transportUnits",
         icon: TruckIcon,
       },
-      { to: "/tires", labelKey: "nav.tires", icon: CircleDotIcon },
-      { to: "/repairs", labelKey: "nav.repairs", icon: WrenchIcon },
-      { to: "/storage", labelKey: "nav.storage", icon: WarehouseIcon },
+      { to: ROUTES.tires, labelKey: "nav.tires", icon: CircleDotIcon },
+      { to: ROUTES.repairs, labelKey: "nav.repairs", icon: WrenchIcon },
+      { to: ROUTES.storage, labelKey: "nav.storage", icon: WarehouseIcon },
     ],
   },
   {
+    id: "system",
     labelKey: "nav.group.system",
     items: [
-      { to: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
-      { to: "/audit", labelKey: "nav.audit", icon: ScrollTextIcon },
+      { to: ROUTES.settings, labelKey: "nav.settings", icon: SettingsIcon },
+      { to: ROUTES.audit, labelKey: "nav.audit", icon: ScrollTextIcon },
     ],
   },
 ]
 
 /** Ruta de inicio del shell: primer tramo de todo breadcrumb. */
-export const HOME_PATH = "/home"
+export const HOME_PATH = ROUTES.home
 
 /** Mapa ruta → clave de etiqueta, derivado de NAV_GROUPS. */
 export const ROUTE_LABELS: Record<string, NavLabelKey> = Object.fromEntries(
@@ -69,11 +78,13 @@ export const ROUTE_LABELS: Record<string, NavLabelKey> = Object.fromEntries(
   )
 )
 
+/** Grupos con acceso directo en el menú flotante inferior (mobile-only). */
+const MOBILE_NAV_GROUP_IDS: NavGroupId[] = ["platform", "operations"]
+
 /**
- * Accesos rápidos para el menú flotante inferior (mobile-only): inicio y el
- * grupo de operaciones, en el mismo orden que la sidebar.
+ * Accesos rápidos para el menú flotante inferior (mobile-only): se derivan por
+ * id de grupo, así reordenar NAV_GROUPS no cambia el menú en silencio.
  */
-export const MOBILE_NAV_ITEMS: NavItem[] = [
-  ...NAV_GROUPS[0].items,
-  ...NAV_GROUPS[1].items,
-]
+export const MOBILE_NAV_ITEMS: NavItem[] = NAV_GROUPS.filter((group) =>
+  MOBILE_NAV_GROUP_IDS.includes(group.id)
+).flatMap((group) => group.items)

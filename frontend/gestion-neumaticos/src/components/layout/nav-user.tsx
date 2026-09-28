@@ -18,9 +18,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useCurrentUser } from "@/hooks/use-current-user"
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
 
-function NavUser() {
+export function NavUser() {
   const { t } = useTranslation()
   const { isMobile } = useSidebar()
   const navigate = useNavigate()
@@ -95,5 +95,3 @@ function NavUser() {
     </SidebarMenu>
   )
 }
-
-export { NavUser }
