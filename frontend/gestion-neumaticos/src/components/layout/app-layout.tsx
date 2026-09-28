@@ -24,7 +24,7 @@ function readSidebarState() {
  * contenido de la página (h-svh + overflow-hidden en el marco, overflow-y-auto
  * sólo en el contenedor del Outlet).
  */
-function AppLayout() {
+export function AppLayout() {
   return (
     <SidebarProvider
       defaultOpen={readSidebarState()}
@@ -41,6 +41,3 @@ function AppLayout() {
     </SidebarProvider>
   )
 }
-
-export { AppLayout }
-export default AppLayout

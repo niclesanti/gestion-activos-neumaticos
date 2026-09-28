@@ -1,9 +1,9 @@
-import { cn } from "cn"
 import { useTranslation } from "react-i18next"
 
 import { TireIcon } from "@/components/brand/tire-icon"
+import { cn } from "@/lib/utils"
 
-function AppLogo({
+export function AppLogo({
   className,
   showText = true,
   ...props
@@ -30,5 +30,3 @@ function AppLogo({
     </div>
   )
 }
-
-export { AppLogo }

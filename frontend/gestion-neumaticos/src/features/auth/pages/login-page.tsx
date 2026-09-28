@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { AppLogo } from "@/components/brand/app-logo"
 import { LanguageToggle } from "@/components/language-toggle"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { LoginCard } from "@/features/auth/components/LoginCard"
+import { LoginCard } from "@/features/auth/components/login-card"
 
 export function LoginPage() {
   const { t } = useTranslation()
@@ -29,5 +29,3 @@ export function LoginPage() {
     </div>
   )
 }
-
-export default LoginPage

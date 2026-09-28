@@ -1,15 +1,15 @@
-import { Link, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
+import { Link, useLocation } from "react-router-dom"
 
-import { cn } from "@/lib/utils"
 import { MOBILE_NAV_ITEMS } from "@/lib/navigation"
+import { cn } from "@/lib/utils"
 
 /**
  * Menú flotante inferior, visible solo en mobile (`md:hidden`), con acceso
  * directo a las secciones de uso más frecuente. Complementa a la sidebar
  * (que en mobile es un drawer que requiere un tap extra para abrirse).
  */
-function MobileBottomNav() {
+export function MobileBottomNav() {
   const { t } = useTranslation()
   const { pathname } = useLocation()
 
@@ -42,5 +42,3 @@ function MobileBottomNav() {
     </nav>
   )
 }
-
-export { MobileBottomNav }

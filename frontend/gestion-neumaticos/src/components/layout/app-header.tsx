@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
-function AppHeader() {
+export function AppHeader() {
   const { t } = useTranslation()
 
   return (
@@ -21,5 +21,3 @@ function AppHeader() {
     </header>
   )
 }
-
-export { AppHeader }

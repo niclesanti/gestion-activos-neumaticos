@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar"
 import { NAV_GROUPS } from "@/lib/navigation"
 
-function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
 
@@ -80,5 +80,3 @@ function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
-
-export { AppSidebar }
