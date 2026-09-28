@@ -12,15 +12,29 @@ import {
 import enAudit from "@/lib/i18n/locales/en/audit.json"
 import enAuth from "@/lib/i18n/locales/en/auth.json"
 import enCommon from "@/lib/i18n/locales/en/common.json"
+import enDev from "@/lib/i18n/locales/en/dev.json"
 import enSettings from "@/lib/i18n/locales/en/settings.json"
 import esAudit from "@/lib/i18n/locales/es/audit.json"
 import esAuth from "@/lib/i18n/locales/es/auth.json"
 import esCommon from "@/lib/i18n/locales/es/common.json"
+import esDev from "@/lib/i18n/locales/es/dev.json"
 import esSettings from "@/lib/i18n/locales/es/settings.json"
 
 export const resources = {
-  es: { common: esCommon, auth: esAuth, settings: esSettings, audit: esAudit },
-  en: { common: enCommon, auth: enAuth, settings: enSettings, audit: enAudit },
+  es: {
+    common: esCommon,
+    auth: esAuth,
+    settings: esSettings,
+    audit: esAudit,
+    dev: esDev,
+  },
+  en: {
+    common: enCommon,
+    auth: enAuth,
+    settings: enSettings,
+    audit: enAudit,
+    dev: enDev,
+  },
 } as const
 
 i18n

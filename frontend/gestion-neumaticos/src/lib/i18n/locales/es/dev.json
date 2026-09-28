@@ -1,0 +1,57 @@
+{
+  "toasts": {
+    "title": "Notificaciones",
+    "subtitle": "Dispará cada tipo de notificación para revisar su estilo, el tema claro/oscuro y la traducción en vivo.",
+    "trigger": {
+      "default": "Default",
+      "success": "Success",
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error",
+      "loading": "Loading",
+      "description": "Con descripción",
+      "action": "Con acción",
+      "promise": "Promise",
+      "stacked": "Apilar tres"
+    },
+    "sample": {
+      "default": {
+        "title": "Neumático actualizado",
+        "description": "Se guardaron los cambios del neumático {{code}}."
+      },
+      "success": {
+        "title": "Neumático dado de alta",
+        "description": "Ya podés asignarlo a una unidad de transporte."
+      },
+      "info": {
+        "title": "Rotación sugerida",
+        "description": "Tres neumáticos superaron los 40.000 km."
+      },
+      "warning": {
+        "title": "Profundidad al límite",
+        "description": "Revisá el neumático {{code}} antes del próximo viaje."
+      },
+      "error": {
+        "title": "No se pudo guardar",
+        "description": "Revisá la conexión y volvé a intentar."
+      },
+      "loading": {
+        "title": "Sincronizando",
+        "description": "Estamos trayendo los datos del servidor."
+      },
+      "action": {
+        "title": "Neumático dado de baja",
+        "label": "Deshacer",
+        "undone": "Se deshizo la baja"
+      },
+      "promise": {
+        "loading": "Guardando el neumático…",
+        "success": "Neumático guardado",
+        "error": "No se pudo guardar el neumático"
+      },
+      "stacked": {
+        "title": "Notificación {{index}} de 3"
+      }
+    }
+  }
+}

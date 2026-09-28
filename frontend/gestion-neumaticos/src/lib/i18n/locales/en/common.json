@@ -25,7 +25,8 @@
     "storage": "Storage",
     "settings": "Settings",
     "audit": "Audit",
-    "mobileNav": "Quick navigation"
+    "mobileNav": "Quick navigation",
+    "toasts": "Notifications"
   },
   "sidebar": {
     "toggle": "Toggle sidebar"
@@ -39,5 +40,8 @@
   },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"
+  },
+  "toast": {
+    "close": "Close notification"
   }
 }

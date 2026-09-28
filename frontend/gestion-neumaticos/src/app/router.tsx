@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AuditPage } from "@/features/audit/pages/audit-page"
 import { LoginPage } from "@/features/auth/pages/login-page"
+import { ToastShowcasePage } from "@/features/dev/pages/toast-showcase-page"
 import { HomePage } from "@/features/home/pages/home-page"
 import { RepairsPage } from "@/features/repairs/pages/repairs-page"
 import { SettingsPage } from "@/features/settings/pages/settings-page"
@@ -27,6 +28,9 @@ export function AppRouter() {
           <Route path={ROUTES.storage} element={<StoragePage />} />
           <Route path={ROUTES.settings} element={<SettingsPage />} />
           <Route path={ROUTES.audit} element={<AuditPage />} />
+          {import.meta.env.DEV ? (
+            <Route path={ROUTES.toasts} element={<ToastShowcasePage />} />
+          ) : null}
         </Route>
         {/* TODO: volver a redirigir a /login cuando existan rutas protegidas. */}
         <Route path="/" element={<Navigate to={ROUTES.home} replace />} />

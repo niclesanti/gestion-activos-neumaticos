@@ -25,7 +25,8 @@
     "storage": "Almacenamiento",
     "settings": "Configuración",
     "audit": "Auditoría",
-    "mobileNav": "Navegación rápida"
+    "mobileNav": "Navegación rápida",
+    "toasts": "Notificaciones"
   },
   "sidebar": {
     "toggle": "Abrir o cerrar la barra lateral"
@@ -39,5 +40,8 @@
   },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"
+  },
+  "toast": {
+    "close": "Cerrar notificación"
   }
 }

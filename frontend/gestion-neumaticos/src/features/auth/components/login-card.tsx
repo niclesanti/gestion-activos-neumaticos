@@ -31,7 +31,10 @@ export function LoginCard() {
     setIsSubmitting(true)
 
     // TODO: conectar con el endpoint de autenticación del backend.
-    // Ante credenciales inválidas: setErrorKey("login.error.invalidCredentials").
+    // Ante credenciales inválidas, avisar por los dos canales: el mensaje inline
+    // anclado al formulario con setErrorKey("login.error.invalidCredentials"), y
+    // notify.error({ titleKey: "auth:login.error.invalidCredentials" }) de
+    // @/lib/toast, que avisa aunque el foco esté en otra parte de la pantalla.
     setIsSubmitting(false)
   }
 

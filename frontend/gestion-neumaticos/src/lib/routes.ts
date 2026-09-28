@@ -12,6 +12,8 @@ export const ROUTES = {
   storage: "/storage",
   settings: "/settings",
   audit: "/audit",
+  /** Showcase de notificaciones, sólo en desarrollo. */
+  toasts: "/toasts",
 } as const
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES]

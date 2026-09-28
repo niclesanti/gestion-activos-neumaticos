@@ -1,5 +1,6 @@
 import type { ParseKeys } from "i18next"
 import {
+  BellIcon,
   CircleDotIcon,
   HomeIcon,
   ScrollTextIcon,
@@ -64,6 +65,12 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: ROUTES.settings, labelKey: "nav.settings", icon: SettingsIcon },
       { to: ROUTES.audit, labelKey: "nav.audit", icon: ScrollTextIcon },
+      // Showcase de notificaciones: no existe en el build de producción.
+      ...(import.meta.env.DEV
+        ? ([
+            { to: ROUTES.toasts, labelKey: "nav.toasts", icon: BellIcon },
+          ] satisfies NavItem[])
+        : []),
     ],
   },
 ]

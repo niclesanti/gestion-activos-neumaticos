@@ -1,0 +1,57 @@
+{
+  "toasts": {
+    "title": "Notifications",
+    "subtitle": "Trigger each notification type to review its style, the light/dark theme and live translation.",
+    "trigger": {
+      "default": "Default",
+      "success": "Success",
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error",
+      "loading": "Loading",
+      "description": "With description",
+      "action": "With action",
+      "promise": "Promise",
+      "stacked": "Stack three"
+    },
+    "sample": {
+      "default": {
+        "title": "Tire updated",
+        "description": "Changes to tire {{code}} were saved."
+      },
+      "success": {
+        "title": "Tire created",
+        "description": "You can now assign it to a transport unit."
+      },
+      "info": {
+        "title": "Rotation suggested",
+        "description": "Three tires went past 40,000 km."
+      },
+      "warning": {
+        "title": "Tread depth at the limit",
+        "description": "Check tire {{code}} before the next trip."
+      },
+      "error": {
+        "title": "Could not save",
+        "description": "Check your connection and try again."
+      },
+      "loading": {
+        "title": "Syncing",
+        "description": "Fetching data from the server."
+      },
+      "action": {
+        "title": "Tire retired",
+        "label": "Undo",
+        "undone": "Retirement undone"
+      },
+      "promise": {
+        "loading": "Saving the tire…",
+        "success": "Tire saved",
+        "error": "Could not save the tire"
+      },
+      "stacked": {
+        "title": "Notification {{index}} of 3"
+      }
+    }
+  }
+}
