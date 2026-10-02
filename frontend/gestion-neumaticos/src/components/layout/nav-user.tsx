@@ -1,7 +1,18 @@
-import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react"
-import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
+import * as React from "react"
 
+import { ChevronsUpDownIcon, Loader2Icon, LogOutIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -19,16 +30,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
+import { useLogout } from "@/features/auth/hooks/use-logout"
 
 export function NavUser() {
   const { t } = useTranslation()
   const { isMobile } = useSidebar()
-  const navigate = useNavigate()
   const user = useCurrentUser()
+  const logout = useLogout()
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
 
-  function handleLogout() {
-    // TODO: invalidar la sesión contra el backend cuando exista autenticación.
-    void navigate("/login")
+  if (!user) {
+    return null
   }
 
   return (
@@ -84,13 +96,42 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleLogout}>
+              <DropdownMenuItem onClick={() => setConfirmOpen(true)}>
                 <LogOutIcon />
                 {t("user.logout")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Confirmación explícita antes de cerrar la sesión (HU-02). */}
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("user.logoutConfirm.title")}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("user.logoutConfirm.description")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={logout.isPending}>
+                {t("user.logoutConfirm.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                {logout.isPending ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : null}
+                {t("user.logoutConfirm.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidebarMenuItem>
     </SidebarMenu>
   )

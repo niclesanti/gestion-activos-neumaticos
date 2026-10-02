@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @RestControllerAdvice
@@ -61,8 +62,9 @@ public class ControllerAdvisor {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionInfo> handleGeneralException(Exception ex, WebRequest request) {
         log.error("Error inesperado: {} - Request: {}", ex.getMessage(), request.getDescription(false), ex);
+        // El detalle queda en el log: devolverlo al cliente filtraría información interna.
         ExceptionInfo exceptionInfo = new ExceptionInfo(
-                ex.getMessage(),
+                "Error interno del servidor",
                 request.getDescription(false),
                 String.valueOf(System.currentTimeMillis()),
                 HttpStatus.INTERNAL_SERVER_ERROR.value()
@@ -123,6 +125,28 @@ public class ControllerAdvisor {
         log.warn("Intento de acceso no autorizado: {} - Request: {}", ex.getMessage(), request.getDescription(false));
         ExceptionInfo exceptionInfo = new ExceptionInfo(
                 ex.getMessage(),
+                request.getDescription(false),
+                String.valueOf(System.currentTimeMillis()),
+                HttpStatus.UNAUTHORIZED.value()
+        );
+        return new ResponseEntity<>(exceptionInfo, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ExceptionInfo> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex, WebRequest request) {
+        ExceptionInfo exceptionInfo = new ExceptionInfo(
+                "El cuerpo de la petición es inválido o está mal formado",
+                request.getDescription(false),
+                String.valueOf(System.currentTimeMillis()),
+                HttpStatus.BAD_REQUEST.value()
+        );
+        return new ResponseEntity<>(exceptionInfo, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<ExceptionInfo> handleCredencialesInvalidasException(CredencialesInvalidasException ex, WebRequest request) {
+        ExceptionInfo exceptionInfo = new ExceptionInfo(
+                CredencialesInvalidasException.MENSAJE,
                 request.getDescription(false),
                 String.valueOf(System.currentTimeMillis()),
                 HttpStatus.UNAUTHORIZED.value()

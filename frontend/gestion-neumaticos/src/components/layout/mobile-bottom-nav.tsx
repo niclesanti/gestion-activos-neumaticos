@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 
-import { MOBILE_NAV_ITEMS } from "@/lib/navigation"
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
+import { filterNavItems, MOBILE_NAV_ITEMS } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
 /**
@@ -12,6 +13,8 @@ import { cn } from "@/lib/utils"
 export function MobileBottomNav() {
   const { t } = useTranslation()
   const { pathname } = useLocation()
+  const user = useCurrentUser()
+  const items = filterNavItems(MOBILE_NAV_ITEMS, user?.accessLevel)
 
   return (
     <nav
@@ -19,7 +22,7 @@ export function MobileBottomNav() {
       className="fixed inset-x-4 bottom-4 z-50 pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="flex items-center justify-between gap-1 rounded-full border border-border bg-muted/95 p-1.5 shadow-lg backdrop-blur supports-backdrop-filter:bg-muted/80">
-        {MOBILE_NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const isActive = pathname === item.to
           return (
             <li key={item.to} className="flex-1">

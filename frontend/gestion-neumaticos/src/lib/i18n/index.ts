@@ -13,11 +13,13 @@ import enAudit from "@/lib/i18n/locales/en/audit.json"
 import enAuth from "@/lib/i18n/locales/en/auth.json"
 import enCommon from "@/lib/i18n/locales/en/common.json"
 import enDev from "@/lib/i18n/locales/en/dev.json"
+import enHome from "@/lib/i18n/locales/en/home.json"
 import enSettings from "@/lib/i18n/locales/en/settings.json"
 import esAudit from "@/lib/i18n/locales/es/audit.json"
 import esAuth from "@/lib/i18n/locales/es/auth.json"
 import esCommon from "@/lib/i18n/locales/es/common.json"
 import esDev from "@/lib/i18n/locales/es/dev.json"
+import esHome from "@/lib/i18n/locales/es/home.json"
 import esSettings from "@/lib/i18n/locales/es/settings.json"
 
 export const resources = {
@@ -27,6 +29,7 @@ export const resources = {
     settings: esSettings,
     audit: esAudit,
     dev: esDev,
+    home: esHome,
   },
   en: {
     common: enCommon,
@@ -34,6 +37,7 @@ export const resources = {
     settings: enSettings,
     audit: enAudit,
     dev: enDev,
+    home: enHome,
   },
 } as const
 

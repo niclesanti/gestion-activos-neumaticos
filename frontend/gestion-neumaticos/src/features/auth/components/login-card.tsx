@@ -1,6 +1,9 @@
 import * as React from "react"
 
+import { zodResolver } from "@hookform/resolvers/zod"
+import type { ParseKeys } from "i18next"
 import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react"
+import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
@@ -12,31 +15,66 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useLogin } from "@/features/auth/hooks/use-login"
+import {
+  loginSchema,
+  type LoginInput,
+  type LoginValues,
+} from "@/features/auth/schemas/login-schema"
+import { getHttpStatus } from "@/lib/api/client"
+import { notify } from "@/lib/toast"
 
-type ErrorKey = "login.error.invalidCredentials"
+type ErrorKey = "login.error.invalidCredentials" | "login.error.unexpected"
+
+/** Los mensajes de zod son claves del namespace `auth` (ver login-schema). */
+type AuthKey = ParseKeys<"auth">
 
 export function LoginCard() {
   const { t } = useTranslation("auth")
+  const login = useLogin()
   const [showPassword, setShowPassword] = React.useState(false)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
   // Se guarda la clave de traducción, no el texto: así el mensaje se retraduce
   // solo si el usuario cambia de idioma con el error visible.
   const [errorKey, setErrorKey] = React.useState<ErrorKey | null>(null)
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setErrorKey(null)
-    setIsSubmitting(true)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput, unknown, LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { identifier: "", password: "" },
+  })
 
-    // TODO: conectar con el endpoint de autenticación del backend.
-    // Ante credenciales inválidas, avisar por los dos canales: el mensaje inline
-    // anclado al formulario con setErrorKey("login.error.invalidCredentials"), y
-    // notify.error({ titleKey: "auth:login.error.invalidCredentials" }) de
-    // @/lib/toast, que avisa aunque el foco esté en otra parte de la pantalla.
-    setIsSubmitting(false)
+  const onSubmit = (values: LoginValues) => {
+    setErrorKey(null)
+    // Al guardarse la sesión, GuestOnly redirige (al tablero o a la pantalla
+    // pedida): no se navega desde acá porque el componente ya se desmontó.
+    login.mutate(values, {
+      onError: (error) => {
+        // Mensaje genérico: nunca se distingue usuario inexistente de clave
+        // incorrecta. Se avisa por los dos canales: inline, anclado al
+        // formulario, y con un toast, que se ve aunque el foco esté en otro lado.
+        const key: ErrorKey =
+          getHttpStatus(error) === 401
+            ? "login.error.invalidCredentials"
+            : "login.error.unexpected"
+        setErrorKey(key)
+        notify.error({ titleKey: `auth:${key}` })
+      },
+    })
   }
+
+  const identifierError = errors.identifier?.message
+  const passwordError = errors.password?.message
+  const isSubmitting = login.isPending
 
   return (
     <Card className="w-full max-w-sm border border-border [--card-spacing:--spacing(4)]">
@@ -45,7 +83,9 @@ export function LoginCard() {
         <CardDescription>{t("login.description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form id="login-form" onSubmit={handleSubmit}>
+        {/* noValidate: la validación la hace zod, con mensajes traducidos, en
+            lugar de los globos nativos del navegador. */}
+        <form id="login-form" noValidate onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
             {errorKey ? (
               <p
@@ -55,24 +95,32 @@ export function LoginCard() {
                 {t(errorKey)}
               </p>
             ) : null}
-            <Field>
+            <Field data-invalid={identifierError ? true : undefined}>
               <FieldLabel htmlFor="identifier">
                 {t("login.identifier.label")}
               </FieldLabel>
               {/* Acepta correo electrónico o nombre de usuario, por eso type="text". */}
               <Input
                 id="identifier"
-                name="identifier"
                 type="text"
                 placeholder={t("login.identifier.placeholder")}
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
-                aria-invalid={errorKey !== null}
-                required
+                aria-required
+                aria-invalid={Boolean(identifierError) || errorKey !== null}
+                aria-describedby={
+                  identifierError ? "identifier-error" : undefined
+                }
+                {...register("identifier")}
               />
+              {identifierError ? (
+                <FieldError id="identifier-error">
+                  {t(identifierError as AuthKey)}
+                </FieldError>
+              ) : null}
             </Field>
-            <Field>
+            <Field data-invalid={passwordError ? true : undefined}>
               <div className="flex items-center">
                 <FieldLabel htmlFor="password">
                   {t("login.password.label")}
@@ -81,13 +129,16 @@ export function LoginCard() {
               <div className="relative">
                 <Input
                   id="password"
-                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder={t("login.password.placeholder")}
                   autoComplete="current-password"
-                  aria-invalid={errorKey !== null}
+                  aria-required
+                  aria-invalid={Boolean(passwordError) || errorKey !== null}
+                  aria-describedby={
+                    passwordError ? "password-error" : undefined
+                  }
                   className="pr-11"
-                  required
+                  {...register("password")}
                 />
                 <Button
                   type="button"
@@ -106,6 +157,11 @@ export function LoginCard() {
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </Button>
               </div>
+              {passwordError ? (
+                <FieldError id="password-error">
+                  {t(passwordError as AuthKey)}
+                </FieldError>
+              ) : null}
             </Field>
           </FieldGroup>
         </form>
