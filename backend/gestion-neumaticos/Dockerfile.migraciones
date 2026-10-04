@@ -4,7 +4,7 @@
 # del backend hace que el proceso de la API nunca tenga credenciales con DDL.
 # La versión de Flyway es la misma que trae Spring Boot (./mvnw help:evaluate
 # -Dexpression=flyway.version).
-FROM flyway/flyway:12.4-alpine
+FROM flyway/flyway:13.9-alpine
 
 COPY src/main/resources/db/migration /flyway/sql/migraciones
 # El seed de usuarios de prueba solo se aplica si FLYWAY_LOCATIONS lo incluye
