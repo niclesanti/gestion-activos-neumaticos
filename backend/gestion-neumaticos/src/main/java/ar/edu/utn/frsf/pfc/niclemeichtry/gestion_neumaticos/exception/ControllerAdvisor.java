@@ -3,6 +3,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -166,5 +167,20 @@ public class ControllerAdvisor {
         return new ResponseEntity<>(exceptionInfo, HttpStatus.FORBIDDEN);
     }
 
+    /**
+     * Rol insuficiente según {@code @PreAuthorize}. Sin este handler la excepción
+     * caería en el genérico y respondería 500.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ExceptionInfo> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
+        log.warn("Acceso denegado por rol insuficiente - Request: {}", request.getDescription(false));
+        ExceptionInfo exceptionInfo = new ExceptionInfo(
+                "No tenés permisos para realizar esta operación",
+                request.getDescription(false),
+                String.valueOf(System.currentTimeMillis()),
+                HttpStatus.FORBIDDEN.value()
+        );
+        return new ResponseEntity<>(exceptionInfo, HttpStatus.FORBIDDEN);
+    }
 
 }

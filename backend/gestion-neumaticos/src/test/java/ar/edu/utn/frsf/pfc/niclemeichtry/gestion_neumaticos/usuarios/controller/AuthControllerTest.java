@@ -121,6 +121,20 @@ class AuthControllerTest {
         }
 
         @Test
+        @DisplayName("ignora un token en el header: el login siempre corre sin usuario")
+        void ignoraTokenEnElHeader() throws Exception {
+            LoginRequestDTO request = new LoginRequestDTO("administrador", "Admin.1234");
+            when(authService.login(request)).thenReturn(new LoginResponseDTO("eyJ.token.firma", "Bearer",
+                    Instant.parse("2026-10-01T20:00:00Z"), usuario));
+
+            mockMvc.perform(post(LOGIN).header(HttpHeaders.AUTHORIZATION, "Bearer token.viejo.revocado")
+                            .contentType(MediaType.APPLICATION_JSON).content(json(request)))
+                    .andExpect(status().isOk());
+
+            verifyNoInteractions(jwtDecoder);
+        }
+
+        @Test
         @DisplayName("401 con mensaje genérico ante credenciales inválidas")
         void credencialesInvalidas() throws Exception {
             when(authService.login(any())).thenThrow(new CredencialesInvalidasException());

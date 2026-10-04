@@ -49,7 +49,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponseDTO login(LoginRequestDTO request) {
         String identificador = request.identifier().strip().toLowerCase(Locale.ROOT);
-        Optional<Usuario> usuario = usuarioRepository.findByNombreUsuarioOrEmail(identificador, identificador);
+        Optional<Usuario> usuario = usuarioRepository.buscarParaLogin(identificador);
 
         if (usuario.isEmpty()) {
             passwordEncoder.matches(request.password(), hashDummy);

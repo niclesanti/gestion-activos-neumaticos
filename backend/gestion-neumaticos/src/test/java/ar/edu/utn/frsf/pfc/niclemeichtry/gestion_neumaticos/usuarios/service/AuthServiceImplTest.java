@@ -82,7 +82,7 @@ class AuthServiceImplTest {
         @DisplayName("con nombre de usuario y clave correctos emite el token y devuelve el usuario")
         void loginPorNombreUsuario() {
             Instant expiraEn = Instant.parse("2026-10-01T20:00:00Z");
-            when(usuarioRepository.findByNombreUsuarioOrEmail("administrador", "administrador"))
+            when(usuarioRepository.buscarParaLogin("administrador"))
                     .thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches(CLAVE, HASH_USUARIO)).thenReturn(true);
             when(tokenService.generar(usuario.getPublicId(), "ROLE_ADMINISTRADOR"))
@@ -101,7 +101,7 @@ class AuthServiceImplTest {
         @DisplayName("acepta el email como identificador")
         void loginPorEmail() {
             String email = "administrador@neumaticos.local";
-            when(usuarioRepository.findByNombreUsuarioOrEmail(email, email)).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.buscarParaLogin(email)).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches(CLAVE, HASH_USUARIO)).thenReturn(true);
             when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
             when(usuarioMapper.toSesionDTO(usuario)).thenReturn(usuarioSesion);
@@ -114,21 +114,20 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("normaliza el identificador a minúsculas y sin espacios antes de buscar")
         void normalizaIdentificador() {
-            when(usuarioRepository.findByNombreUsuarioOrEmail(anyString(), anyString())).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches(CLAVE, HASH_USUARIO)).thenReturn(true);
             when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
 
             authService.login(new LoginRequestDTO("  Administrador@Neumaticos.LOCAL ", CLAVE));
 
-            verify(usuarioRepository).findByNombreUsuarioOrEmail(
-                    "administrador@neumaticos.local", "administrador@neumaticos.local");
+            verify(usuarioRepository).buscarParaLogin("administrador@neumaticos.local");
         }
 
         @Test
         @DisplayName("no recorta la contraseña: los espacios son parte de ella")
         void noRecortaLaClave() {
             String claveConEspacios = " " + CLAVE + " ";
-            when(usuarioRepository.findByNombreUsuarioOrEmail(anyString(), anyString())).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches(claveConEspacios, HASH_USUARIO)).thenReturn(false);
 
             assertThatThrownBy(() -> authService.login(new LoginRequestDTO("administrador", claveConEspacios)))
@@ -139,7 +138,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("usuario inexistente: error genérico y compara contra el hash dummy (tiempo constante)")
         void usuarioInexistente() {
-            when(usuarioRepository.findByNombreUsuarioOrEmail(anyString(), anyString())).thenReturn(Optional.empty());
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> authService.login(new LoginRequestDTO("noexiste", CLAVE)))
                     .isInstanceOf(CredencialesInvalidasException.class)
@@ -152,7 +151,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("clave incorrecta: mismo error genérico que el usuario inexistente")
         void claveIncorrecta() {
-            when(usuarioRepository.findByNombreUsuarioOrEmail(anyString(), anyString())).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches("otra", HASH_USUARIO)).thenReturn(false);
 
             assertThatThrownBy(() -> authService.login(new LoginRequestDTO("administrador", "otra")))
@@ -167,7 +166,7 @@ class AuthServiceImplTest {
         @DisplayName("el token lleva el nivel de acceso del usuario")
         void tokenConNivelDeAcceso() {
             usuario.setNivelAcceso(NivelAcceso.ROLE_EDITOR);
-            when(usuarioRepository.findByNombreUsuarioOrEmail(anyString(), anyString())).thenReturn(Optional.of(usuario));
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches(CLAVE, HASH_USUARIO)).thenReturn(true);
             when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
 

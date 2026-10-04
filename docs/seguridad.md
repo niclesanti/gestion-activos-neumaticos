@@ -1,6 +1,6 @@
 # Seguridad: autenticación y autorización
 
-Decisiones de diseño tomadas al implementar **HU-01 (Iniciar sesión)** y **HU-02 (Cerrar sesión)**, y lo que queda pendiente. Última actualización: 2026-10-01.
+Decisiones de diseño tomadas al implementar **HU-01 (Iniciar sesión)**, **HU-02 (Cerrar sesión)** y la autorización por rol (frontend, backend y base de datos), y lo que queda pendiente. Última actualización: 2026-10-02.
 
 > **Idea rectora:** el frontend mejora la experiencia de uso; el backend es la única barrera real de seguridad. Todo lo que el frontend oculta o bloquea tiene que estar también protegido en el backend (ver [Pendiente](#pendiente)).
 
@@ -26,7 +26,8 @@ Decisiones de diseño tomadas al implementar **HU-01 (Iniciar sesión)** y **HU-
 |---|---|
 | Configuración de Spring Security, JWT, hash, revocación | `backend/.../security/` (módulo Modulith) |
 | Usuarios, login, logout, `/me` | `backend/.../usuarios/` |
-| Migraciones | `db/migration/V1__crear_tabla_usuarios.sql`, `V2__crear_tabla_tokens_revocados.sql` |
+| Migraciones | `db/migration/V1__crear_tabla_usuarios.sql`, `V2__crear_tabla_tokens_revocados.sql`; roles, permisos y RLS en `V3`–`V6` |
+| Rol de base por conexión | `backend/.../security/bd/` |
 | Sesión, guards, formulario | `frontend/.../src/features/auth/` |
 | Reglas de acceso de la UI | `frontend/.../src/lib/access.ts` |
 
@@ -108,7 +109,101 @@ Reglas mínimas, coincidentes entre frontend y backend:
 
 - CORS admite un único origen (`FRONTEND_URL`).
 - `JWT_SECRET` y las credenciales de base viven en el `.env` raíz (fuera de git).
-- **Usuarios de prueba:** se cargan solo en el perfil `dev`, con el seed repetible `db/seed/dev/R__usuarios_dev.sql` que se suma a `spring.flyway.locations` en `application-dev.properties`. En `prod` no existen.
+- **Usuarios de prueba:** se cargan solo en el perfil `dev`, con el seed repetible `db/seed/dev/R__usuarios_dev.sql` que se suma a `spring.flyway.locations` en `application-dev.properties`. Hay dos editores y dos lectores para poder comprobar que cada uno ve solo su fila. En `prod` no existen.
+- **Credenciales de base:** `DB_USER`/`DB_PASSWORD` son las del owner y solo las usa Flyway. La app se conecta como `gn_app`, con `DB_APP_PASSWORD` (ver 2.11).
+
+### 2.10 Autorización por rol en los endpoints
+
+Se usa el mecanismo estándar de Spring Security, sin código propio:
+
+- `@EnableMethodSecurity` en `SecurityConfig`. Cada endpoint declara su regla con `@PreAuthorize("hasRole('EDITOR')")`.
+- Un bean `RoleHierarchy`: **ADMINISTRADOR > EDITOR > LECTOR**. `hasRole('EDITOR')` habilita también al administrador, y `hasRole('LECTOR')` habilita a los tres. Lo toman tanto `@PreAuthorize` como `authorizeHttpRequests`.
+- Un rol insuficiente responde **403** con `ExceptionInfo`: `ControllerAdvisor` atrapa `AccessDeniedException`. Si no, el handler genérico lo convertiría en 500.
+- El login ignora un `Authorization: Bearer` que venga en la request (`bearerTokenResolver`): siempre corre sin usuario.
+
+Convención para los endpoints que vengan:
+
+| Operación | Anotación |
+|---|---|
+| Lectura que también puede hacer el lector | `@PreAuthorize("hasRole('LECTOR')")` |
+| Operación de negocio (alta, edición, etc.) | `@PreAuthorize("hasRole('EDITOR')")` |
+| Configuración, catálogos, auditoría, usuarios | `@PreAuthorize("hasRole('ADMINISTRADOR')")` |
+
+Sin anotación, el endpoint queda abierto a cualquier usuario autenticado (`anyRequest().authenticated()`). `AutorizacionPorRolTest` verifica la jerarquía con un controller de prueba.
+
+### 2.11 Autorización en la base de datos
+
+Principio de **privilegio mínimo y denegación por defecto**. Sigue el patrón *authenticator* de PostgREST y Supabase: aunque una consulta del backend tuviera un bug, la base solo devuelve o modifica lo que el rol del usuario puede tocar.
+
+**Roles** (`V3__roles_y_privilegios_minimos.sql`):
+
+| Rol | Tipo | Qué puede hacer |
+|---|---|---|
+| Owner (`DB_USER`) | dueño de schemas y tablas | Solo DDL, desde Flyway. La app nunca se conecta con él. |
+| `gn_app` | `LOGIN NOINHERIT` | Rol de conexión del pool. Por sí mismo solo puede: ejecutar `usuarios.buscar_para_login`, leer `seguridad.tokens_revocados` y borrar los tokens ya vencidos. |
+| `gn_administrador`, `gn_editor`, `gn_lector` | `NOLOGIN` | Los permisos reales. `gn_app` puede asumirlos (`SET ROLE`), pero no los hereda (`WITH INHERIT FALSE`). |
+
+La clave de `gn_app` la fija el callback `afterMigrate__clave_rol_app.sql` desde `DB_APP_PASSWORD` en cada arranque.
+
+**Cómo llega el usuario a la base.** `RolBaseDatosDataSource` (módulo `security`) envuelve el datasource. En cada conexión que se toma del pool ejecuta un único statement parametrizado:
+
+```sql
+SELECT set_config('role', 'gn_editor', false), set_config('app.usuario_id', '<publicId del JWT>', false)
+```
+
+- El rol sale de una lista blanca según el claim `nivelAcceso`.
+- Sin usuario autenticado (login, validación del token, tareas programadas) se usa `'none'`, que vuelve a `gn_app`, y `''`.
+- Como cada checkout sobrescribe los dos valores, una conexión reciclada no arrastra la identidad del usuario anterior.
+
+Las políticas leen al usuario con `seguridad.usuario_actual()`.
+
+**Denegar por defecto:**
+
+- Se revocan los privilegios de `PUBLIC` sobre la base, el schema `public` y la ejecución de funciones nuevas. Las tablas nacen sin grants.
+- Toda tabla tiene `ENABLE ROW LEVEL SECURITY`. Sin una política que lo permita, no se ve ni se modifica nada.
+- Cada tabla lleva una política **`RESTRICTIVE`** "requiere autenticación" (`seguridad.usuario_actual() IS NOT NULL`) para los tres roles. Se combina con AND con las permisivas, así que ningún rol opera sin un usuario identificado.
+
+**`usuarios.usuarios`** (`V4`):
+
+| | Administrador | Editor | Lector |
+|---|:-:|:-:|:-:|
+| SELECT | todas las filas | solo la propia | solo la propia |
+| INSERT | ✔ | ✘ | ✘ |
+| UPDATE | `nombre_usuario`, `nombre_apellido`, `email`, `clave`, `nivel_acceso` (no `id` ni `public_id`) | ✘ | ✘ |
+| DELETE | ✘ | ✘ | ✘ |
+
+El login ocurre antes de que haya un usuario. En lugar de abrir la tabla a `gn_app`, este solo puede ejecutar `usuarios.buscar_para_login(identificador)`: una función `SECURITY DEFINER` con `search_path` vacío que devuelve únicamente la fila buscada. Un usuario ya autenticado no puede ejecutarla.
+
+**`seguridad.tokens_revocados`** (`V5`):
+
+- `gn_app` la lee, porque comprobar la revocación es parte de autenticar el token.
+- `gn_app` borra solo filas con `expira_en < now()`: la purga diaria no puede borrar un token vigente.
+- Los tres roles insertan (logout) y leen.
+
+**Excepciones documentadas:**
+
+- `public.flyway_schema_history`: solo la toca el owner.
+- `public.event_publication` (Spring Modulith, `V6`): sin RLS, porque es infraestructura y los listeners asíncronos corren sin usuario.
+
+**Por qué no un enum de PostgreSQL para el nivel de acceso:**
+
+- Solo lo usa una tabla, y el `CHECK` existente ya restringe los valores.
+- Un enum no permite quitar valores y complica el mapeo de Hibernate.
+- Los niveles ya están modelados como roles de base.
+
+**Riesgo aceptado:** la base confía en que `gn_app` fija el rol correcto. Una inyección SQL en la app podría ejecutar `SET ROLE gn_administrador`, como en cualquier esquema de este tipo. Por eso todo el acceso pasa por JPA o consultas parametrizadas.
+
+**Salvaguardas:**
+
+- La app no arranca si se conecta con un rol superusuario o con `BYPASSRLS`. Esto pasaría, por ejemplo, si se conectara con las credenciales del owner, y todas las políticas quedarían salteadas en silencio.
+- `AutorizacionBaseDatosTests` falla si aparece una tabla nueva sin RLS.
+
+**Al crear una tabla nueva** (en su schema de módulo), en la misma migración:
+
+1. `ENABLE ROW LEVEL SECURITY`.
+2. La política `RESTRICTIVE` de autenticación para los tres roles.
+3. Los `GRANT` mínimos por rol, más `USAGE` sobre el schema y la secuencia si corresponde.
+4. Las políticas permisivas que correspondan.
 
 ---
 
@@ -143,21 +238,30 @@ Reglas mínimas, coincidentes entre frontend y backend:
 
 | Sección | Administrador | Editor | Lector |
 |---|:-:|:-:|:-:|
-| Inicio, Unidades de transporte, Neumáticos, Reparaciones, Almacenamiento | ✔ | ✔ | ✔ |
+| Inicio | ✔ | ✔ | ✔ |
+| Unidades de transporte, Neumáticos, Reparaciones, Almacenamiento | ✔ | ✔ | ✘ |
 | Configuración (`/settings`) | ✔ | ✘ | ✘ |
 | Auditoría (`/audit`) | ✔ | ✘ | ✘ |
 
-Por ahora el lector tiene el mismo acceso que el editor: su lógica propia (solo lectura) está pendiente.
+El administrador es el "superusuario" del negocio. El editor puede hacer todo menos Configuración y Auditoría. Las restricciones del lector todavía no están definidas, así que por ahora solo entra a Inicio.
 
-> Esto es **autorización de interfaz**: decide qué se muestra, no qué se permite. Cualquiera con un token válido puede llamar a la API directamente.
+> Esto es **autorización de interfaz**: decide qué se muestra, no qué se permite. Las barreras reales son `@PreAuthorize` en el backend (2.10) y los permisos de la base (2.11).
 
 ---
 
 ## 4. Verificación
 
-- **Backend:** `./mvnw test` corre 66 tests:
+- **Backend:** `./mvnw test` corre 95 tests. Necesita Docker: los tests de integración levantan `postgres:18-alpine` con Testcontainers, porque roles, GRANT y RLS no existen en una base embebida.
   - Unit tests del service con Mockito, incluidos el hash dummy y la normalización.
-  - `@WebMvcTest` del controller con la cadena de seguridad real: endpoints públicos y protegidos, validaciones 400, 401 por credenciales y por token revocado o ausente.
+  - `@WebMvcTest` del controller con la cadena de seguridad real: endpoints públicos y protegidos, validaciones 400, 401 por credenciales y por token revocado o ausente, y login que ignora un Bearer.
+  - `AutorizacionPorRolTest`: jerarquía de roles con `@PreAuthorize` y 403 en JSON.
+  - `AutorizacionBaseDatosTests`, contra PostgreSQL real:
+    - Rol de cada conexión.
+    - Cada rol ve y modifica solo lo permitido.
+    - El administrador no borra ni cambia el `public_id`.
+    - Sin sesión no se lee la tabla, pero el login funciona.
+    - Logout y purga de tokens.
+    - Ninguna tabla sin RLS.
   - El emisor y el validador de JWT con el encoder y decoder reales: token expirado, firmado con otra clave o revocado.
   - El validador del identificador.
   - La estructura modular.
@@ -172,6 +276,15 @@ Por ahora el lector tiene el mismo acceso que el editor: su lógica propia (solo
   - Token viejo rechazado con 401.
   - "Atrás" después del logout.
   - Editor sin Configuración ni Auditoría, también por URL.
+  - Lector solo con Inicio: `/tires` y `/settings` tipeadas a mano redirigen a `/home`.
+  - Administrador con todas las secciones.
+  - `/me` y logout responden 200/204 con los tres roles (corren como `gn_lector`, `gn_editor` y `gn_administrador`).
+- **Base, con `psql` como `gn_app`:**
+  - Sin rol, `SELECT` sobre `usuarios` → `permission denied`.
+  - `gn_lector` ve 1 fila y no puede actualizar ni borrar.
+  - `gn_administrador` ve todas y actualiza, pero `DELETE` y el cambio de `public_id` → `permission denied`.
+  - `gn_administrador` sin `app.usuario_id` ve 0 filas.
+  - `SET ROLE` al owner → denegado.
 
 ---
 
@@ -181,24 +294,25 @@ Ordenado por prioridad.
 
 ### Alta
 
-1. **Autorización por rol en el backend.** Hoy cualquier usuario autenticado puede llamar a cualquier endpoint. Hay que definir la matriz rol → operación y aplicarla con `requestMatchers(...).hasAuthority(...)` en `SecurityConfig` o con `@PreAuthorize` en los controllers (habilitando `@EnableMethodSecurity`). La matriz debe coincidir con `ROUTE_ACCESS`: por ejemplo, los endpoints de auditoría y de catálogos de configuración solo para `ROLE_ADMINISTRADOR`, y el lector sin operaciones de escritura.
-2. **Límite de intentos y bloqueo temporal en el login.** Limitar por IP y por cuenta, por ejemplo con 5 fallos y bloqueo progresivo (Bucket4j o un filtro con contador), y evaluar un CAPTCHA tras varios fallos. Hoy el login no tiene protección contra fuerza bruta.
-3. **Subir los parámetros de Argon2id.** Los valores por defecto de Spring (`m=16 MiB, t=2, p=1`) quedan un poco por debajo del mínimo de OWASP (`m=19 MiB, t=2, p=1`). Se corrige con `new Argon2PasswordEncoder(16, 32, 1, 19456, 2)` en `PasswordConfig`, midiendo antes el tiempo por hash en el servidor real. Los hashes existentes siguen validando porque cada uno guarda sus parámetros.
-4. **HTTPS obligatorio en producción**, con HSTS. Las credenciales y el token viajan en claro sobre HTTP.
+1. **Aplicar la autorización por rol en cada endpoint nuevo.** El mecanismo está listo (`@PreAuthorize` + `RoleHierarchy`, ver 2.10). Falta anotar cada endpoint de negocio a medida que se cree, y definir los permisos de lectura del lector (frontend, backend y políticas de base) con la convención de 2.10 y 2.11.
+2. **Owner no superusuario en producción.** Hoy Flyway migra con el superusuario de la imagen de PostgreSQL. En producción conviene un owner dedicado con `CREATEROLE` (para los roles `gn_*`) y sin `SUPERUSER`.
+3. **Límite de intentos y bloqueo temporal en el login.** Limitar por IP y por cuenta, por ejemplo con 5 fallos y bloqueo progresivo (Bucket4j o un filtro con contador), y evaluar un CAPTCHA tras varios fallos. Hoy el login no tiene protección contra fuerza bruta.
+4. **Subir los parámetros de Argon2id.** Los valores por defecto de Spring (`m=16 MiB, t=2, p=1`) quedan un poco por debajo del mínimo de OWASP (`m=19 MiB, t=2, p=1`). Se corrige con `new Argon2PasswordEncoder(16, 32, 1, 19456, 2)` en `PasswordConfig`, midiendo antes el tiempo por hash en el servidor real. Los hashes existentes siguen validando porque cada uno guarda sus parámetros.
+5. **HTTPS obligatorio en producción**, con HSTS. Las credenciales y el token viajan en claro sobre HTTP.
 
 ### Media
 
-5. **Revocar todas las sesiones de un usuario** al cambiar la contraseña, darlo de baja o cambiarle el nivel de acceso. Hoy solo se revoca el token puntual del logout, y el nivel de acceso viaja en el token, así que un cambio de rol no rige hasta que vence. Opción: un campo `version_token` en `usuarios`, incluido como claim y comparado al validar.
-6. **Baja lógica de usuarios** (`activo` / `deletedAt`, según `AuditableEntity` del diagrama) y rechazo del login para usuarios inactivos.
-7. **Mitigar XSS**, ya que el token está en `sessionStorage`: una Content-Security-Policy estricta en `nginx.conf`, más los headers `X-Content-Type-Options`, `Referrer-Policy` y `frame-ancestors`.
-8. **Expiración en el frontend:** hoy la sesión vencida se detecta al navegar o al recibir un 401. Falta avisar antes de que expire o cerrar la sesión automáticamente al llegar a `expiraEn`, y evaluar un *refresh token* si 8 horas resulta corto o largo para la operación.
-9. **Auditoría de eventos de seguridad** (logins exitosos y fallidos, logouts, cambios de rol) en el módulo `trazabilidad`, que alimentaría la pantalla de Auditoría.
-10. **Exposición en producción:** deshabilitar Swagger y `/api-docs` en `prod` (`springdoc.api-docs.enabled=false`, el propio log lo advierte), confirmar que la consola de H2 no queda habilitada, y fijar `spring.jpa.open-in-view=false`.
+6. **Revocar todas las sesiones de un usuario** al cambiar la contraseña, darlo de baja o cambiarle el nivel de acceso. Hoy solo se revoca el token puntual del logout, y el nivel de acceso viaja en el token, así que un cambio de rol no rige hasta que vence. Opción: un campo `version_token` en `usuarios`, incluido como claim y comparado al validar.
+7. **Baja lógica de usuarios** (`activo` / `deletedAt`, según `AuditableEntity` del diagrama) y rechazo del login para usuarios inactivos.
+8. **Mitigar XSS**, ya que el token está en `sessionStorage`: una Content-Security-Policy estricta en `nginx.conf`, más los headers `X-Content-Type-Options`, `Referrer-Policy` y `frame-ancestors`.
+9. **Expiración en el frontend:** hoy la sesión vencida se detecta al navegar o al recibir un 401. Falta avisar antes de que expire o cerrar la sesión automáticamente al llegar a `expiraEn`, y evaluar un *refresh token* si 8 horas resulta corto o largo para la operación.
+10. **Auditoría de eventos de seguridad** (logins exitosos y fallidos, logouts, cambios de rol) en el módulo `trazabilidad`, que alimentaría la pantalla de Auditoría.
+11. **Exposición en producción:** deshabilitar Swagger y `/api-docs` en `prod` (`springdoc.api-docs.enabled=false`, el propio log lo advierte), y fijar `spring.jpa.open-in-view=false`.
 
 ### Baja
 
-11. **Rotación de la clave JWT:** soportar varias claves con `kid` para rotar `JWT_SECRET` sin cerrar todas las sesiones. Si otros servicios tuvieran que validar tokens, pasar a firma asimétrica (RS256 o EdDSA).
-12. **Rendimiento de la revocación:** cada request consulta `tokens_revocados`. Si el volumen crece, cachear la consulta (Caffeine con TTL igual a la vida del token) o mover la lista a Redis.
-13. **Política de contraseñas para el alta y el cambio de contraseña** (largo mínimo, chequeo contra contraseñas filtradas). No aplica al login.
-14. **Tests del frontend** (schema de login, guards, `syncSessionOnPageRestore`). Hoy la cobertura del frontend es solo la prueba end-to-end manual.
-15. **Análisis de dependencias** (OWASP Dependency-Check o Dependabot) en CI.
+12. **Rotación de la clave JWT:** soportar varias claves con `kid` para rotar `JWT_SECRET` sin cerrar todas las sesiones. Si otros servicios tuvieran que validar tokens, pasar a firma asimétrica (RS256 o EdDSA).
+13. **Rendimiento de la revocación:** cada request consulta `tokens_revocados`. Si el volumen crece, cachear la consulta (Caffeine con TTL igual a la vida del token) o mover la lista a Redis.
+14. **Política de contraseñas para el alta y el cambio de contraseña** (largo mínimo, chequeo contra contraseñas filtradas). No aplica al login.
+15. **Tests del frontend** (schema de login, guards, `syncSessionOnPageRestore`). Hoy la cobertura del frontend es solo la prueba end-to-end manual.
+16. **Análisis de dependencias** (OWASP Dependency-Check o Dependabot) en CI.
