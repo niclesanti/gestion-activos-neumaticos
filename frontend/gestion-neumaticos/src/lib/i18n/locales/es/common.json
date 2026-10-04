@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Gestión de Neumáticos",
+    "company": "Empresa"
+  },
+  "theme": {
+    "toggle": "Cambiar tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
+  },
+  "language": {
+    "toggle": "Cambiar idioma"
+  },
+  "nav": {
+    "group": {
+      "platform": "Plataforma",
+      "operations": "Operaciones",
+      "system": "Sistema"
+    },
+    "home": "Inicio",
+    "transportUnits": "Unidades de transporte",
+    "tires": "Neumáticos",
+    "repairs": "Reparaciones",
+    "storage": "Almacenamiento",
+    "settings": "Configuración",
+    "audit": "Auditoría",
+    "mobileNav": "Navegación rápida",
+    "toasts": "Notificaciones"
+  },
+  "sidebar": {
+    "toggle": "Abrir o cerrar la barra lateral"
+  },
+  "breadcrumb": {
+    "label": "Ruta de navegación"
+  },
+  "user": {
+    "menu": "Menú de usuario",
+    "logout": "Cerrar sesión",
+    "logoutConfirm": {
+      "title": "¿Cerrar sesión?",
+      "description": "Vas a tener que ingresar tus credenciales de nuevo para volver al sistema.",
+      "cancel": "Cancelar",
+      "confirm": "Cerrar sesión"
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} · {{appName}}"
+  },
+  "toast": {
+    "close": "Cerrar notificación"
+  }
+}

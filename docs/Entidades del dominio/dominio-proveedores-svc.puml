@@ -1,0 +1,57 @@
+@startuml dominio-proveedores-svc
+
+title Diagrama de Entidades — módulo "proveedores-svc"
+
+skinparam class {
+    BackgroundColor<<Auditable>> #F9F9F9
+    BorderColor<<Auditable>> #9b9934
+    HeaderBackgroundColor<<Auditable>> #e9e77a
+}
+
+' Agregado raíz del módulo. Único escritor de sus propios datos.
+class ProveedorNeumaticos <<Entity>> <<Auditable>> {
+  - id: Long
+  - publicId: UUID <<unique>>
+  - nombre: String
+  - email: String
+  - telefono: String
+}
+
+package "common" as common {
+  abstract class AuditableEntity <<MappedSuperclass>> <<Compartida>> {
+    - createdAt: Instant
+    - updatedAt: Instant
+    - deletedAt: Instant
+    - createdBy: String
+    - updatedBy: String
+    - deletedBy: String
+  }
+
+  class Provincia <<Entity>> <<Compartida>> {
+    - id: Long
+    - nombre: String
+  }
+
+  class Localidad <<Entity>> <<Compartida>> {
+    - id: Long
+    - nombre: String
+    - codigoPostal: String
+  }
+
+  ' Atributo compuesto (calle + altura + localidad) unique a nivel de negocio
+  class Domicilio <<Entity>> <<Compartida>> {
+    - id: Long
+    - calle: String
+    - altura: String
+    - piso: String
+    - departamento: String
+  }
+}
+
+ProveedorNeumaticos --|> AuditableEntity
+ProveedorNeumaticos "1" *-- "1" Domicilio : domicilio >
+
+Localidad "*" --> "1" Provincia : provincia >
+Domicilio "*" --> "1" Localidad : localidad >
+
+@enduml

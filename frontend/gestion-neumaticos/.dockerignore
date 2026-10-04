@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+.git
+.vscode
+.wrangler
+.dev.vars*
+# Ninguna variable de entorno local entra a la imagen: VITE_API_URL llega como
+# build arg y Vite incrustaría en el bundle cualquier VITE_* que encuentre.
+.env
+.env.*
+*.log

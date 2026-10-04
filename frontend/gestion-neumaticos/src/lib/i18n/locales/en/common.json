@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Tire Management",
+    "company": "Company"
+  },
+  "theme": {
+    "toggle": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "toggle": "Change language"
+  },
+  "nav": {
+    "group": {
+      "platform": "Platform",
+      "operations": "Operations",
+      "system": "System"
+    },
+    "home": "Home",
+    "transportUnits": "Transport units",
+    "tires": "Tires",
+    "repairs": "Repairs",
+    "storage": "Storage",
+    "settings": "Settings",
+    "audit": "Audit",
+    "mobileNav": "Quick navigation",
+    "toasts": "Notifications"
+  },
+  "sidebar": {
+    "toggle": "Toggle sidebar"
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb"
+  },
+  "user": {
+    "menu": "User menu",
+    "logout": "Log out",
+    "logoutConfirm": {
+      "title": "Log out?",
+      "description": "You will need to enter your credentials again to get back into the system.",
+      "cancel": "Cancel",
+      "confirm": "Log out"
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} · {{appName}}"
+  },
+  "toast": {
+    "close": "Close notification"
+  }
+}

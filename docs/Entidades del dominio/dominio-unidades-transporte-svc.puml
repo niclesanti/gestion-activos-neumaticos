@@ -1,0 +1,96 @@
+@startuml dominio-unidades-transporte-svc
+
+title Diagrama de Entidades — módulo "unidades-transporte-svc"
+
+skinparam class {
+    BackgroundColor<<Auditable>> #F9F9F9
+    BorderColor<<Auditable>> #9b9934
+    HeaderBackgroundColor<<Auditable>> #e9e77a
+
+    BackgroundColor<<Service>> #F9F9F9
+    BorderColor<<Service>> #72a047
+    HeaderBackgroundColor<<Service>> #ace46d
+}
+
+' PATRÓN TYPE OBJECT: configuraciones de unidad sin subclasificar por tipo
+class ConfiguracionUnidad <<Entity>> {
+  - id: Long
+  - nombre: String
+  - cantEjesDireccion: Integer
+  - cantEjesTraccion: Integer
+  - cantEjesArrastre: Integer
+  - cantSlotsAuxilio: Integer
+  + obtenerTotalEjes(): Integer
+}
+
+' Agregado raíz del módulo. Único escritor de sus propios datos.
+class UnidadTransporte <<Entity>> <<Auditable>> {
+  - id: Long
+  - publicId: UUID <<unique>>
+  - patente: String
+  + addSlot(slot: SlotUnidadTransporte): void
+  + getSlots(): List<SlotUnidadTransporte>
+}
+
+class SlotUnidadTransporte <<Entity>> {
+  - id: Long
+  - posicion: PosicionEje
+  - nroEje: Integer
+  - tipoEje: TipoEjeUnidadTransporte
+  - neumaticoActualId: Long
+  + montarNeumatico(neumaticoId: Long): void
+  + desmontarNeumatico(): Long
+}
+
+enum PosicionEje {
+  IZQ_DIR
+  DER_DIR
+  EXT_IZQ
+  EXT_DER
+  INT_IZQ
+  INT_DER
+  AUX
+}
+
+enum TipoEjeUnidadTransporte {
+  DIRECCION
+  TRACCION
+  ARRASTRE
+  AUXILIO
+}
+
+' PATRÓN CREACIONAL: FACTORY / BUILDER
+class UnidadTransporteFactory <<Service>> {
+    + crearUnidad(patente: String, 
+    config: ConfiguracionUnidad): UnidadTransporte
+}
+
+package "common" as common {
+  abstract class AuditableEntity <<MappedSuperclass>> <<Compartida>> {
+    - createdAt: Instant
+    - updatedAt: Instant
+    - deletedAt: Instant
+    - createdBy: String
+    - updatedBy: String
+    - deletedBy: String
+  }
+}
+
+UnidadTransporte --|> AuditableEntity
+UnidadTransporte "*" --> "1" ConfiguracionUnidad : configuracion >
+UnidadTransporte "1" *-- "*" SlotUnidadTransporte : slots >
+SlotUnidadTransporte "*" --> "1" UnidadTransporte : unidadTransporte >
+UnidadTransporteFactory ..> UnidadTransporte : <<instancia>>
+UnidadTransporteFactory ..> ConfiguracionUnidad : <<usa>>
+UnidadTransporteFactory ..> SlotUnidadTransporte : <<instancia>>
+
+note right of SlotUnidadTransporte
+  <b>neumaticoActualId (Long):</b> reemplaza la
+  asociación directa a un neumático. Neumatico 
+  pertenece a neumaticos-svc, otro módulo: solo se 
+  guarda su id. Si se necesita mostrar en pantalla 
+  el detalle se resuelve con una llamada api a 
+  neumaticos-svc en el momento.
+end note
+
+@enduml

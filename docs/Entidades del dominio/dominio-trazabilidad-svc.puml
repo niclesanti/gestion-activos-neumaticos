@@ -1,0 +1,102 @@
+@startuml dominio-trazabilidad-svc
+
+title Diagrama de Entidades — módulo "trazabilidad-svc"
+
+skinparam class {
+    BackgroundColor<<Auditable>> #F9F9F9
+    BorderColor<<Auditable>> #9b9934
+    HeaderBackgroundColor<<Auditable>> #e9e77a
+}
+
+' Observador reactivo (3.1.2): no expone casos de uso de negocio, solo
+' escucha eventos ya consumados y persiste el subtipo de EventoNeumatico
+' correspondiente, con los datos de exhibición "congelados" (denormalización
+' deliberada). Por eso, a diferencia de los demás módulos, TODAS sus
+' referencias hacia entidades de otros módulos llevan id + snapshot.
+
+abstract class EventoNeumatico <<Entity>> {
+  - id: Long
+  - tipo: tipoEventoNeumatico
+  - fecha: Instant
+  - usuario: String
+  - comentario: String
+  - neumaticoId: Long
+  - numeroSerieNeumatico: String
+}
+
+enum tipoEventoNeumatico {
+  COMPRA
+  ENVIO_REPARACION
+  REGRESO_REPARACION
+  ASIGNACION
+  DESASIGNACION
+  ENVIO_STOCK
+  REGRESO_STOCK
+  BAJA_OPERATIVA
+  OTROS
+}
+
+enum tipoReparacion {
+  HOMBROS
+  RECAPADO
+  VULCANIZADO
+  NINGUNO
+}
+
+class EventoCompra <<Entity>> {
+  - proveedorId: Long
+  - nombreProveedor: String
+}
+
+class EventoAsignacion <<Entity>> {
+  - unidadTransporteId: Long
+  - patenteUnidadTransporte: String
+  - slotId: Long
+  - posicionSlot: String
+  - conductorId: Long
+  - nombreConductor: String
+}
+
+class EventoDesasignacion <<Entity>> {
+  - unidadTransporteId: Long
+  - patenteUnidadTransporte: String
+  - slotId: Long
+  - posicionSlot: String
+  - conductorId: Long
+  - nombreConductor: String
+}
+
+class EventoServicioTecnico <<Entity>> {
+  - tipoReparacion: tipoReparacion
+  - servicioReparacionId: Long
+  - nombreServicioReparacion: String
+  - conductorId: Long
+  - nombreConductor: String
+}
+
+class EventoStock <<Entity>> {
+  - centroAlmacenamientoId: Long
+  - nombreCentroAlmacenamiento: String
+  - conductorId: Long
+  - nombreConductor: String
+}
+
+class EventoBaja <<Entity>> {
+}
+
+EventoCompra --|> EventoNeumatico
+EventoAsignacion --|> EventoNeumatico
+EventoDesasignacion --|> EventoNeumatico
+EventoServicioTecnico --|> EventoNeumatico
+EventoStock --|> EventoNeumatico
+EventoBaja --|> EventoNeumatico
+
+note top of EventoNeumatico
+  <b>Patrón id + snapshot:</b>
+  cada campo "*Id" (Long) es la referencia formal al
+  agregado dueño en otro módulo; el campo de texto que
+  lo acompaña es una copia del dato "tal como se veía 
+  en el momento del hecho".
+end note
+
+@enduml
