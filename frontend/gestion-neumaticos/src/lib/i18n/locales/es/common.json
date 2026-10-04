@@ -25,7 +25,8 @@
     "storage": "Almacenamiento",
     "settings": "Configuración",
     "audit": "Auditoría",
-    "mobileNav": "Navegación rápida"
+    "mobileNav": "Navegación rápida",
+    "toasts": "Notificaciones"
   },
   "sidebar": {
     "toggle": "Abrir o cerrar la barra lateral"
@@ -35,9 +36,18 @@
   },
   "user": {
     "menu": "Menú de usuario",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "logoutConfirm": {
+      "title": "¿Cerrar sesión?",
+      "description": "Vas a tener que ingresar tus credenciales de nuevo para volver al sistema.",
+      "cancel": "Cancelar",
+      "confirm": "Cerrar sesión"
+    }
   },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"
+  },
+  "toast": {
+    "close": "Cerrar notificación"
   }
 }

@@ -25,7 +25,8 @@
     "storage": "Storage",
     "settings": "Settings",
     "audit": "Audit",
-    "mobileNav": "Quick navigation"
+    "mobileNav": "Quick navigation",
+    "toasts": "Notifications"
   },
   "sidebar": {
     "toggle": "Toggle sidebar"
@@ -35,9 +36,18 @@
   },
   "user": {
     "menu": "User menu",
-    "logout": "Log out"
+    "logout": "Log out",
+    "logoutConfirm": {
+      "title": "Log out?",
+      "description": "You will need to enter your credentials again to get back into the system.",
+      "cancel": "Cancel",
+      "confirm": "Log out"
+    }
   },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"
+  },
+  "toast": {
+    "close": "Close notification"
   }
 }

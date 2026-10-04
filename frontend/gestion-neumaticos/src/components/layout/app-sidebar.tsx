@@ -15,11 +15,14 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { NAV_GROUPS } from "@/lib/navigation"
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
+import { filterNavGroups, NAV_GROUPS } from "@/lib/navigation"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
+  const user = useCurrentUser()
+  const navGroups = filterNavGroups(NAV_GROUPS, user?.accessLevel)
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -51,7 +54,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <SidebarGroup key={group.labelKey}>
             <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
             <SidebarMenu>

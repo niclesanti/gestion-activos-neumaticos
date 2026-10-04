@@ -9,6 +9,13 @@ export type Language = (typeof SUPPORTED_LANGUAGES)[number]["value"]
 
 export const FALLBACK_LANGUAGE: Language = "es"
 
-export const NAMESPACES = ["common", "auth", "settings", "audit"] as const
+export const NAMESPACES = [
+  "common",
+  "auth",
+  "settings",
+  "audit",
+  "dev",
+  "home",
+] as const
 
 export const DEFAULT_NAMESPACE = "common"

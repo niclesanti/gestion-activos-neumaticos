@@ -1,5 +1,6 @@
 import type { ParseKeys } from "i18next"
 import {
+  BellIcon,
   CircleDotIcon,
   HomeIcon,
   ScrollTextIcon,
@@ -9,6 +10,7 @@ import {
   WrenchIcon,
 } from "lucide-react"
 
+import { canAccessRoute, type AccessLevel } from "@/lib/access"
 import { ROUTES, type AppRoute } from "@/lib/routes"
 
 /** Claves de traducción válidas del namespace `common`. */
@@ -64,6 +66,12 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: ROUTES.settings, labelKey: "nav.settings", icon: SettingsIcon },
       { to: ROUTES.audit, labelKey: "nav.audit", icon: ScrollTextIcon },
+      // Showcase de notificaciones: no existe en el build de producción.
+      ...(import.meta.env.DEV
+        ? ([
+            { to: ROUTES.toasts, labelKey: "nav.toasts", icon: BellIcon },
+          ] satisfies NavItem[])
+        : []),
     ],
   },
 ]
@@ -88,3 +96,26 @@ const MOBILE_NAV_GROUP_IDS: NavGroupId[] = ["platform", "operations"]
 export const MOBILE_NAV_ITEMS: NavItem[] = NAV_GROUPS.filter((group) =>
   MOBILE_NAV_GROUP_IDS.includes(group.id)
 ).flatMap((group) => group.items)
+
+/**
+ * Navegación visible para un nivel de acceso (reglas en `ROUTE_ACCESS`): quita
+ * los ítems no permitidos y los grupos que quedan vacíos.
+ */
+export function filterNavGroups(
+  groups: NavGroup[],
+  level: AccessLevel | null | undefined
+): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: filterNavItems(group.items, level),
+    }))
+    .filter((group) => group.items.length > 0)
+}
+
+export function filterNavItems(
+  items: NavItem[],
+  level: AccessLevel | null | undefined
+): NavItem[] {
+  return items.filter((item) => canAccessRoute(level, item.to))
+}

@@ -1,8 +1,12 @@
+import { useSessionStore } from "@/features/auth/store/session-store"
+import type { AccessLevel } from "@/lib/access"
+
 export type CurrentUser = {
   name: string
   email: string
   avatarUrl: string
   initials: string
+  accessLevel: AccessLevel
 }
 
 /** Primeras letras de las dos primeras palabras del nombre, para el AvatarFallback. */
@@ -15,17 +19,20 @@ function getInitials(name: string) {
     .join("")
 }
 
-// TODO: reemplazar por el usuario autenticado real cuando existan el módulo
-// `usuarios` del backend y el endpoint de sesión. Es el único punto a cambiar.
-const MOCK_USER = {
-  name: "Santiago Nicle",
-  email: "santiago.nicle@ejemplo.com",
-  avatarUrl: "",
-}
+/** Usuario de la sesión actual, o `null` si no hay sesión. */
+export function useCurrentUser(): CurrentUser | null {
+  const user = useSessionStore((state) => state.user)
 
-export function useCurrentUser(): CurrentUser {
+  if (!user) {
+    return null
+  }
+
   return {
-    ...MOCK_USER,
-    initials: getInitials(MOCK_USER.name),
+    name: user.nombreApellido,
+    email: user.email,
+    // El backend todavía no maneja avatares: se muestran las iniciales.
+    avatarUrl: "",
+    initials: getInitials(user.nombreApellido),
+    accessLevel: user.nivelAcceso,
   }
 }

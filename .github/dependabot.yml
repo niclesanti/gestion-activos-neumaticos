@@ -1,0 +1,33 @@
+# Actualizaciones de dependencias con avisos de seguridad (OWASP A03, supply chain).
+# bcprov-jdk18on, springdoc y bucket4j están fijados fuera del BOM de Spring
+# Boot: Dependabot los cubre igual porque lee el pom.xml.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend/gestion-neumaticos
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /frontend/gestion-neumaticos
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directories:
+      - /backend/gestion-neumaticos
+      - /frontend/gestion-neumaticos
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
