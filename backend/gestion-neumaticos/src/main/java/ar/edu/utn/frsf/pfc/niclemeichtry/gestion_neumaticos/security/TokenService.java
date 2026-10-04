@@ -9,7 +9,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
  */
 public interface TokenService {
 
-	/** Claim con el nivel de acceso del usuario (ej. {@code ROLE_ADMINISTRADOR}). */
+	/**
+	 * Claim con el nivel de acceso al emitir el token (ej. {@code ROLE_ADMINISTRADOR}).
+	 * Es solo informativo: la autorización usa el nivel vigente en la base
+	 * ({@link NivelAccesoVigente}).
+	 */
 	String CLAIM_NIVEL_ACCESO = "nivelAcceso";
 
 	/**

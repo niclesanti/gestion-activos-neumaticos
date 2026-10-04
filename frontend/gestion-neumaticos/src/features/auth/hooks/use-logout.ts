@@ -16,7 +16,7 @@ export function useLogout() {
   const clearSession = useSessionStore((state) => state.clearSession)
 
   return useMutation({
-    mutationFn: logout,
+    mutationFn: () => logout(),
     onSettled: () => {
       clearSession()
       queryClient.clear()

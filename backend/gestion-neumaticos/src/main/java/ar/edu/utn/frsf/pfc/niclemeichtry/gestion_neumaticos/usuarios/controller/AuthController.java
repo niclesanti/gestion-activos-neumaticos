@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -45,10 +46,18 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Campos obligatorios faltantes o con formato inválido",
                     content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
             @ApiResponse(responseCode = "401", description = "Credenciales inválidas",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "429", description = "Demasiados intentos desde la IP o para la cuenta "
+                    + "(ver header `Retry-After`)",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "503", description = "Servicio saturado (ver header `Retry-After`)",
                     content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
     })
-    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request,
+            @Parameter(hidden = true) HttpServletRequest httpRequest) {
+        // Detrás de un proxy, getRemoteAddr() ya es la IP del cliente
+        // (server.forward-headers-strategy, ver application-prod.properties).
+        return ResponseEntity.ok(authService.login(request, httpRequest.getRemoteAddr()));
     }
 
     @PostMapping("/logout")

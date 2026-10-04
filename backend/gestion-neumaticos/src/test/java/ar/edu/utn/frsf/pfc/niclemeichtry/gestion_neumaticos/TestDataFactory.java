@@ -1,8 +1,10 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +14,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.jwt.JwtProperties;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.limite.LimiteLoginProperties;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.UsuarioSesionDTO;
@@ -26,9 +29,14 @@ public final class TestDataFactory {
 
 	public static final String CLAVE = "Admin.1234";
 	public static final String HASH_CLAVE = "{argon2}hash-de-prueba";
-	public static final String SECRETO_JWT = "un-secreto-de-prueba-de-al-menos-32-bytes!!";
+	/** Secreto JWT en base64, como se configura `JWT_SECRET` (43 bytes decodificados). */
+	public static final String SECRETO_JWT = secretoBase64("un-secreto-de-prueba-de-al-menos-32-bytes!!");
 	public static final String ISSUER = "gestion-neumaticos";
+	public static final String AUDIENCE = "gestion-neumaticos-api";
+	public static final Duration EXPIRACION_TOKEN = Duration.ofHours(2);
 	public static final String TOKEN = "eyJ.token.firma";
+	/** IP de cliente de ejemplo (rango de documentación, RFC 5737). */
+	public static final String IP = "203.0.113.10";
 	public static final Instant EXPIRACION = Instant.parse("2026-10-01T20:00:00Z");
 
 	private TestDataFactory() {
@@ -155,7 +163,19 @@ public final class TestDataFactory {
 	}
 
 	public static JwtProperties jwtProperties(String secreto) {
-		return new JwtProperties(secreto, Duration.ofHours(8), ISSUER);
+		return new JwtProperties(secreto, EXPIRACION_TOKEN, ISSUER, AUDIENCE);
+	}
+
+	/** Codifica en base64 los bytes UTF-8 del texto, como hay que pasar el secreto JWT. */
+	public static String secretoBase64(String texto) {
+		return Base64.getEncoder().encodeToString(texto.getBytes(StandardCharsets.UTF_8));
+	}
+
+	// Límite de intentos de login
+
+	/** Límites chicos para probar: 3 intentos por IP por minuto, 2 fallos por cuenta cada 10 minutos. */
+	public static LimiteLoginProperties limiteLogin() {
+		return new LimiteLoginProperties(3, Duration.ofMinutes(1), 2, Duration.ofMinutes(10), 1_000);
 	}
 
 }

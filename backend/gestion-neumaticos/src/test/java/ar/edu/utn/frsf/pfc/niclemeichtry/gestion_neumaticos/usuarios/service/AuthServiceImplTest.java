@@ -3,6 +3,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.service;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CLAVE;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.EXPIRACION;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.HASH_CLAVE;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.IP;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.administrador;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.jwt;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.loginRequest;
@@ -12,10 +13,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,6 +37,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.CredencialesInvalidasException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.DemasiadosIntentosException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.LimitadorIntentosLogin;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenEmitido;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginResponseDTO;
@@ -55,6 +61,8 @@ class AuthServiceImplTest {
     private TokenService tokenService;
     @Mock
     private UsuarioMapper usuarioMapper;
+    @Mock
+    private LimitadorIntentosLogin limitador;
 
     private final Usuario usuario = administrador();
     private final UsuarioSesionDTO usuarioSesion = usuarioSesion(usuario);
@@ -68,7 +76,7 @@ class AuthServiceImplTest {
     @BeforeEach
     void crearServicio() {
         when(passwordEncoder.encode(anyString())).thenReturn(HASH_DUMMY);
-        authService = new AuthServiceImpl(usuarioRepository, passwordEncoder, tokenService, usuarioMapper);
+        authService = new AuthServiceImpl(usuarioRepository, passwordEncoder, tokenService, usuarioMapper, limitador);
     }
 
     @Nested
@@ -85,7 +93,7 @@ class AuthServiceImplTest {
                     .thenReturn(new TokenEmitido("jwt", EXPIRACION));
             when(usuarioMapper.toSesionDTO(usuario)).thenReturn(usuarioSesion);
 
-            LoginResponseDTO respuesta = authService.login(loginRequest());
+            LoginResponseDTO respuesta = authService.login(loginRequest(), IP);
 
             assertThat(respuesta.token()).isEqualTo("jwt");
             assertThat(respuesta.tipo()).isEqualTo("Bearer");
@@ -102,7 +110,7 @@ class AuthServiceImplTest {
             when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
             when(usuarioMapper.toSesionDTO(usuario)).thenReturn(usuarioSesion);
 
-            LoginResponseDTO respuesta = authService.login(loginRequest(email, CLAVE));
+            LoginResponseDTO respuesta = authService.login(loginRequest(email, CLAVE), IP);
 
             assertThat(respuesta.usuario().email()).isEqualTo(email);
         }
@@ -114,7 +122,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches(CLAVE, HASH_CLAVE)).thenReturn(true);
             when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
 
-            authService.login(loginRequest("  Administrador@Neumaticos.LOCAL ", CLAVE));
+            authService.login(loginRequest("  Administrador@Neumaticos.LOCAL ", CLAVE), IP);
 
             verify(usuarioRepository).buscarParaLogin("administrador@neumaticos.local");
         }
@@ -126,7 +134,7 @@ class AuthServiceImplTest {
             when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches(claveConEspacios, HASH_CLAVE)).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.login(loginRequest("administrador", claveConEspacios)))
+            assertThatThrownBy(() -> authService.login(loginRequest("administrador", claveConEspacios), IP))
                     .isInstanceOf(CredencialesInvalidasException.class);
             verify(passwordEncoder).matches(claveConEspacios, HASH_CLAVE);
         }
@@ -136,7 +144,7 @@ class AuthServiceImplTest {
         void usuarioInexistente() {
             when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.login(loginRequest("noexiste", CLAVE)))
+            assertThatThrownBy(() -> authService.login(loginRequest("noexiste", CLAVE), IP))
                     .isInstanceOf(CredencialesInvalidasException.class)
                     .hasMessage(CredencialesInvalidasException.MENSAJE);
 
@@ -150,12 +158,49 @@ class AuthServiceImplTest {
             when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
             when(passwordEncoder.matches("otra", HASH_CLAVE)).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.login(loginRequest("administrador", "otra")))
+            assertThatThrownBy(() -> authService.login(loginRequest("administrador", "otra"), IP))
                     .isInstanceOf(CredencialesInvalidasException.class)
                     .hasMessage(CredencialesInvalidasException.MENSAJE);
 
             verify(tokenService, never()).generar(any(), anyString());
             verify(usuarioMapper, never()).toSesionDTO(any());
+        }
+
+        @Test
+        @DisplayName("bloqueado por el límite de intentos: no busca al usuario ni calcula el hash")
+        void bloqueadoPorLimiteDeIntentos() {
+            doThrow(new DemasiadosIntentosException(Duration.ofMinutes(3)))
+                    .when(limitador).verificar(IP, "administrador");
+
+            assertThatThrownBy(() -> authService.login(loginRequest(), IP))
+                    .isInstanceOf(DemasiadosIntentosException.class);
+
+            verifyNoInteractions(usuarioRepository, tokenService);
+            verify(passwordEncoder, never()).matches(any(), any());
+        }
+
+        @Test
+        @DisplayName("el intento se cuenta para el identificador normalizado, exista o no la cuenta")
+        void registraElFallo() {
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.login(loginRequest(" NoExiste ", CLAVE), IP))
+                    .isInstanceOf(CredencialesInvalidasException.class);
+
+            verify(limitador).verificar(IP, "noexiste");
+            verify(limitador, never()).registrarExito(anyString());
+        }
+
+        @Test
+        @DisplayName("un login correcto devuelve los intentos de la cuenta")
+        void registraElExito() {
+            when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.of(usuario));
+            when(passwordEncoder.matches(CLAVE, HASH_CLAVE)).thenReturn(true);
+            when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
+
+            authService.login(loginRequest(), IP);
+
+            verify(limitador).registrarExito("administrador");
         }
 
         @Test
@@ -166,7 +211,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches(CLAVE, HASH_CLAVE)).thenReturn(true);
             when(tokenService.generar(any(), anyString())).thenReturn(new TokenEmitido("jwt", Instant.now()));
 
-            authService.login(loginRequest());
+            authService.login(loginRequest(), IP);
 
             ArgumentCaptor<String> nivel = ArgumentCaptor.forClass(String.class);
             verify(tokenService).generar(eq(usuario.getPublicId()), nivel.capture());

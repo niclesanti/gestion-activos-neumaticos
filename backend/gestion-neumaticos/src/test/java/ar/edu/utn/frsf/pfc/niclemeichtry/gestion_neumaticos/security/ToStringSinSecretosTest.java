@@ -21,7 +21,7 @@ class ToStringSinSecretosTest {
 	@Test
 	void jwtPropertiesOcultaElSecreto() {
 		assertThat(jwtProperties().toString())
-				.contains("PT8H")
+				.contains("PT2H")
 				.doesNotContain(SECRETO_JWT);
 	}
 

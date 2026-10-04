@@ -5,12 +5,14 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -109,7 +111,7 @@ class RolBaseDatosDataSourceTest {
 	@Test
 	void unNivelDeAccesoDesconocidoEsAnonimo() throws SQLException {
 		autenticarJwt(jwtBuilder().subject(UUID.randomUUID().toString())
-				.claim(TokenService.CLAIM_NIVEL_ACCESO, "ROLE_SUPERUSUARIO").build());
+				.build(), "ROLE_SUPERUSUARIO");
 		when(destino.getConnection()).thenReturn(conexion);
 
 		dataSource.getConnection();
@@ -119,7 +121,7 @@ class RolBaseDatosDataSourceTest {
 
 	@Test
 	void unTokenSinSubjectEsAnonimo() throws SQLException {
-		autenticarJwt(jwtBuilder().claim(TokenService.CLAIM_NIVEL_ACCESO, "ROLE_EDITOR").build());
+		autenticarJwt(jwtBuilder().build(), "ROLE_EDITOR");
 		when(destino.getConnection()).thenReturn(conexion);
 
 		dataSource.getConnection();
@@ -130,12 +132,37 @@ class RolBaseDatosDataSourceTest {
 	@Test
 	void unSubjectQueNoEsUuidEsAnonimo() throws SQLException {
 		autenticarJwt(jwtBuilder().subject("'; DROP ROLE gn_app; --")
-				.claim(TokenService.CLAIM_NIVEL_ACCESO, "ROLE_EDITOR").build());
+				.build(), "ROLE_EDITOR");
 		when(destino.getConnection()).thenReturn(conexion);
 
 		dataSource.getConnection();
 
 		verificarSesion("none", "");
+	}
+
+	@Test
+	void elRolSaleDeLasAuthoritiesYNoDelClaimDelToken() throws SQLException {
+		UUID publicId = UUID.randomUUID();
+		autenticarJwt(jwtBuilder().subject(publicId.toString())
+				.claim(TokenService.CLAIM_NIVEL_ACCESO, "ROLE_ADMINISTRADOR").build(), "ROLE_LECTOR");
+		when(destino.getConnection()).thenReturn(conexion);
+
+		dataSource.getConnection();
+
+		verificarSesion("gn_lector", publicId.toString());
+	}
+
+	@Test
+	void sinAuthoritiesOConMasDeUnNivelEsAnonimo() throws SQLException {
+		String sub = UUID.randomUUID().toString();
+		when(destino.getConnection()).thenReturn(conexion);
+
+		autenticarJwt(jwtBuilder().subject(sub).build());
+		dataSource.getConnection();
+		autenticarJwt(jwtBuilder().subject(sub).build(), "ROLE_LECTOR", "ROLE_ADMINISTRADOR");
+		dataSource.getConnection();
+
+		verify(statement, times(2)).setString(1, "none");
 	}
 
 	@Test
@@ -153,8 +180,9 @@ class RolBaseDatosDataSourceTest {
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 	}
 
-	private static void autenticarJwt(Jwt jwt) {
-		autenticar(new JwtAuthenticationToken(jwt));
+	private static void autenticarJwt(Jwt jwt, String... authorities) {
+		autenticar(new JwtAuthenticationToken(jwt,
+				Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()));
 	}
 
 	private void verificarSesion(String rol, String usuarioId) throws SQLException {

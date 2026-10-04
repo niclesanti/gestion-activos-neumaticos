@@ -61,6 +61,9 @@ class AutorizacionPorRolTest {
 	@MockitoBean
 	private JwtDecoder jwtDecoder;
 
+	@MockitoBean
+	private NivelAccesoVigente nivelAccesoVigente;
+
 	@ParameterizedTest(name = "{0} en /prueba/{1} → {2}")
 	@CsvSource({
 			"ROLE_LECTOR,        lector,        200",

@@ -18,6 +18,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query(value = "SELECT * FROM usuarios.buscar_para_login(:identificador)", nativeQuery = true)
     Optional<Usuario> buscarParaLogin(String identificador);
 
+    /**
+     * Nivel de acceso actual del usuario, o vacío si ya no existe. Corre mientras
+     * se autentica el token, todavía sin usuario en la base: usa la función
+     * {@code SECURITY DEFINER} de V9__nivel_acceso_vigente.sql.
+     */
+    @Query(value = "SELECT usuarios.nivel_acceso_vigente(:publicId)", nativeQuery = true)
+    Optional<String> nivelAccesoVigente(UUID publicId);
+
     Optional<Usuario> findByPublicId(UUID publicId);
 
 }

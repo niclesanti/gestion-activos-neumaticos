@@ -6,6 +6,8 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.usuarioSesionAdministrador;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -23,6 +25,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +51,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.CredencialesInvalidasException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.DemasiadosIntentosException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ServicioSaturadoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.NivelAccesoVigente;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.SecurityConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSecurityErrorHandler;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginRequestDTO;
@@ -80,6 +87,9 @@ class AuthControllerTest {
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
+    @MockitoBean
+    private NivelAccesoVigente nivelAccesoVigente;
+
     private final UsuarioSesionDTO usuario = usuarioSesionAdministrador();
 
     private String json(Object body) {
@@ -94,7 +104,7 @@ class AuthControllerTest {
         @DisplayName("200 con token y usuario ante credenciales válidas (endpoint público)")
         void loginExitoso() throws Exception {
             LoginRequestDTO request = loginRequest();
-            when(authService.login(request)).thenReturn(loginResponse(usuario));
+            when(authService.login(eq(request), anyString())).thenReturn(loginResponse(usuario));
 
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isOk())
@@ -124,7 +134,7 @@ class AuthControllerTest {
         @DisplayName("ignora un token en el header: el login siempre corre sin usuario")
         void ignoraTokenEnElHeader() throws Exception {
             LoginRequestDTO request = loginRequest();
-            when(authService.login(request)).thenReturn(loginResponse(usuario));
+            when(authService.login(eq(request), anyString())).thenReturn(loginResponse(usuario));
 
             mockMvc.perform(post(LOGIN).header(HttpHeaders.AUTHORIZATION, "Bearer token.viejo.revocado")
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
@@ -136,7 +146,7 @@ class AuthControllerTest {
         @Test
         @DisplayName("401 con mensaje genérico ante credenciales inválidas")
         void credencialesInvalidas() throws Exception {
-            when(authService.login(any())).thenThrow(new CredencialesInvalidasException());
+            when(authService.login(any(), anyString())).thenThrow(new CredencialesInvalidasException());
 
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON)
                             .content(json(loginRequest("noexiste", "cualquiera"))))
@@ -174,11 +184,88 @@ class AuthControllerTest {
         @Test
         @DisplayName("una contraseña de solo espacios es válida (no se recorta)")
         void claveDeEspaciosEsValida() throws Exception {
-            when(authService.login(any())).thenThrow(new CredencialesInvalidasException());
+            when(authService.login(any(), anyString())).thenThrow(new CredencialesInvalidasException());
 
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON)
                             .content(json(loginRequest("administrador", "   "))))
                     .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("pasa al servicio la IP del cliente")
+        void pasaLaIpDelCliente() throws Exception {
+            LoginRequestDTO request = loginRequest();
+            when(authService.login(eq(request), anyString())).thenReturn(loginResponse(usuario));
+
+            mockMvc.perform(post(LOGIN).with(req -> {
+                        req.setRemoteAddr("203.0.113.99");
+                        return req;
+                    }).contentType(MediaType.APPLICATION_JSON).content(json(request)))
+                    .andExpect(status().isOk());
+
+            verify(authService).login(request, "203.0.113.99");
+        }
+
+        @Test
+        @DisplayName("429 con Retry-After al superar el límite de intentos")
+        void demasiadosIntentos() throws Exception {
+            when(authService.login(any(), anyString()))
+                    .thenThrow(new DemasiadosIntentosException(Duration.ofSeconds(90)));
+
+            mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(json(loginRequest())))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(header().string(HttpHeaders.RETRY_AFTER, "90"))
+                    .andExpect(jsonPath("$.message").value(DemasiadosIntentosException.MENSAJE))
+                    .andExpect(jsonPath("$.status").value(429));
+        }
+
+        @Test
+        @DisplayName("503 con Retry-After si el hash de contraseñas está saturado")
+        void servicioSaturado() throws Exception {
+            when(authService.login(any(), anyString()))
+                    .thenThrow(new ServicioSaturadoException(Duration.ofMillis(1500)));
+
+            mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(json(loginRequest())))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(header().string(HttpHeaders.RETRY_AFTER, "2"))
+                    .andExpect(jsonPath("$.status").value(503));
+        }
+
+        @Test
+        @DisplayName("415 (no 500) ante un Content-Type que no es JSON")
+        void contentTypeNoSoportado() throws Exception {
+            mockMvc.perform(post(LOGIN).contentType(MediaType.TEXT_PLAIN).content("identifier=admin"))
+                    .andExpect(status().isUnsupportedMediaType())
+                    .andExpect(jsonPath("$.message").value("Tipo de contenido no soportado"))
+                    .andExpect(jsonPath("$.status").value(415));
+
+            verifyNoInteractions(authService);
+        }
+
+        @Test
+        @DisplayName("responde con las cabeceras de seguridad")
+        void cabecerasDeSeguridad() throws Exception {
+            when(authService.login(any(), anyString())).thenThrow(new CredencialesInvalidasException());
+
+            mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(json(loginRequest())))
+                    .andExpect(header().string("Content-Security-Policy",
+                            org.hamcrest.Matchers.containsString("default-src 'none'")))
+                    .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                    .andExpect(header().string("X-Frame-Options", "DENY"))
+                    .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL,
+                            org.hamcrest.Matchers.containsString("no-store")));
+        }
+
+        @Test
+        @DisplayName("HSTS solo sobre HTTPS")
+        void hstsSobreHttps() throws Exception {
+            when(authService.login(any(), anyString())).thenThrow(new CredencialesInvalidasException());
+
+            mockMvc.perform(post(LOGIN).secure(true).contentType(MediaType.APPLICATION_JSON)
+                            .content(json(loginRequest())))
+                    .andExpect(header().string("Strict-Transport-Security",
+                            org.hamcrest.Matchers.containsString("max-age=31536000")));
         }
 
         @Test
@@ -237,6 +324,7 @@ class AuthControllerTest {
         void usuarioActual() throws Exception {
             Jwt token = TestDataFactory.jwt(usuario.publicId(), NivelAcceso.ROLE_ADMINISTRADOR);
             when(jwtDecoder.decode("token-valido")).thenReturn(token);
+            when(nivelAccesoVigente.buscar(usuario.publicId())).thenReturn(Optional.of("ROLE_ADMINISTRADOR"));
             when(authService.usuarioActual(any(Jwt.class))).thenReturn(usuario);
 
             mockMvc.perform(get(ME).header(HttpHeaders.AUTHORIZATION, "Bearer token-valido"))
@@ -254,6 +342,29 @@ class AuthControllerTest {
         @DisplayName("401 sin token")
         void sinToken() throws Exception {
             mockMvc.perform(get(ME)).andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("401 con un token válido si el usuario ya no está habilitado en la base")
+        void usuarioDadoDeBajaConTokenVigente() throws Exception {
+            Jwt token = TestDataFactory.jwt(usuario.publicId(), NivelAcceso.ROLE_ADMINISTRADOR);
+            when(jwtDecoder.decode("token-valido")).thenReturn(token);
+            when(nivelAccesoVigente.buscar(usuario.publicId())).thenReturn(Optional.empty());
+
+            mockMvc.perform(get(ME).header(HttpHeaders.AUTHORIZATION, "Bearer token-valido"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401));
+
+            verifyNoInteractions(authService);
+        }
+
+        @Test
+        @DisplayName("405 (no 500) con un método no soportado")
+        void metodoNoSoportado() throws Exception {
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(ME).with(jwt()))
+                    .andExpect(status().isMethodNotAllowed())
+                    .andExpect(header().string(HttpHeaders.ALLOW, "GET"))
+                    .andExpect(jsonPath("$.status").value(405));
         }
 
         @Test

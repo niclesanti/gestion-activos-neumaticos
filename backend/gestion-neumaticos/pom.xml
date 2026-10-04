@@ -31,6 +31,7 @@
 		<spring-modulith.version>2.1.1</spring-modulith.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<bouncycastle.version>1.80</bouncycastle.version>
+		<bucket4j.version>8.21.0</bucket4j.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<!-- Cobertura mínima de líneas y de ramas que exige jacoco:check en verify. -->
 		<jacoco.cobertura.minima>0.85</jacoco.cobertura.minima>
@@ -64,6 +65,16 @@
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk18on</artifactId>
 			<version>${bouncycastle.version}</version>
+		</dependency>
+		<!-- Límite de intentos de login (token bucket) sobre un caché acotado en memoria. -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j_jdk17-core</artifactId>
+			<version>${bucket4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

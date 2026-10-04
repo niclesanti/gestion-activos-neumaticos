@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.jwt;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -39,6 +40,7 @@ public class TokenServiceImpl implements TokenService {
 				.id(UUID.randomUUID().toString())
 				.issuer(properties.issuer())
 				.subject(publicId.toString())
+				.audience(List.of(properties.audience()))
 				.issuedAt(ahora)
 				.expiresAt(expiraEn)
 				.claim(CLAIM_NIVEL_ACCESO, nivelAcceso)

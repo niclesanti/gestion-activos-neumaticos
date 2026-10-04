@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.CredencialesInvalidasException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.LimitadorIntentosLogin;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenEmitido;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginRequestDTO;
@@ -20,8 +21,12 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.mapper.Usua
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * El login no es transaccional a propósito: la búsqueda toma y devuelve su
+ * conexión al pool, y el hash (costoso) corre sin retener ninguna. Con una
+ * transacción alrededor, unos pocos logins concurrentes agotaban el pool.
+ */
 @Service
-@Transactional(readOnly = true)
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
@@ -29,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final UsuarioMapper usuarioMapper;
+    private final LimitadorIntentosLogin limitador;
 
     /**
      * Hash de una contraseña que nadie conoce. Si el usuario no existe se lo
@@ -38,32 +44,35 @@ public class AuthServiceImpl implements AuthService {
     private final String hashDummy;
 
     public AuthServiceImpl(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder,
-            TokenService tokenService, UsuarioMapper usuarioMapper) {
+            TokenService tokenService, UsuarioMapper usuarioMapper, LimitadorIntentosLogin limitador) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
         this.usuarioMapper = usuarioMapper;
+        this.limitador = limitador;
         this.hashDummy = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     @Override
-    public LoginResponseDTO login(LoginRequestDTO request) {
+    public LoginResponseDTO login(LoginRequestDTO request, String ip) {
+        // El identificador ya pasó @IdentificadorValido (sin espacios ni saltos de
+        // línea): se puede loguear sin riesgo de inyectar líneas en el log.
         String identificador = request.identifier().strip().toLowerCase(Locale.ROOT);
-        Optional<Usuario> usuario = usuarioRepository.buscarParaLogin(identificador);
+        limitador.verificar(ip, identificador);
 
-        if (usuario.isEmpty()) {
-            passwordEncoder.matches(request.password(), hashDummy);
-            log.info("Inicio de sesión rechazado: credenciales inválidas");
-            throw new CredencialesInvalidasException();
-        }
-        if (!passwordEncoder.matches(request.password(), usuario.get().getClave())) {
-            log.info("Inicio de sesión rechazado: credenciales inválidas");
+        Optional<Usuario> usuario = usuarioRepository.buscarParaLogin(identificador);
+        String hash = usuario.map(Usuario::getClave).orElse(hashDummy);
+        boolean claveCorrecta = passwordEncoder.matches(request.password(), hash);
+
+        if (usuario.isEmpty() || !claveCorrecta) {
+            log.warn("Inicio de sesión rechazado: credenciales inválidas (ip={}, identificador={})", ip, identificador);
             throw new CredencialesInvalidasException();
         }
 
         Usuario autenticado = usuario.get();
+        limitador.registrarExito(identificador);
         TokenEmitido token = tokenService.generar(autenticado.getPublicId(), autenticado.getNivelAcceso().name());
-        log.info("Inicio de sesión exitoso del usuario {}", autenticado.getPublicId());
+        log.info("Inicio de sesión exitoso del usuario {} (ip={})", autenticado.getPublicId(), ip);
 
         return new LoginResponseDTO(token.token(), LoginResponseDTO.TIPO_BEARER, token.expiraEn(),
                 usuarioMapper.toSesionDTO(autenticado));
@@ -77,6 +86,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UsuarioSesionDTO usuarioActual(Jwt jwt) {
         // Un token válido de un usuario dado de baja deja de servir.
         return usuarioRepository.findByPublicId(UUID.fromString(jwt.getSubject()))

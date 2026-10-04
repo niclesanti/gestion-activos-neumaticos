@@ -69,7 +69,7 @@ class AutorizacionBaseDatosTests {
 	@Autowired
 	private JdbcTemplate app;
 
-	/** Conexión del owner (superusuario del contenedor), para preparar datos. */
+	/** Superusuario del contenedor, no sujeto a RLS: solo para preparar y verificar datos. */
 	private JdbcTemplate owner;
 
 	@Autowired
@@ -324,6 +324,105 @@ class AutorizacionBaseDatosTests {
 					.containsExactly(vigente);
 		}
 
+	}
+
+	@Nested
+	@DisplayName("usuarios.nivel_acceso_vigente")
+	class NivelAccesoVigente {
+
+		@Test
+		@DisplayName("sin sesión (al autenticar el token) devuelve el nivel actual, o nada si el usuario no existe")
+		void sinSesionDevuelveElNivel() {
+			assertThat(usuarioRepository.nivelAccesoVigente(editor)).contains("ROLE_EDITOR");
+			assertThat(usuarioRepository.nivelAccesoVigente(UUID.randomUUID())).isEmpty();
+		}
+
+		@Test
+		@DisplayName("un cambio de rol se ve en la consulta siguiente")
+		void reflejaElCambioDeRol() {
+			owner.update("UPDATE usuarios.usuarios SET nivel_acceso = 'ROLE_LECTOR' WHERE public_id = ?", admin);
+
+			assertThat(usuarioRepository.nivelAccesoVigente(admin)).contains("ROLE_LECTOR");
+		}
+
+		@Test
+		@DisplayName("un usuario autenticado no puede ejecutarla")
+		void conSesionNoSePuedeEjecutar() {
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			permisoDenegado(() -> usuarioRepository.nivelAccesoVigente(admin));
+		}
+
+	}
+
+	@Nested
+	@DisplayName("public.event_publication")
+	class EventPublication {
+
+		private static final String INSERTAR = """
+				INSERT INTO public.event_publication (id, completion_attempts, event_type, listener_id,
+				    publication_date, serialized_event, status)
+				VALUES (?, 0, 'Evento', 'listener', now(), '{}', 'PUBLISHED')""";
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM public.event_publication");
+		}
+
+		@Test
+		@DisplayName("el editor publica y marca eventos, pero no los borra")
+		void editorPublica() {
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+			UUID id = UUID.randomUUID();
+
+			app.update(INSERTAR, id);
+			app.update("UPDATE public.event_publication SET completion_date = now() WHERE id = ?", id);
+
+			permisoDenegado(() -> app.update("DELETE FROM public.event_publication"));
+		}
+
+		@Test
+		@DisplayName("el lector no tiene acceso")
+		void lectorSinAcceso() {
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM public.event_publication", Integer.class));
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID()));
+		}
+
+		@Test
+		@DisplayName("sin sesión (listeners asíncronos) se marcan y purgan, pero no se publican")
+		void sinSesionMarcaYPurga() {
+			UUID id = UUID.randomUUID();
+			owner.update(INSERTAR, id);
+
+			assertThat(app.update("UPDATE public.event_publication SET status = 'COMPLETED' WHERE id = ?", id))
+					.isEqualTo(1);
+			assertThat(app.update("DELETE FROM public.event_publication WHERE id = ?", id)).isEqualTo(1);
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID()));
+		}
+
+	}
+
+	@Test
+	@DisplayName("no se puede registrar un token revocado con una expiración lejana")
+	void tokenRevocadoConExpiracionAcotada() {
+		autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+		assertThatThrownBy(() -> app.update("INSERT INTO seguridad.tokens_revocados (jti, expira_en) VALUES (?, ?)",
+				UUID.randomUUID(), Timestamp.from(Instant.now().plus(30, ChronoUnit.DAYS))))
+				.isInstanceOf(DataAccessException.class)
+				.hasStackTraceContaining("row-level security");
+	}
+
+	@Test
+	@DisplayName("las migraciones corren con un owner que no es superusuario")
+	void ownerSinSuperusuario() {
+		assertThat(owner.queryForObject(
+				"SELECT tableowner FROM pg_tables WHERE schemaname = 'usuarios' AND tablename = 'usuarios'",
+				String.class)).isEqualTo(TestcontainersConfiguration.OWNER);
+		assertThat(owner.queryForObject("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = ?",
+				Boolean.class, TestcontainersConfiguration.OWNER)).isFalse();
 	}
 
 	@Test

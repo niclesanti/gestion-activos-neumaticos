@@ -1,5 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security;
 
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,21 +11,26 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.jwt.AutoridadesVigentesConverter;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSecurityErrorHandler;
 
 /**
  * API stateless autenticada con JWT (Bearer). El token lo emite
  * {@link TokenService} en el login y lo valida el resource server de Spring
- * Security en cada request.
+ * Security en cada request; el rol se toma de la base en cada request
+ * ({@link AutoridadesVigentesConverter}), no del token.
  *
  * <p>La autorización por rol se declara en cada endpoint con
  * {@code @PreAuthorize("hasRole('EDITOR')")}: gracias a {@link #roleHierarchy()}
@@ -37,6 +44,14 @@ public class SecurityConfig {
 	public static final String LOGIN_PATH = "/api/auth/login";
 
 	private static final RequestMatcher LOGIN = PathPatternRequestMatcher.pathPattern(HttpMethod.POST, LOGIN_PATH);
+
+	private static final String[] DOCUMENTACION = { "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**" };
+
+	/**
+	 * La API solo devuelve JSON: no carga recursos ni se puede embeber. Swagger UI
+	 * (deshabilitado en prod) necesita scripts y estilos propios, así que queda afuera.
+	 */
+	static final String CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
 	/**
 	 * ADMINISTRADOR &gt; EDITOR &gt; LECTOR: cada nivel incluye los permisos del
@@ -55,19 +70,25 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http,
 			CorsConfigurationSource corsConfigurationSource,
-			JsonSecurityErrorHandler errorHandler) throws Exception {
+			JsonSecurityErrorHandler errorHandler,
+			NivelAccesoVigente nivelAccesoVigente) throws Exception {
 		http
 				.cors(cors -> cors.configurationSource(corsConfigurationSource))
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.headers(headers -> headers
+						.referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
+						.addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+								new NegatedRequestMatcher(documentacion()),
+								new StaticHeadersWriter("Content-Security-Policy", CSP_API))))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/actuator/health", "/actuator/info", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**")
-						.permitAll()
+						.requestMatchers("/actuator/health", "/actuator/info").permitAll()
+						.requestMatchers(DOCUMENTACION).permitAll()
 						.requestMatchers(LOGIN).permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(oauth2 -> oauth2
 						.bearerTokenResolver(bearerTokenResolver())
-						.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+						.jwt(jwt -> jwt.jwtAuthenticationConverter(new AutoridadesVigentesConverter(nivelAccesoVigente)))
 						.authenticationEntryPoint(errorHandler)
 						.accessDeniedHandler(errorHandler))
 				.exceptionHandling(exceptions -> exceptions
@@ -75,6 +96,12 @@ public class SecurityConfig {
 						.accessDeniedHandler(errorHandler));
 
 		return http.build();
+	}
+
+	private static RequestMatcher documentacion() {
+		return new OrRequestMatcher(Arrays.stream(DOCUMENTACION)
+				.map(patron -> (RequestMatcher) PathPatternRequestMatcher.pathPattern(patron))
+				.toList());
 	}
 
 	/**
@@ -85,20 +112,6 @@ public class SecurityConfig {
 	private BearerTokenResolver bearerTokenResolver() {
 		DefaultBearerTokenResolver porDefecto = new DefaultBearerTokenResolver();
 		return request -> LOGIN.matches(request) ? null : porDefecto.resolve(request);
-	}
-
-	/**
-	 * El nivel de acceso viaja en el claim {@code nivelAcceso} y ya tiene el
-	 * prefijo {@code ROLE_}, así que se usa tal cual como authority.
-	 */
-	private JwtAuthenticationConverter jwtAuthenticationConverter() {
-		JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
-		authorities.setAuthoritiesClaimName(TokenService.CLAIM_NIVEL_ACCESO);
-		authorities.setAuthorityPrefix("");
-
-		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-		converter.setJwtGrantedAuthoritiesConverter(authorities);
-		return converter;
 	}
 
 }

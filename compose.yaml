@@ -1,3 +1,9 @@
+# Stack local. Variables en el .env raíz (ver .env.example). Lo que cambia en un
+# despliegue real está en docs/despliegue-seguro.md.
+#
+# Los puertos se publican solo en 127.0.0.1: nada de este stack queda expuesto
+# a la red local. pgAdmin no arranca por defecto:
+#   docker compose --profile herramientas up -d pgadmin
 services:
   backend:
     build:
@@ -7,13 +13,50 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      # Solo la clave del rol sin privilegios gn_app: las migraciones las corre
+      # el servicio "migraciones" y el backend nunca recibe credenciales con DDL.
       DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      SPRING_FLYWAY_ENABLED: "false"
       FRONTEND_URL: ${FRONTEND_URL}
       JWT_SECRET: ${JWT_SECRET}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      migraciones:
+        condition: service_completed_successfully
+
+  # Job de una sola ejecución: migra con el owner (no superusuario) y termina.
+  migraciones:
+    build:
+      context: ./backend/gestion-neumaticos
+      dockerfile: Dockerfile.migraciones
+    # La clave de gn_app viaja como placeholder dentro de un string con dollar
+    # quoting (afterMigrate__clave_rol_app.sql): se rechaza si contiene "$".
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        case "$$FLYWAY_PLACEHOLDERS_APP_PASSWORD" in
+          *'$$'*) echo "DB_APP_PASSWORD no puede contener '$$'" >&2; exit 1 ;;
+        esac
+        exec flyway migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      FLYWAY_USER: ${DB_OWNER_USER}
+      FLYWAY_PASSWORD: ${DB_OWNER_PASSWORD}
+      # Por defecto, solo las migraciones. En dev se suma el seed de usuarios
+      # de prueba: filesystem:/flyway/sql/migraciones,filesystem:/flyway/sql/seed-dev
+      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-filesystem:/flyway/sql/migraciones}
+      FLYWAY_PLACEHOLDERS_APP_PASSWORD: ${DB_APP_PASSWORD}
+      FLYWAY_CONNECT_RETRIES: 10
+      # Sin telemetría de Redgate ni chequeo de versiones contra internet.
+      REDGATE_DISABLE_TELEMETRY: "true"
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,7 +67,12 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       - backend
 
@@ -32,12 +80,18 @@ services:
     image: postgres:18-alpine
     environment:
       POSTGRES_DB: ${DB_NAME}
+      # Superusuario de la imagen: solo lo usa el script de initdb para crear
+      # el owner. Ningún servicio de la aplicación se conecta con él.
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      DB_OWNER_USER: ${DB_OWNER_USER}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql
+      - ./infra/postgres/initdb:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      # Para conectarse desde el IDE o psql locales.
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -45,14 +99,15 @@ services:
       retries: 5
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:9.18
+    profiles: ["herramientas"]
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     volumes:
       - pgadmin-data:/var/lib/pgadmin
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     depends_on:
       - postgres
 

@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios, { type InternalAxiosRequestConfig } from "axios"
 
 import { env } from "@/lib/env"
 
@@ -41,7 +41,10 @@ export function configureApiClient({
       if (
         axios.isAxiosError(error) &&
         error.response?.status === 401 &&
-        !AUTH_ENDPOINTS_WITHOUT_SESSION.includes(error.config?.url ?? "")
+        !AUTH_ENDPOINTS_WITHOUT_SESSION.includes(error.config?.url ?? "") &&
+        // Un 401 tardío de un request hecho con un token anterior (por ejemplo,
+        // el de la sesión previa a un nuevo login) no debe cerrar la sesión actual.
+        sentToken(error.config) === getToken()
       ) {
         onUnauthorized()
       }
@@ -55,7 +58,27 @@ export function configureApiClient({
   }
 }
 
+/** Token Bearer con el que salió un request, o `null` si salió sin token. */
+function sentToken(config: InternalAxiosRequestConfig | undefined) {
+  const header = config?.headers?.Authorization
+  return typeof header === "string" && header.startsWith("Bearer ")
+    ? header.slice("Bearer ".length)
+    : null
+}
+
 /** Código HTTP de un error de axios, o `undefined` si no hubo respuesta. */
 export function getHttpStatus(error: unknown) {
   return axios.isAxiosError(error) ? error.response?.status : undefined
+}
+
+/**
+ * Segundos del header `Retry-After` de un 429/503, o `undefined` si no vino o
+ * no es un número de segundos.
+ */
+export function getRetryAfterSeconds(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return undefined
+  }
+  const seconds = Number(error.response?.headers["retry-after"])
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined
 }

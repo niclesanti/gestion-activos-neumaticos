@@ -3,18 +3,19 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.bd;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import javax.sql.DataSource;
 
 import org.springframework.jdbc.datasource.DelegatingDataSource;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenService;
 
 /**
  * Lleva el usuario autenticado hasta PostgreSQL. En cada conexión que se toma
@@ -81,12 +82,18 @@ class RolBaseDatosDataSource extends DelegatingDataSource {
 			return SesionBaseDatos.ANONIMA;
 		}
 		Jwt jwt = token.getToken();
-		String rol = ROLES.get(jwt.getClaimAsString(TokenService.CLAIM_NIVEL_ACCESO));
-		if (rol == null || jwt.getSubject() == null) {
+		// El nivel sale de las authorities, que el resource server ya cargó desde
+		// la base (AutoridadesVigentesConverter), y no del claim del token.
+		List<String> roles = token.getAuthorities().stream()
+				.map(GrantedAuthority::getAuthority)
+				.map(ROLES::get)
+				.filter(Objects::nonNull)
+				.toList();
+		if (roles.size() != 1 || jwt.getSubject() == null) {
 			return SesionBaseDatos.ANONIMA;
 		}
 		try {
-			return new SesionBaseDatos(rol, UUID.fromString(jwt.getSubject()).toString());
+			return new SesionBaseDatos(roles.getFirst(), UUID.fromString(jwt.getSubject()).toString());
 		} catch (IllegalArgumentException ex) {
 			return SesionBaseDatos.ANONIMA;
 		}

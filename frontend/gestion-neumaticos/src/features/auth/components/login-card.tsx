@@ -28,10 +28,38 @@ import {
   type LoginInput,
   type LoginValues,
 } from "@/features/auth/schemas/login-schema"
-import { getHttpStatus } from "@/lib/api/client"
+import { getHttpStatus, getRetryAfterSeconds } from "@/lib/api/client"
 import { notify } from "@/lib/toast"
 
-type ErrorKey = "login.error.invalidCredentials" | "login.error.unexpected"
+type ErrorKey =
+  | "login.error.invalidCredentials"
+  | "login.error.tooManyAttempts"
+  | "login.error.unavailable"
+  | "login.error.unexpected"
+
+type LoginError = { key: ErrorKey; values?: { count: number } }
+
+/**
+ * Traduce el error del login a un mensaje. El 429 (límite de intentos) es el
+ * mismo exista o no la cuenta, así que tampoco permite enumerarlas.
+ */
+function toLoginError(error: unknown): LoginError {
+  switch (getHttpStatus(error)) {
+    case 401:
+      return { key: "login.error.invalidCredentials" }
+    case 429: {
+      const seconds = getRetryAfterSeconds(error) ?? 60
+      return {
+        key: "login.error.tooManyAttempts",
+        values: { count: Math.max(1, Math.ceil(seconds / 60)) },
+      }
+    }
+    case 503:
+      return { key: "login.error.unavailable" }
+    default:
+      return { key: "login.error.unexpected" }
+  }
+}
 
 /** Los mensajes de zod son claves del namespace `auth` (ver login-schema). */
 type AuthKey = ParseKeys<"auth">
@@ -42,7 +70,7 @@ export function LoginCard() {
   const [showPassword, setShowPassword] = React.useState(false)
   // Se guarda la clave de traducción, no el texto: así el mensaje se retraduce
   // solo si el usuario cambia de idioma con el error visible.
-  const [errorKey, setErrorKey] = React.useState<ErrorKey | null>(null)
+  const [error, setError] = React.useState<LoginError | null>(null)
 
   const {
     register,
@@ -54,7 +82,7 @@ export function LoginCard() {
   })
 
   const onSubmit = (values: LoginValues) => {
-    setErrorKey(null)
+    setError(null)
     // Al guardarse la sesión, GuestOnly redirige (al tablero o a la pantalla
     // pedida): no se navega desde acá porque el componente ya se desmontó.
     login.mutate(values, {
@@ -62,12 +90,12 @@ export function LoginCard() {
         // Mensaje genérico: nunca se distingue usuario inexistente de clave
         // incorrecta. Se avisa por los dos canales: inline, anclado al
         // formulario, y con un toast, que se ve aunque el foco esté en otro lado.
-        const key: ErrorKey =
-          getHttpStatus(error) === 401
-            ? "login.error.invalidCredentials"
-            : "login.error.unexpected"
-        setErrorKey(key)
-        notify.error({ titleKey: `auth:${key}` })
+        const loginError = toLoginError(error)
+        setError(loginError)
+        notify.error({
+          titleKey: `auth:${loginError.key}`,
+          values: loginError.values,
+        })
       },
     })
   }
@@ -87,12 +115,12 @@ export function LoginCard() {
             lugar de los globos nativos del navegador. */}
         <form id="login-form" noValidate onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
-            {errorKey ? (
+            {error ? (
               <p
                 role="alert"
                 className="rounded-3xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               >
-                {t(errorKey)}
+                {t(error.key, error.values)}
               </p>
             ) : null}
             <Field data-invalid={identifierError ? true : undefined}>
@@ -108,7 +136,7 @@ export function LoginCard() {
                 autoCapitalize="none"
                 spellCheck={false}
                 aria-required
-                aria-invalid={Boolean(identifierError) || errorKey !== null}
+                aria-invalid={Boolean(identifierError) || error !== null}
                 aria-describedby={
                   identifierError ? "identifier-error" : undefined
                 }
@@ -133,7 +161,7 @@ export function LoginCard() {
                   placeholder={t("login.password.placeholder")}
                   autoComplete="current-password"
                   aria-required
-                  aria-invalid={Boolean(passwordError) || errorKey !== null}
+                  aria-invalid={Boolean(passwordError) || error !== null}
                   aria-describedby={
                     passwordError ? "password-error" : undefined
                   }

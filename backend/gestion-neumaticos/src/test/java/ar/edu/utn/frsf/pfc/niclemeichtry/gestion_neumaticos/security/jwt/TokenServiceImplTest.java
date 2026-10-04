@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.jwt;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.jwtBuilder;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.jwtProperties;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.secretoBase64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +27,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenEmitido;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.revocacion.TokenRevocado;
@@ -67,7 +69,8 @@ class TokenServiceImplTest {
         assertThat(jwt.getClaimAsString("iss")).isEqualTo("gestion-neumaticos");
         assertThat(UUID.fromString(jwt.getId())).isNotNull();
         assertThat(jwt.getExpiresAt()).isEqualTo(emitido.expiraEn().truncatedTo(ChronoUnit.SECONDS));
-        assertThat(Duration.between(jwt.getIssuedAt(), jwt.getExpiresAt())).isEqualTo(Duration.ofHours(8));
+        assertThat(Duration.between(jwt.getIssuedAt(), jwt.getExpiresAt())).isEqualTo(properties.expiracion());
+        assertThat(jwt.getAudience()).containsExactly(TestDataFactory.AUDIENCE);
     }
 
     @Test
@@ -104,7 +107,7 @@ class TokenServiceImplTest {
 
     @Test
     void rechazaUnTokenFirmadoConOtraClave() {
-        JwtProperties otras = jwtProperties("otro-secreto-distinto-de-al-menos-32-bytes");
+        JwtProperties otras = jwtProperties(secretoBase64("otro-secreto-distinto-de-al-menos-32-bytes"));
         TokenServiceImpl ajeno = new TokenServiceImpl(config.jwtEncoder(config.jwtSecretKey(otras)), otras,
                 tokenRevocadoRepository, Clock.systemUTC());
         String token = ajeno.generar(UUID.randomUUID(), "ROLE_ADMINISTRADOR").token();
@@ -128,18 +131,40 @@ class TokenServiceImplTest {
     }
 
     @Test
-    void fallaAlArrancarSinSecretoOConSecretoCorto() {
-        assertThatThrownBy(() -> config.jwtSecretKey(new JwtProperties(null, Duration.ofHours(1), "x")))
-                .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> config.jwtSecretKey(new JwtProperties("corto", Duration.ofHours(1), "x")))
-                .isInstanceOf(IllegalStateException.class);
+    void rechazaUnTokenParaOtroDestinatario() {
+        JwtProperties otraAudiencia = new JwtProperties(properties.secret(), properties.expiracion(),
+                properties.issuer(), "otra-api");
+        TokenServiceImpl ajeno = new TokenServiceImpl(config.jwtEncoder(key), otraAudiencia,
+                tokenRevocadoRepository, Clock.systemUTC());
+        String token = ajeno.generar(UUID.randomUUID(), "ROLE_ADMINISTRADOR").token();
+        when(tokenRevocadoRepository.existsById(any())).thenReturn(false);
+
+        assertThatThrownBy(() -> decoder().decode(token))
+                .isInstanceOf(JwtValidationException.class)
+                .hasMessageContaining("aud");
     }
 
     @Test
-    void aceptaUnSecretoDeExactamente32Bytes() {
-        assertThat(config.jwtSecretKey(jwtProperties("a".repeat(JwtConfig.LONGITUD_MINIMA_SECRETO))).getEncoded())
+    void fallaAlArrancarSinSecretoConSecretoCortoONoBase64() {
+        assertThatThrownBy(() -> config.jwtSecretKey(jwtProperties(null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("base64");
+        assertThatThrownBy(() -> config.jwtSecretKey(jwtProperties(secretoBase64("corto"))))
+                .isInstanceOf(IllegalStateException.class);
+        // Una frase en texto plano ya no se acepta, aunque mida más de 32 caracteres.
+        assertThatThrownBy(() -> config.jwtSecretKey(jwtProperties("una frase humana con espacios y mas de 32 caracteres")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("openssl rand -base64 32");
+    }
+
+    @Test
+    void aceptaUnSecretoDeExactamente32BytesDecodificados() {
+        String exacto = secretoBase64("a".repeat(JwtConfig.LONGITUD_MINIMA_SECRETO));
+        String corto = secretoBase64("a".repeat(JwtConfig.LONGITUD_MINIMA_SECRETO - 1));
+
+        assertThat(config.jwtSecretKey(jwtProperties(exacto)).getEncoded())
                 .hasSize(JwtConfig.LONGITUD_MINIMA_SECRETO);
-        assertThatThrownBy(() -> config.jwtSecretKey(jwtProperties("a".repeat(JwtConfig.LONGITUD_MINIMA_SECRETO - 1))))
+        assertThatThrownBy(() -> config.jwtSecretKey(jwtProperties(corto)))
                 .isInstanceOf(IllegalStateException.class);
     }
 

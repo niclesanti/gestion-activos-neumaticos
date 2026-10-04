@@ -28,8 +28,17 @@ export async function login(values: LoginValues) {
   return data
 }
 
-export async function logout() {
-  await apiClient.post("/api/auth/logout")
+/**
+ * Revoca el token en el backend. Por defecto usa el de la sesión actual; se
+ * puede pasar uno explícito para revocarlo aunque la sesión local ya se haya
+ * limpiado (cierre por inactividad).
+ */
+export async function logout(token?: string) {
+  await apiClient.post(
+    "/api/auth/logout",
+    null,
+    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+  )
 }
 
 export async function getMe() {

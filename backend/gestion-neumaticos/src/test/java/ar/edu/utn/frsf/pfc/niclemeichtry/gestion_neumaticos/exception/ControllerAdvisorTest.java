@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +11,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,9 +20,15 @@ import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -38,10 +47,6 @@ class ControllerAdvisorTest {
 
     static Stream<Arguments> excepcionesConMensajePropio() {
         return Stream.of(
-                caso("IllegalArgumentException", new IllegalArgumentException("argumento"),
-                        HttpStatus.BAD_REQUEST, ControllerAdvisor::handleIllegalArgumentException),
-                caso("EntityNotFoundException", new EntityNotFoundException("no existe"),
-                        HttpStatus.NOT_FOUND, ControllerAdvisor::handleEntityNotFoundException),
                 caso("UsuarioNoEncontradoException", new UsuarioNoEncontradoException("sin usuario"),
                         HttpStatus.NOT_FOUND, ControllerAdvisor::handleUsuarioNoEncontradoException),
                 caso("UsuarioNoEncontradoException con causa", new UsuarioNoEncontradoException("sin usuario", CAUSA),
@@ -50,8 +55,6 @@ class ControllerAdvisorTest {
                         HttpStatus.CONFLICT, ControllerAdvisor::handleEntidadDuplicadaException),
                 caso("EntidadDuplicadaException con causa", new EntidadDuplicadaException("duplicada", CAUSA),
                         HttpStatus.CONFLICT, ControllerAdvisor::handleEntidadDuplicadaException),
-                caso("IllegalStateException", new IllegalStateException("estado"),
-                        HttpStatus.CONFLICT, ControllerAdvisor::handleIllegalStateException),
                 caso("PermisosDenegadosException", new PermisosDenegadosException("sin permisos"),
                         HttpStatus.FORBIDDEN, ControllerAdvisor::handlePermisosDenegadosException),
                 caso("PermisosDenegadosException con causa", new PermisosDenegadosException("sin permisos", CAUSA),
@@ -111,6 +114,74 @@ class ControllerAdvisorTest {
     }
 
     @Test
+    @DisplayName("excepciones de la plataforma: mensaje genérico, nunca el de la excepción")
+    void excepcionesDeLaPlataformaNoExponenSuMensaje() {
+        assertRespuesta(advisor.handleIllegalArgumentException(
+                new IllegalArgumentException("Invalid UUID string: 1'; --"), request),
+                HttpStatus.BAD_REQUEST, ControllerAdvisor.MENSAJE_SOLICITUD_INVALIDA);
+        assertRespuesta(advisor.handleEntityNotFoundException(
+                new EntityNotFoundException("Unable to find ...Usuario with id 7"), request),
+                HttpStatus.NOT_FOUND, ControllerAdvisor.MENSAJE_NO_ENCONTRADO);
+    }
+
+    @Test
+    @DisplayName("límite de intentos: 429 con Retry-After en segundos, redondeado hacia arriba")
+    void demasiadosIntentos() {
+        ResponseEntity<ExceptionInfo> respuesta = advisor.handleDemasiadosIntentosException(
+                new DemasiadosIntentosException(Duration.ofMillis(61_200)), request);
+
+        assertRespuesta(respuesta, HttpStatus.TOO_MANY_REQUESTS, DemasiadosIntentosException.MENSAJE);
+        assertThat(respuesta.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("62");
+    }
+
+    @Test
+    @DisplayName("servicio saturado: 503 con Retry-After de al menos 1 segundo")
+    void servicioSaturado() {
+        ResponseEntity<ExceptionInfo> respuesta = advisor.handleServicioSaturadoException(
+                new ServicioSaturadoException(Duration.ZERO), request);
+
+        assertRespuesta(respuesta, HttpStatus.SERVICE_UNAVAILABLE, ServicioSaturadoException.MENSAJE);
+        assertThat(respuesta.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("1");
+    }
+
+    static Stream<Arguments> erroresDelFramework() {
+        return Stream.of(
+                Arguments.of(new HttpMediaTypeNotSupportedException("text/plain"), HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                        "Tipo de contenido no soportado"),
+                Arguments.of(new HttpRequestMethodNotSupportedException("DELETE"), HttpStatus.METHOD_NOT_ALLOWED,
+                        "Método HTTP no permitido para este recurso"),
+                Arguments.of(new NoResourceFoundException(HttpMethod.GET, "/api/nada", "api/nada"),
+                        HttpStatus.NOT_FOUND, ControllerAdvisor.MENSAJE_NO_ENCONTRADO),
+                Arguments.of(new HttpMediaTypeNotAcceptableException("xml"), HttpStatus.NOT_ACCEPTABLE,
+                        "No se puede generar una respuesta en el formato pedido"),
+                Arguments.of(new MissingServletRequestParameterException("id", "String"), HttpStatus.BAD_REQUEST,
+                        ControllerAdvisor.MENSAJE_SOLICITUD_INVALIDA),
+                Arguments.of(new AsyncRequestTimeoutException(), HttpStatus.SERVICE_UNAVAILABLE,
+                        ControllerAdvisor.MENSAJE_ERROR_INTERNO));
+    }
+
+    @ParameterizedTest(name = "{0} → {1}")
+    @MethodSource("erroresDelFramework")
+    @DisplayName("errores de Spring MVC: conservan su status (no 500) con un mensaje propio")
+    void erroresDelFrameworkConservanSuStatus(Exception ex, HttpStatus status, String mensaje) {
+        ResponseEntity<ExceptionInfo> respuesta = advisor.handleGeneralException(ex, request);
+
+        assertThat(respuesta).isNotNull();
+        assertThat(respuesta.getStatusCode()).isEqualTo(status);
+        assertThat(respuesta.getBody()).isInstanceOfSatisfying(ExceptionInfo.class, info -> {
+            assertThat(info.status()).isEqualTo(status.value());
+            assertThat(info.message()).isEqualTo(mensaje);
+        });
+    }
+
+    @Test
+    @DisplayName("un status 4xx sin mensaje propio usa el de solicitud inválida")
+    void otrosStatus() {
+        assertThat(ControllerAdvisor.mensajePara(HttpStatus.PAYLOAD_TOO_LARGE)).isEqualTo("La petición es demasiado grande");
+        assertThat(ControllerAdvisor.mensajePara(HttpStatus.CONFLICT)).isEqualTo(ControllerAdvisor.MENSAJE_SOLICITUD_INVALIDA);
+    }
+
+    @Test
     @DisplayName("rol insuficiente (@PreAuthorize): 403")
     void accesoDenegado() {
         assertRespuesta(advisor.handleAccessDeniedException(new AccessDeniedException("Access Denied"), request),
@@ -155,9 +226,9 @@ class ControllerAdvisorTest {
         return new MethodArgumentNotValidException(parametro, errores);
     }
 
-    private static void assertRespuesta(ResponseEntity<ExceptionInfo> respuesta, HttpStatus status, String mensaje) {
+    private static void assertRespuesta(ResponseEntity<?> respuesta, HttpStatus status, String mensaje) {
         assertThat(respuesta.getStatusCode()).isEqualTo(status);
-        assertThat(respuesta.getBody()).isNotNull().satisfies(info -> {
+        assertThat(respuesta.getBody()).isInstanceOfSatisfying(ExceptionInfo.class, info -> {
             assertThat(info.status()).isEqualTo(status.value());
             assertThat(info.message()).isEqualTo(mensaje);
             assertThat(info.path()).isEqualTo("uri=" + URI);
