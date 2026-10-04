@@ -26,8 +26,13 @@ Run all Maven commands from `backend/gestion-neumaticos/` using the wrapper (`./
 ./mvnw spring-boot:run        # run the app
 ./mvnw test                   # run all tests
 ./mvnw test -Dtest=ClassName  # run a single test class
+./mvnw verify                 # tests + JaCoCo coverage gate
 ./mvnw clean package          # build a jar
 ```
+
+Coverage: JaCoCo (`jacoco-maven-plugin`, version in the `jacoco.version` property) instruments every test run; `verify` writes the report to `target/site/jacoco/index.html` and `jacoco:check` fails the build if LINE or BRANCH coverage of the whole bundle drops below 85 % (`jacoco.cobertura.minima` property). Only `GestionNeumaticosApplication` is excluded; `lombok.config` (`lombok.addLombokGeneratedAnnotation = true`) makes JaCoCo skip Lombok-generated code, while MapStruct `*MapperImpl`s are measured, so test mappers too (null source and null fields).
+
+Test data: build fixtures with the static methods of `TestDataFactory` (test root package: users per `NivelAcceso`, `usuarioNuevo` for persisting, login DTOs, JWTs/`JwtAuthenticationToken`, `JwtProperties`) instead of `setUp()` methods or per-class builders; extend it when a new module needs fixtures. `@BeforeEach` is kept only for lifecycle wiring (mock-dependent construction, DB reset in integration tests).
 
 Architecture/stack notes:
 - Package root: `ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos` (note: underscore, not hyphen — Maven's default package name from `gestion-neumaticos` is invalid Java, so it was changed; see `HELP.md`).
@@ -41,7 +46,7 @@ Architecture/stack notes:
 - Modulith's `event_publication` table is created by Flyway (`V6`, no RLS — framework infrastructure); `spring.modulith.events.jpa.schema-initialization.enabled=false` because `gn_app` cannot run DDL.
 - API docs via springdoc-openapi at `/swagger-ui.html` and `/api-docs` (paths configured explicitly in `application.properties`, not the defaults).
 - Actuator exposes only `health` and `info` over the web.
-- Lombok is available for boilerplate reduction.
+- Lombok is available for boilerplate reduction (`backend/gestion-neumaticos/lombok.config` marks generated code `@Generated` for JaCoCo).
 - Integration tests run against a real PostgreSQL 18 via Testcontainers (Docker required for `./mvnw test`): import `TestcontainersConfiguration` (test root package), which migrates as the container superuser and connects the app as `gn_app` (no `@ServiceConnection`, it would connect as superuser and bypass RLS).
 - Test dependencies include `spring-modulith-starter-test` and `spring-restdocs-mockmvc`/`asciidoctor-maven-plugin` (restdocs generation wired into the Maven build) — new module tests should use Modulith's test support for module-boundary verification, and API tests intended to produce documentation should use Spring REST Docs conventions already set up in the POM.
 - MapStruct (`mapstruct` + `mapstruct-processor`, with `lombok-mapstruct-binding` so it coexists with Lombok's annotation processor) is configured via `MapstructConfig` in `config/` for entity↔DTO mapping — no mappers exist yet, but new ones should be MapStruct `@Mapper` interfaces rather than hand-written conversion code.

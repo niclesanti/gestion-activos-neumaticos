@@ -1,5 +1,9 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.controller;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.TOKEN;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.loginRequest;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.loginResponse;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.usuarioSesionAdministrador;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -19,8 +23,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Instant;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -42,12 +44,12 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.CredencialesInvalidasException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.SecurityConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSecurityErrorHandler;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginRequestDTO;
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.LoginResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.UsuarioSesionDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.entity.NivelAcceso;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.service.AuthService;
@@ -78,8 +80,7 @@ class AuthControllerTest {
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
-    private final UsuarioSesionDTO usuario = new UsuarioSesionDTO(UUID.randomUUID(), "administrador",
-            "Ana Administradora", "administrador@neumaticos.local", NivelAcceso.ROLE_ADMINISTRADOR);
+    private final UsuarioSesionDTO usuario = usuarioSesionAdministrador();
 
     private String json(Object body) {
         return jsonMapper.writeValueAsString(body);
@@ -92,13 +93,12 @@ class AuthControllerTest {
         @Test
         @DisplayName("200 con token y usuario ante credenciales válidas (endpoint público)")
         void loginExitoso() throws Exception {
-            LoginRequestDTO request = new LoginRequestDTO("administrador", "Admin.1234");
-            when(authService.login(request)).thenReturn(new LoginResponseDTO("eyJ.token.firma", "Bearer",
-                    Instant.parse("2026-10-01T20:00:00Z"), usuario));
+            LoginRequestDTO request = loginRequest();
+            when(authService.login(request)).thenReturn(loginResponse(usuario));
 
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.token").value("eyJ.token.firma"))
+                    .andExpect(jsonPath("$.token").value(TOKEN))
                     .andExpect(jsonPath("$.tipo").value("Bearer"))
                     .andExpect(jsonPath("$.usuario.nombreUsuario").value("administrador"))
                     .andExpect(jsonPath("$.usuario.nivelAcceso").value("ROLE_ADMINISTRADOR"))
@@ -123,9 +123,8 @@ class AuthControllerTest {
         @Test
         @DisplayName("ignora un token en el header: el login siempre corre sin usuario")
         void ignoraTokenEnElHeader() throws Exception {
-            LoginRequestDTO request = new LoginRequestDTO("administrador", "Admin.1234");
-            when(authService.login(request)).thenReturn(new LoginResponseDTO("eyJ.token.firma", "Bearer",
-                    Instant.parse("2026-10-01T20:00:00Z"), usuario));
+            LoginRequestDTO request = loginRequest();
+            when(authService.login(request)).thenReturn(loginResponse(usuario));
 
             mockMvc.perform(post(LOGIN).header(HttpHeaders.AUTHORIZATION, "Bearer token.viejo.revocado")
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
@@ -140,7 +139,7 @@ class AuthControllerTest {
             when(authService.login(any())).thenThrow(new CredencialesInvalidasException());
 
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON)
-                            .content(json(new LoginRequestDTO("noexiste", "cualquiera"))))
+                            .content(json(loginRequest("noexiste", "cualquiera"))))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.message").value("Credenciales inválidas"))
                     .andExpect(jsonPath("$.status").value(401));
@@ -165,7 +164,7 @@ class AuthControllerTest {
         @DisplayName("400 sin consultar el servicio ante campos faltantes o inválidos")
         void validaElRequest(String caso, String identifier, String password, String campo) throws Exception {
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON)
-                            .content(json(new LoginRequestDTO(identifier, password))))
+                            .content(json(loginRequest(identifier, password))))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString(campo + ":")));
 
@@ -178,7 +177,7 @@ class AuthControllerTest {
             when(authService.login(any())).thenThrow(new CredencialesInvalidasException());
 
             mockMvc.perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON)
-                            .content(json(new LoginRequestDTO("administrador", "   "))))
+                            .content(json(loginRequest("administrador", "   "))))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -236,9 +235,7 @@ class AuthControllerTest {
         @Test
         @DisplayName("200 con el usuario del token válido")
         void usuarioActual() throws Exception {
-            Jwt token = Jwt.withTokenValue("token-valido").header("alg", "HS256")
-                    .subject(usuario.publicId().toString()).jti(UUID.randomUUID().toString())
-                    .claim("nivelAcceso", "ROLE_ADMINISTRADOR").build();
+            Jwt token = TestDataFactory.jwt(usuario.publicId(), NivelAcceso.ROLE_ADMINISTRADOR);
             when(jwtDecoder.decode("token-valido")).thenReturn(token);
             when(authService.usuarioActual(any(Jwt.class))).thenReturn(usuario);
 

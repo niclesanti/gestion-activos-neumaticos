@@ -1,5 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.jwt;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.jwtBuilder;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.jwtProperties;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,7 +17,6 @@ import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -37,20 +38,16 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.revocacion.
 @ExtendWith(MockitoExtension.class)
 class TokenServiceImplTest {
 
-    private static final String SECRETO = "un-secreto-de-prueba-de-al-menos-32-bytes!!";
-
     @Mock
     private TokenRevocadoRepository tokenRevocadoRepository;
 
     private final JwtConfig config = new JwtConfig();
-    private final JwtProperties properties = new JwtProperties(SECRETO, Duration.ofHours(8), "gestion-neumaticos");
-    private SecretKey key;
-    private JwtDecoder decoder;
+    private final JwtProperties properties = jwtProperties();
+    private final SecretKey key = config.jwtSecretKey(properties);
 
-    @BeforeEach
-    void setUp() {
-        key = config.jwtSecretKey(properties);
-        decoder = config.jwtDecoder(key, properties, new TokenNoRevocadoValidator(tokenRevocadoRepository));
+    /** Decoder real del resource server, con el validador de revocados sobre el mock. */
+    private JwtDecoder decoder() {
+        return config.jwtDecoder(key, properties, new TokenNoRevocadoValidator(tokenRevocadoRepository));
     }
 
     private TokenServiceImpl tokenService(Clock clock) {
@@ -63,7 +60,7 @@ class TokenServiceImplTest {
         when(tokenRevocadoRepository.existsById(any())).thenReturn(false);
 
         TokenEmitido emitido = tokenService(Clock.systemUTC()).generar(publicId, "ROLE_EDITOR");
-        Jwt jwt = decoder.decode(emitido.token());
+        Jwt jwt = decoder().decode(emitido.token());
 
         assertThat(jwt.getSubject()).isEqualTo(publicId.toString());
         assertThat(jwt.getClaimAsString(TokenService.CLAIM_NIVEL_ACCESO)).isEqualTo("ROLE_EDITOR");
@@ -79,8 +76,8 @@ class TokenServiceImplTest {
         TokenServiceImpl service = tokenService(Clock.systemUTC());
         UUID publicId = UUID.randomUUID();
 
-        String jti1 = decoder.decode(service.generar(publicId, "ROLE_EDITOR").token()).getId();
-        String jti2 = decoder.decode(service.generar(publicId, "ROLE_EDITOR").token()).getId();
+        String jti1 = decoder().decode(service.generar(publicId, "ROLE_EDITOR").token()).getId();
+        String jti2 = decoder().decode(service.generar(publicId, "ROLE_EDITOR").token()).getId();
 
         assertThat(jti1).isNotEqualTo(jti2);
     }
@@ -90,7 +87,7 @@ class TokenServiceImplTest {
         TokenEmitido emitido = tokenService(Clock.systemUTC()).generar(UUID.randomUUID(), "ROLE_ADMINISTRADOR");
         when(tokenRevocadoRepository.existsById(any())).thenReturn(true);
 
-        assertThatThrownBy(() -> decoder.decode(emitido.token()))
+        assertThatThrownBy(() -> decoder().decode(emitido.token()))
                 .isInstanceOf(JwtValidationException.class)
                 .hasMessageContaining("revocado");
     }
@@ -100,20 +97,19 @@ class TokenServiceImplTest {
         Clock haceUnDia = Clock.fixed(Instant.now().minus(Duration.ofDays(1)), ZoneOffset.UTC);
         TokenEmitido emitido = tokenService(haceUnDia).generar(UUID.randomUUID(), "ROLE_ADMINISTRADOR");
 
-        assertThatThrownBy(() -> decoder.decode(emitido.token()))
+        assertThatThrownBy(() -> decoder().decode(emitido.token()))
                 .isInstanceOf(JwtValidationException.class)
                 .hasMessageContaining("expired");
     }
 
     @Test
     void rechazaUnTokenFirmadoConOtraClave() {
-        JwtProperties otras = new JwtProperties("otro-secreto-distinto-de-al-menos-32-bytes", Duration.ofHours(8),
-                "gestion-neumaticos");
+        JwtProperties otras = jwtProperties("otro-secreto-distinto-de-al-menos-32-bytes");
         TokenServiceImpl ajeno = new TokenServiceImpl(config.jwtEncoder(config.jwtSecretKey(otras)), otras,
                 tokenRevocadoRepository, Clock.systemUTC());
         String token = ajeno.generar(UUID.randomUUID(), "ROLE_ADMINISTRADOR").token();
 
-        assertThatThrownBy(() -> decoder.decode(token))
+        assertThatThrownBy(() -> decoder().decode(token))
                 .isInstanceOf(org.springframework.security.oauth2.jwt.BadJwtException.class);
     }
 
@@ -121,8 +117,7 @@ class TokenServiceImplTest {
     void revocarGuardaElJtiHastaSuExpiracion() {
         UUID jti = UUID.randomUUID();
         Instant expiraEn = Instant.now().plusSeconds(3600).truncatedTo(ChronoUnit.SECONDS);
-        Jwt jwt = Jwt.withTokenValue("token").header("alg", "HS256")
-                .jti(jti.toString()).subject(UUID.randomUUID().toString()).expiresAt(expiraEn).build();
+        Jwt jwt = jwtBuilder().jti(jti.toString()).subject(UUID.randomUUID().toString()).expiresAt(expiraEn).build();
 
         tokenService(Clock.systemUTC()).revocar(jwt);
 
@@ -137,6 +132,14 @@ class TokenServiceImplTest {
         assertThatThrownBy(() -> config.jwtSecretKey(new JwtProperties(null, Duration.ofHours(1), "x")))
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> config.jwtSecretKey(new JwtProperties("corto", Duration.ofHours(1), "x")))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void aceptaUnSecretoDeExactamente32Bytes() {
+        assertThat(config.jwtSecretKey(jwtProperties("a".repeat(JwtConfig.LONGITUD_MINIMA_SECRETO))).getEncoded())
+                .hasSize(JwtConfig.LONGITUD_MINIMA_SECRETO);
+        assertThatThrownBy(() -> config.jwtSecretKey(jwtProperties("a".repeat(JwtConfig.LONGITUD_MINIMA_SECRETO - 1))))
                 .isInstanceOf(IllegalStateException.class);
     }
 

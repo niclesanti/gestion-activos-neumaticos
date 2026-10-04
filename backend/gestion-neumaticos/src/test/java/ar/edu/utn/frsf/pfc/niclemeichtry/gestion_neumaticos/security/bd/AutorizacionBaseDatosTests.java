@@ -1,5 +1,9 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.bd;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.HASH_CLAVE;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.autenticacion;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.jwt;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.usuarioNuevo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -23,10 +27,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestcontainersConfiguration;
@@ -46,8 +48,6 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.repository.
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class AutorizacionBaseDatosTests {
-
-	private static final String HASH = "{argon2}hash-de-prueba";
 
 	private final UUID admin = UUID.randomUUID();
 	private final UUID editor = UUID.randomUUID();
@@ -96,22 +96,11 @@ class AutorizacionBaseDatosTests {
 		owner.update("""
 				INSERT INTO usuarios.usuarios (public_id, nombre_usuario, nombre_apellido, email, clave, nivel_acceso)
 				VALUES (?, ?, ?, ?, ?, ?)""",
-				publicId, nombre, "Usuario " + nombre, nombre + "@neumaticos.local", HASH, nivel.name());
-	}
-
-	private static Jwt jwt(UUID publicId, NivelAcceso nivel) {
-		return Jwt.withTokenValue("token")
-				.header("alg", "HS256")
-				.jti(UUID.randomUUID().toString())
-				.subject(publicId.toString())
-				.claim(TokenService.CLAIM_NIVEL_ACCESO, nivel.name())
-				.expiresAt(Instant.now().plus(1, ChronoUnit.HOURS))
-				.build();
+				publicId, nombre, "Usuario " + nombre, nombre + "@neumaticos.local", HASH_CLAVE, nivel.name());
 	}
 
 	private static void autenticar(UUID publicId, NivelAcceso nivel) {
-		SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(
-				jwt(publicId, nivel), List.of(new SimpleGrantedAuthority(nivel.name()))));
+		SecurityContextHolder.getContext().setAuthentication(autenticacion(publicId, nivel));
 	}
 
 	private static void permisoDenegado(Runnable operacion) {
@@ -238,13 +227,7 @@ class AutorizacionBaseDatosTests {
 		void adminInsertaYActualiza() {
 			autenticar(admin, NivelAcceso.ROLE_ADMINISTRADOR);
 
-			Usuario nuevo = usuarioRepository.save(Usuario.builder()
-					.nombreUsuario("nuevo")
-					.nombreApellido("Usuario Nuevo")
-					.email("nuevo@neumaticos.local")
-					.clave(HASH)
-					.nivelAcceso(NivelAcceso.ROLE_LECTOR)
-					.build());
+			Usuario nuevo = usuarioRepository.save(usuarioNuevo("nuevo", NivelAcceso.ROLE_LECTOR));
 
 			nuevo.setNombreUsuario("renombrado");
 			nuevo.setNombreApellido("Usuario Renombrado");
