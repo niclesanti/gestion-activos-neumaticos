@@ -30,7 +30,7 @@
 		<java.version>21</java.version>
 		<spring-modulith.version>2.1.1</spring-modulith.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
-		<bouncycastle.version>1.80</bouncycastle.version>
+		<bouncycastle.version>1.86</bouncycastle.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<!-- Cobertura mínima de líneas y de ramas que exige jacoco:check en verify. -->
