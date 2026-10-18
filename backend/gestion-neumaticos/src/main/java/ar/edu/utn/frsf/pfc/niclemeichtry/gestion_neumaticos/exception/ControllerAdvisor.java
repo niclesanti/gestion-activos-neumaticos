@@ -52,6 +52,11 @@ public class ControllerAdvisor {
         return respuesta(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(EntidadNoEncontradaException.class)
+    public ResponseEntity<ExceptionInfo> handleEntidadNoEncontradaException(EntidadNoEncontradaException ex, WebRequest request) {
+        return respuesta(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(EntidadDuplicadaException.class)
     public ResponseEntity<ExceptionInfo> handleEntidadDuplicadaException(EntidadDuplicadaException ex, WebRequest request) {
         return respuesta(HttpStatus.CONFLICT, ex.getMessage(), request);

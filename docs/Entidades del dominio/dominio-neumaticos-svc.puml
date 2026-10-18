@@ -16,14 +16,19 @@ class MarcaNeumatico <<Entity>> {
 ' Agregado raíz del módulo. Único escritor del estado operativo del
 ' neumático (estadoActual, situacionOperativaVigente, nodoUbicacion,
 ' kilometraje) — ver criterio 3 de vista-de-modulos.md.
+' kilometrajeTotal, kilometrajeUltimaReparacion y cantidadRecapados son
+' opcionales (null = dato desconocido), salvo: NUEVO exige los tres en 0 y
+' los estados recapados exigen cantidadRecapados >= 1 (HU-11).
 class Neumatico <<Entity>> <<Auditable>> {
   - id: Long
   - publicId: UUID <<unique>>
   - numeroSerie: String
   - estadoActual: EstadoNeumatico
   - enEspera: Boolean
-  - kilometraje: Float
+  - kilometrajeTotal: Float
+  - kilometrajeUltimaReparacion: Float
   - tipoOrigen: TipoEjeUnidadTransporte
+  - tipoActual: TipoEjeUnidadTransporte
   - cantidadRecapados: Integer
   - situacionOperativaVigente: SituacionOperativa
   - nodoUbicacion: String
@@ -32,10 +37,13 @@ class Neumatico <<Entity>> <<Auditable>> {
   - centroAlmacenamientoId: Long
   - servicioReparacionId: Long
   + setCalculoKm(kmAntes: Float, kmDespues: Float): void
+  + setKilometraje(kilometraje: Float): void
   + agregarNeumaticoStock(idCentroAlmacenamiento: Long): void
   + removerNeumaticoStock(): void
   + enviarNeumaticoReparacion(idServicioReparacion: Long): void
   + reingresarNeumatico(): void
+  + nuevoRecapado(): void
+  + montarEnSlot(slotMontadoId: Long): void
 }
 
 enum EstadoNeumatico {
@@ -61,6 +69,7 @@ enum TipoEjeUnidadTransporte {
   TRACCION
   ARRASTRE
   AUXILIO
+  SIN_ESPECIFICAR
 }
 
 package "common" as common {

@@ -1,33 +1,56 @@
 # Actualizaciones de dependencias con avisos de seguridad (OWASP A03, supply chain).
 # bcprov-jdk18on, springdoc y bucket4j están fijados fuera del BOM de Spring
 # Boot: Dependabot los cubre igual porque lee el pom.xml.
+# Revisión mensual contra develop; minor y patch llegan agrupados en un solo PR
+# por ecosistema, los major por separado. Las alertas de seguridad no dependen
+# de este calendario.
 version: 2
 updates:
   - package-ecosystem: maven
     directory: /backend/gestion-neumaticos
+    target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      maven-menores:
+        update-types: [minor, patch]
 
   - package-ecosystem: npm
     directory: /frontend/gestion-neumaticos
+    target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      npm-menores:
+        update-types: [minor, patch]
 
   - package-ecosystem: docker
     directories:
       - /backend/gestion-neumaticos
       - /frontend/gestion-neumaticos
+    target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      docker-menores:
+        update-types: [minor, patch]
 
   - package-ecosystem: docker-compose
     directory: /
+    target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      compose-menores:
+        update-types: [minor, patch]
 
   - package-ecosystem: github-actions
     directory: /
+    target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      actions-menores:
+        update-types: [minor, patch]
