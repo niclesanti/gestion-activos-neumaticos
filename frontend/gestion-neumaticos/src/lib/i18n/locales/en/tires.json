@@ -1,0 +1,112 @@
+{
+  "title": "Tires",
+  "subtitle": "Manage the fleet's tires throughout their whole lifecycle.",
+  "actions": {
+    "register": "Register tire"
+  },
+  "dialog": {
+    "createTitle": "Register tire",
+    "createDescription": "Fill in the tire details. It will stay on hold until you mount it, send it to storage or to repair.",
+    "cancel": "Cancel",
+    "submit": "Register",
+    "submitting": "Registering…"
+  },
+  "confirm": {
+    "title": "Confirm the registration?",
+    "withSerial": "The serial number {{serial}} can't be changed once the tire is registered.",
+    "withoutSerial": "You are registering the tire without a serial number and won't be able to add one later.",
+    "cancel": "Review",
+    "confirm": "Yes, register"
+  },
+  "form": {
+    "serialNumber": {
+      "label": "Serial number",
+      "placeholder": "E.g.: 4B12-3456",
+      "description": "Optional. It can't be changed after registration."
+    },
+    "brand": {
+      "label": "Brand",
+      "placeholder": "Choose a brand",
+      "loading": "Loading brands…",
+      "error": "We couldn't load the brands"
+    },
+    "status": {
+      "label": "Status",
+      "placeholder": "Choose the status"
+    },
+    "supplier": {
+      "label": "Supplier",
+      "placeholder": "Choose the supplier",
+      "description": "Optional. Who the new tire was bought from.",
+      "none": "No supplier",
+      "loading": "Loading suppliers…",
+      "error": "We couldn't load the suppliers"
+    },
+    "originAxle": {
+      "label": "Origin axle type",
+      "placeholder": "Choose the axle type"
+    },
+    "currentAxle": {
+      "label": "Current axle type",
+      "placeholder": "Choose the axle type"
+    },
+    "totalKm": {
+      "label": "Current mileage (km)",
+      "placeholder": "E.g. 85000"
+    },
+    "kmSinceRepair": {
+      "label": "Km since last repair",
+      "placeholder": "E.g. 12000"
+    },
+    "retreads": {
+      "label": "Number of retreads",
+      "placeholder": "E.g. 1"
+    },
+    "comment": {
+      "label": "Comments",
+      "placeholder": "Notes about the tire (optional)"
+    },
+    "newTireHint": "A new tire is registered with 0 km and no retreads."
+  },
+  "status": {
+    "NUEVO": "New",
+    "NUEVO_USADO": "New, used",
+    "HOMBROS": "Shoulders",
+    "RECAPADO": "Retreaded",
+    "RECAPADO_USADO": "Retreaded, used",
+    "RECAPADO_SIN_GARANTIA": "Retreaded, no warranty",
+    "DE_BAJA": "Decommissioned"
+  },
+  "axle": {
+    "DIRECCION": "Steer",
+    "TRACCION": "Drive",
+    "ARRASTRE": "Trailer",
+    "AUXILIO": "Spare",
+    "SIN_ESPECIFICAR": "Unspecified"
+  },
+  "validation": {
+    "required": "This field is required",
+    "serialTooLong": "It can't exceed 100 characters",
+    "serialFormat": "Only letters, numbers, spaces, dots, hyphens and slashes; it must start with a letter or number",
+    "kmNegative": "It can't be negative",
+    "kmTooHigh": "It can't exceed 9,999,999 km",
+    "kmSinceRepairAboveTotal": "It can't exceed the current mileage",
+    "retreadsInteger": "It must be a whole number",
+    "retreadsNegative": "It can't be negative",
+    "retreadsTooHigh": "It can't exceed 20 retreads",
+    "newTireKm": "A new tire must have 0 km",
+    "newTireRetreads": "A new tire can't have retreads",
+    "retreadedNeedsRetread": "A retreaded tire must have at least one retread",
+    "statusNotAllowed": "A decommissioned tire can't be registered",
+    "commentTooLong": "It can't exceed 512 characters"
+  },
+  "feedback": {
+    "created": "Tire registered",
+    "createdDescription": "It's on hold until you operate with it.",
+    "duplicateSerial": "A tire with that serial number already exists",
+    "notFound": "The selected brand or supplier no longer exists. Reload the page and try again",
+    "forbidden": "You don't have permission to register tires",
+    "invalid": "Check the form data",
+    "unexpected": "We couldn't register the tire. Try again in a few minutes"
+  }
+}

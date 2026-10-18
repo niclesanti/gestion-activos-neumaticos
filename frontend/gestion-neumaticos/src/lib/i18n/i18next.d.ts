@@ -7,6 +7,7 @@ import type common from "@/lib/i18n/locales/es/common.json"
 import type dev from "@/lib/i18n/locales/es/dev.json"
 import type home from "@/lib/i18n/locales/es/home.json"
 import type settings from "@/lib/i18n/locales/es/settings.json"
+import type tires from "@/lib/i18n/locales/es/tires.json"
 
 declare module "i18next" {
   interface CustomTypeOptions {
@@ -18,6 +19,7 @@ declare module "i18next" {
       audit: typeof audit
       dev: typeof dev
       home: typeof home
+      tires: typeof tires
     }
   }
 }

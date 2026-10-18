@@ -12,6 +12,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -353,6 +354,204 @@ class AutorizacionBaseDatosTests {
 			permisoDenegado(() -> usuarioRepository.nivelAccesoVigente(admin));
 		}
 
+	}
+
+	@Nested
+	@DisplayName("neumaticos.marcas_neumaticos")
+	class MarcasNeumaticos {
+
+		@Test
+		@DisplayName("los tres roles leen las marcas cargadas por la migración")
+		void todosLeen() {
+			for (UUID usuario : List.of(admin, editor, lector)) {
+				autenticar(usuario, nivelDe(usuario));
+				assertThat(app.queryForList("SELECT nombre FROM neumaticos.marcas_neumaticos ORDER BY nombre",
+						String.class)).containsExactly("Bridgestone", "Fate", "Pirelli");
+			}
+		}
+
+		@Test
+		@DisplayName("nadie inserta, modifica ni borra marcas desde la app")
+		void nadieEscribe() {
+			for (UUID usuario : List.of(admin, editor, lector)) {
+				autenticar(usuario, nivelDe(usuario));
+				permisoDenegado(() -> app.update("INSERT INTO neumaticos.marcas_neumaticos (nombre) VALUES ('Otra')"));
+				permisoDenegado(() -> app.update("UPDATE neumaticos.marcas_neumaticos SET nombre = 'x'"));
+				permisoDenegado(() -> app.update("DELETE FROM neumaticos.marcas_neumaticos"));
+			}
+		}
+
+		@Test
+		@DisplayName("sin sesión no se leen")
+		void sinSesionNoLee() {
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM neumaticos.marcas_neumaticos", Integer.class));
+		}
+
+	}
+
+	@Nested
+	@DisplayName("neumaticos.neumaticos")
+	class Neumaticos {
+
+		private static final String INSERTAR = """
+				INSERT INTO neumaticos.neumaticos (public_id, numero_serie, estado_actual, tipo_origen, tipo_actual,
+				    situacion_operativa_vigente, marca_id)
+				VALUES (?, ?, 'NUEVO', 'TRACCION', 'TRACCION', 'EN_ESPERA', ?)""";
+
+		private Long marca;
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM neumaticos.neumaticos");
+			marca = owner.queryForObject("SELECT id FROM neumaticos.marcas_neumaticos WHERE nombre = 'Fate'",
+					Long.class);
+		}
+
+		private void insertarConOwner(String numeroSerie) {
+			owner.update(INSERTAR, UUID.randomUUID(), numeroSerie, marca);
+		}
+
+		@Test
+		@DisplayName("sin sesión no se lee ni se inserta")
+		void sinSesion() {
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM neumaticos.neumaticos", Integer.class));
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "S1", marca));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee")
+		void lectorSoloLee() {
+			insertarConOwner("S1");
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT count(*) FROM neumaticos.neumaticos", Integer.class)).isOne();
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "S2", marca));
+			permisoDenegado(() -> app.update("UPDATE neumaticos.neumaticos SET comentario = 'x'"));
+			permisoDenegado(() -> app.update("DELETE FROM neumaticos.neumaticos"));
+		}
+
+		@Test
+		@DisplayName("editor y administrador insertan, leen y modifican, pero no borran")
+		void editorYAdministradorEscriben() {
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				String serie = "S-" + usuario;
+
+				assertThat(app.update(INSERTAR, UUID.randomUUID(), serie.toUpperCase(), marca)).isOne();
+				assertThat(app.update("UPDATE neumaticos.neumaticos SET comentario = 'ok', en_espera = false "
+						+ "WHERE numero_serie = ?", serie.toUpperCase())).isOne();
+				permisoDenegado(() -> app.update("DELETE FROM neumaticos.neumaticos"));
+			}
+			assertThat(owner.queryForObject("SELECT count(*) FROM neumaticos.neumaticos WHERE comentario = 'ok'",
+					Integer.class)).isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("nadie modifica el número de serie ni los identificadores")
+		void numeroSerieInmutable() {
+			insertarConOwner("S1");
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				permisoDenegado(() -> app.update("UPDATE neumaticos.neumaticos SET numero_serie = 'OTRO'"));
+				permisoDenegado(() -> app.update("UPDATE neumaticos.neumaticos SET public_id = ?", UUID.randomUUID()));
+				permisoDenegado(() -> app.update("UPDATE neumaticos.neumaticos SET id = 1"));
+			}
+		}
+
+		@Test
+		@DisplayName("el número de serie se guarda normalizado y es único")
+		void numeroSerieNormalizadoYUnico() {
+			insertarConOwner("S1");
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "minusculas", marca))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_neumaticos_numero_serie_formato");
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "S1", marca))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_neumaticos_numero_serie");
+			// Sin número de serie: varios NULL no chocan con la restricción UNIQUE.
+			assertThat(app.update(INSERTAR, UUID.randomUUID(), null, marca)).isOne();
+			assertThat(app.update(INSERTAR, UUID.randomUUID(), null, marca)).isOne();
+		}
+
+		@Test
+		@DisplayName("kilometrajes y recapados admiten NULL, salvo los recapados de un recapado")
+		void kilometrajesYRecapadosOpcionales() {
+			String insertarConEstado = """
+					INSERT INTO neumaticos.neumaticos (public_id, estado_actual, tipo_origen, tipo_actual,
+					    situacion_operativa_vigente, marca_id, cantidad_recapados)
+					VALUES (?, ?, 'TRACCION', 'TRACCION', 'EN_ESPERA', ?, ?)""";
+
+			assertThat(owner.update(insertarConEstado, UUID.randomUUID(), "HOMBROS", marca, null)).isOne();
+			assertThat(owner.queryForObject("""
+					SELECT count(*) FROM neumaticos.neumaticos WHERE estado_actual = 'HOMBROS'
+					    AND kilometraje_total IS NULL AND kilometraje_ultima_reparacion IS NULL
+					    AND cantidad_recapados IS NULL""", Integer.class)).isOne();
+			assertThat(owner.update(insertarConEstado, UUID.randomUUID(), "RECAPADO", marca, 1)).isOne();
+			for (Integer recapados : Arrays.asList(null, 0)) {
+				assertThatThrownBy(() -> owner.update(insertarConEstado, UUID.randomUUID(), "RECAPADO_USADO", marca,
+						recapados))
+						.isInstanceOf(DataAccessException.class)
+						.hasStackTraceContaining("ck_neumaticos_recapado_con_recapados");
+			}
+		}
+
+	}
+
+	@Nested
+	@DisplayName("trazabilidad.eventos_neumatico")
+	class Trazabilidad {
+
+		private static final String INSERTAR_COMPRA = """
+				INSERT INTO trazabilidad.eventos_neumatico (id, tipo, fecha, usuario, neumatico_id, proveedor_id,
+				    nombre_proveedor)
+				VALUES (?, 'COMPRA', now(), 'usuario', 1, 1, 'Proveedor')""";
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM trazabilidad.eventos_neumatico");
+		}
+
+		@Test
+		@DisplayName("sin sesión (listener asíncrono, gn_app) inserta, pero no lee, modifica ni borra")
+		void sinSesionSoloInserta() {
+			Long id = app.queryForObject("SELECT nextval('trazabilidad.eventos_neumatico_id_seq')", Long.class);
+
+			assertThat(app.update(INSERTAR_COMPRA, id)).isOne();
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM trazabilidad.eventos_neumatico", Integer.class));
+			permisoDenegado(() -> app.update("UPDATE trazabilidad.eventos_neumatico SET usuario = 'x'"));
+			permisoDenegado(() -> app.update("DELETE FROM trazabilidad.eventos_neumatico"));
+		}
+
+		@Test
+		@DisplayName("ningún rol de usuario escribe ni lee el historial")
+		void rolesDeUsuarioSinAcceso() {
+			for (UUID usuario : List.of(admin, editor, lector)) {
+				autenticar(usuario, nivelDe(usuario));
+				permisoDenegado(() -> app.update(INSERTAR_COMPRA, 1L));
+				permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM trazabilidad.eventos_neumatico",
+						Integer.class));
+			}
+		}
+
+		@Test
+		@DisplayName("los datos de la compra solo los lleva un evento de compra")
+		void datosDeCompraSoloEnCompra() {
+			assertThatThrownBy(() -> owner.update("""
+					INSERT INTO trazabilidad.eventos_neumatico (tipo, fecha, usuario, neumatico_id, proveedor_id)
+					VALUES ('ENVIO_STOCK', now(), 'usuario', 1, 1)"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_eventos_neumatico_datos_compra");
+		}
+
+	}
+
+	private NivelAcceso nivelDe(UUID usuario) {
+		if (usuario.equals(admin)) {
+			return NivelAcceso.ROLE_ADMINISTRADOR;
+		}
+		return usuario.equals(editor) ? NivelAcceso.ROLE_EDITOR : NivelAcceso.ROLE_LECTOR;
 	}
 
 	@Nested
