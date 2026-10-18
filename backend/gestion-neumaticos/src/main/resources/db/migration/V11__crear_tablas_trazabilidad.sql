@@ -5,6 +5,14 @@
 -- es el único rol que inserta, igual que es el que completa event_publication
 -- (V7). Ningún rol de usuario escribe ni modifica el historial; la lectura se
 -- habilitará junto con el endpoint de consulta del historial.
+--
+-- Todos los subtipos de evento viven en una sola tabla (herencia SINGLE_TABLE,
+-- con `tipo` como discriminador): la consulta principal es "todo el historial de
+-- un neumático", que así es un solo recorrido del índice (neumatico_id, fecha)
+-- en vez de un LEFT JOIN por subtipo, y cada evento es un solo INSERT. Las
+-- columnas propias de cada subtipo son NULL en los demás (lo garantiza un CHECK
+-- por subtipo); cada subtipo nuevo agrega sus columnas y su CHECK en su propia
+-- migración.
 CREATE SCHEMA IF NOT EXISTS trazabilidad;
 GRANT USAGE ON SCHEMA trazabilidad TO gn_app, gn_administrador, gn_editor, gn_lector;
 
@@ -20,27 +28,22 @@ CREATE TABLE trazabilidad.eventos_neumatico (
     -- Referencia formal al neumático de otro módulo: sin FK entre schemas de módulos.
     neumatico_id           BIGINT                      NOT NULL,
     numero_serie_neumatico VARCHAR(100),
+    -- COMPRA: el proveedor es opcional.
+    proveedor_id           BIGINT,
+    nombre_proveedor       VARCHAR(150),
 
     CONSTRAINT pk_eventos_neumatico PRIMARY KEY (id),
     CONSTRAINT ck_eventos_neumatico_tipo CHECK (tipo IN ('COMPRA', 'ENVIO_REPARACION', 'REGRESO_REPARACION',
-        'ASIGNACION', 'DESASIGNACION', 'ENVIO_STOCK', 'REGRESO_STOCK', 'BAJA_OPERATIVA', 'OTROS'))
+        'ASIGNACION', 'DESASIGNACION', 'ENVIO_STOCK', 'REGRESO_STOCK', 'BAJA_OPERATIVA', 'OTROS')),
+    CONSTRAINT ck_eventos_neumatico_datos_compra CHECK (
+        tipo = 'COMPRA' OR (proveedor_id IS NULL AND nombre_proveedor IS NULL))
 );
 
 CREATE INDEX ix_eventos_neumatico_neumatico_fecha ON trazabilidad.eventos_neumatico (neumatico_id, fecha);
 
-CREATE TABLE trazabilidad.eventos_compra (
-    id               BIGINT       NOT NULL,
-    proveedor_id     BIGINT,
-    nombre_proveedor VARCHAR(150),
-
-    CONSTRAINT pk_eventos_compra PRIMARY KEY (id),
-    CONSTRAINT fk_eventos_compra_evento FOREIGN KEY (id) REFERENCES trazabilidad.eventos_neumatico (id)
-);
-
 ALTER TABLE trazabilidad.eventos_neumatico ENABLE ROW LEVEL SECURITY;
-ALTER TABLE trazabilidad.eventos_compra ENABLE ROW LEVEL SECURITY;
 
-GRANT INSERT ON trazabilidad.eventos_neumatico, trazabilidad.eventos_compra TO gn_app;
+GRANT INSERT ON trazabilidad.eventos_neumatico TO gn_app;
 -- USAGE para nextval al insertar; SELECT también lo pide la validación de Hibernate.
 GRANT USAGE, SELECT ON SEQUENCE trazabilidad.eventos_neumatico_id_seq TO gn_app;
 
@@ -51,19 +54,7 @@ CREATE POLICY eventos_neumatico_requiere_autenticacion ON trazabilidad.eventos_n
     USING ((SELECT seguridad.usuario_actual()) IS NOT NULL)
     WITH CHECK ((SELECT seguridad.usuario_actual()) IS NOT NULL);
 
-CREATE POLICY eventos_compra_requiere_autenticacion ON trazabilidad.eventos_compra
-    AS RESTRICTIVE
-    FOR ALL
-    TO gn_administrador, gn_editor, gn_lector
-    USING ((SELECT seguridad.usuario_actual()) IS NOT NULL)
-    WITH CHECK ((SELECT seguridad.usuario_actual()) IS NOT NULL);
-
 CREATE POLICY eventos_neumatico_insert_sistema ON trazabilidad.eventos_neumatico
-    FOR INSERT
-    TO gn_app
-    WITH CHECK (true);
-
-CREATE POLICY eventos_compra_insert_sistema ON trazabilidad.eventos_compra
     FOR INSERT
     TO gn_app
     WITH CHECK (true);

@@ -12,6 +12,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -474,21 +475,41 @@ class AutorizacionBaseDatosTests {
 			assertThat(app.update(INSERTAR, UUID.randomUUID(), null, marca)).isOne();
 		}
 
+		@Test
+		@DisplayName("kilometrajes y recapados admiten NULL, salvo los recapados de un recapado")
+		void kilometrajesYRecapadosOpcionales() {
+			String insertarConEstado = """
+					INSERT INTO neumaticos.neumaticos (public_id, estado_actual, tipo_origen, tipo_actual,
+					    situacion_operativa_vigente, marca_id, cantidad_recapados)
+					VALUES (?, ?, 'TRACCION', 'TRACCION', 'EN_ESPERA', ?, ?)""";
+
+			assertThat(owner.update(insertarConEstado, UUID.randomUUID(), "HOMBROS", marca, null)).isOne();
+			assertThat(owner.queryForObject("""
+					SELECT count(*) FROM neumaticos.neumaticos WHERE estado_actual = 'HOMBROS'
+					    AND kilometraje_total IS NULL AND kilometraje_ultima_reparacion IS NULL
+					    AND cantidad_recapados IS NULL""", Integer.class)).isOne();
+			assertThat(owner.update(insertarConEstado, UUID.randomUUID(), "RECAPADO", marca, 1)).isOne();
+			for (Integer recapados : Arrays.asList(null, 0)) {
+				assertThatThrownBy(() -> owner.update(insertarConEstado, UUID.randomUUID(), "RECAPADO_USADO", marca,
+						recapados))
+						.isInstanceOf(DataAccessException.class)
+						.hasStackTraceContaining("ck_neumaticos_recapado_con_recapados");
+			}
+		}
+
 	}
 
 	@Nested
-	@DisplayName("trazabilidad.eventos_neumatico / eventos_compra")
+	@DisplayName("trazabilidad.eventos_neumatico")
 	class Trazabilidad {
 
-		private static final String INSERTAR_EVENTO = """
-				INSERT INTO trazabilidad.eventos_neumatico (id, tipo, fecha, usuario, neumatico_id)
-				VALUES (?, 'COMPRA', now(), 'usuario', 1)""";
 		private static final String INSERTAR_COMPRA = """
-				INSERT INTO trazabilidad.eventos_compra (id, proveedor_id, nombre_proveedor) VALUES (?, 1, 'Proveedor')""";
+				INSERT INTO trazabilidad.eventos_neumatico (id, tipo, fecha, usuario, neumatico_id, proveedor_id,
+				    nombre_proveedor)
+				VALUES (?, 'COMPRA', now(), 'usuario', 1, 1, 'Proveedor')""";
 
 		@BeforeEach
 		void limpiar() {
-			owner.update("DELETE FROM trazabilidad.eventos_compra");
 			owner.update("DELETE FROM trazabilidad.eventos_neumatico");
 		}
 
@@ -497,11 +518,10 @@ class AutorizacionBaseDatosTests {
 		void sinSesionSoloInserta() {
 			Long id = app.queryForObject("SELECT nextval('trazabilidad.eventos_neumatico_id_seq')", Long.class);
 
-			assertThat(app.update(INSERTAR_EVENTO, id)).isOne();
 			assertThat(app.update(INSERTAR_COMPRA, id)).isOne();
 			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM trazabilidad.eventos_neumatico", Integer.class));
 			permisoDenegado(() -> app.update("UPDATE trazabilidad.eventos_neumatico SET usuario = 'x'"));
-			permisoDenegado(() -> app.update("DELETE FROM trazabilidad.eventos_compra"));
+			permisoDenegado(() -> app.update("DELETE FROM trazabilidad.eventos_neumatico"));
 		}
 
 		@Test
@@ -509,11 +529,20 @@ class AutorizacionBaseDatosTests {
 		void rolesDeUsuarioSinAcceso() {
 			for (UUID usuario : List.of(admin, editor, lector)) {
 				autenticar(usuario, nivelDe(usuario));
-				permisoDenegado(() -> app.update(INSERTAR_EVENTO, 1L));
 				permisoDenegado(() -> app.update(INSERTAR_COMPRA, 1L));
-				permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM trazabilidad.eventos_compra",
+				permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM trazabilidad.eventos_neumatico",
 						Integer.class));
 			}
+		}
+
+		@Test
+		@DisplayName("los datos de la compra solo los lleva un evento de compra")
+		void datosDeCompraSoloEnCompra() {
+			assertThatThrownBy(() -> owner.update("""
+					INSERT INTO trazabilidad.eventos_neumatico (tipo, fecha, usuario, neumatico_id, proveedor_id)
+					VALUES ('ENVIO_STOCK', now(), 'usuario', 1, 1)"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_eventos_neumatico_datos_compra");
 		}
 
 	}

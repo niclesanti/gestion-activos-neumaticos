@@ -86,13 +86,13 @@ public class Neumatico {
     private MarcaNeumatico marca;
 
     public void setCalculoKm(Float kmAntes, Float kmDespues) {
-        this.kilometrajeTotal += (kmDespues - kmAntes);
-        this.kilometrajeUltimaReparacion += (kmDespues - kmAntes);
+        setKilometraje(kmDespues - kmAntes);
     }
 
+    // Un dato desconocido (null) sigue desconocido: no se inventa un punto de partida.
     public void setKilometraje(Float kilometraje) {
-        this.kilometrajeTotal += kilometraje;
-        this.kilometrajeUltimaReparacion += kilometraje;
+        this.kilometrajeTotal = sumar(this.kilometrajeTotal, kilometraje);
+        this.kilometrajeUltimaReparacion = sumar(this.kilometrajeUltimaReparacion, kilometraje);
     }
 
     public void agregarNeumaticoStock(Long centroAlmacenamientoId) {
@@ -112,10 +112,16 @@ public class Neumatico {
     }
 
     public void nuevoRecapado() {
-        this.cantidadRecapados += 1;
+        if (this.cantidadRecapados != null) {
+            this.cantidadRecapados += 1;
+        }
     }
 
     public void montarEnSlot(Long slotMontadoId) {
         this.slotMontadoId = slotMontadoId;
+    }
+
+    private static Float sumar(Float actual, Float incremento) {
+        return actual == null ? null : actual + incremento;
     }
 }

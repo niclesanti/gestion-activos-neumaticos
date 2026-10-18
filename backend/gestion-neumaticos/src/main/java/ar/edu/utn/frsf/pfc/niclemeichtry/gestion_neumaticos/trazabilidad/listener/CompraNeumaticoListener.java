@@ -7,7 +7,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.event.NeumaticoComprado;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.ComoSistema;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.trazabilidad.domain.entity.EventoCompra;
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.trazabilidad.domain.entity.TipoEventoNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.trazabilidad.repository.EventoNeumaticoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +33,6 @@ public class CompraNeumaticoListener {
     @TransactionalEventListener
     public void on(NeumaticoComprado evento) {
         EventoCompra compra = EventoCompra.builder()
-                .tipo(TipoEventoNeumatico.COMPRA)
                 .fecha(evento.fecha())
                 .usuario(evento.usuario())
                 .comentario(evento.comentario())
@@ -43,8 +41,10 @@ public class CompraNeumaticoListener {
                 .proveedorId(evento.proveedorId())
                 .nombreProveedor(evento.nombreProveedor())
                 .build();
+        log.debug("Registrando evento de compra del neumático {}", evento.neumaticoId());
         ComoSistema.ejecutar(() -> eventoNeumaticoRepository.save(compra));
-        log.debug("Evento de compra registrado para el neumático {}", evento.neumaticoId());
+        log.info("Evento de compra registrado para el neumático {} (proveedor {})", evento.neumaticoId(),
+                evento.proveedorId());
     }
 
 }

@@ -71,6 +71,12 @@ class NeumaticoRequestDTOTest {
                         neumaticoRequest("DOT 4B.12-34/56", EstadoNeumatico.NUEVO, 0f, 0f, 0)),
                 Arguments.of("serie de 100 caracteres", neumaticoRequest("A".repeat(100), EstadoNeumatico.NUEVO, 0f, 0f, 0)),
                 Arguments.of("hombros sin recapados", neumaticoRequest(null, EstadoNeumatico.HOMBROS, 1000f, 1000f, 0)),
+                Arguments.of("hombros sin datos de uso conocidos",
+                        neumaticoRequest(null, EstadoNeumatico.HOMBROS, null, null, null)),
+                Arguments.of("nuevo usado solo con kilometraje total",
+                        neumaticoRequest(null, EstadoNeumatico.NUEVO_USADO, 5000f, null, null)),
+                Arguments.of("recapado con recapados y sin kilometrajes",
+                        neumaticoRequest(null, EstadoNeumatico.RECAPADO, null, null, 2)),
                 Arguments.of("recapado con un recapado", neumaticoRequest(null, EstadoNeumatico.RECAPADO, 10f, 0f, 1)),
                 Arguments.of("recapado sin garantía al máximo",
                         neumaticoRequest(null, EstadoNeumatico.RECAPADO_SIN_GARANTIA, 9_999_999f, 9_999_999f, 20)),
@@ -94,21 +100,15 @@ class NeumaticoRequestDTOTest {
                 Arguments.of("sin estado", neumaticoRequest(null, null, 0f, 0f, 0), "estadoActual"),
                 Arguments.of("estado de baja", neumaticoRequest(null, EstadoNeumatico.DE_BAJA, 0f, 0f, 0),
                         "estadoActualRegistrable"),
-                Arguments.of("sin kilometraje total", neumaticoRequest(null, EstadoNeumatico.HOMBROS, null, 0f, 0),
-                        "kilometrajeTotal"),
                 Arguments.of("kilometraje total negativo", neumaticoRequest(null, EstadoNeumatico.HOMBROS, -1f, 0f, 0),
                         "kilometrajeTotal"),
                 Arguments.of("kilometraje total excesivo",
                         neumaticoRequest(null, EstadoNeumatico.HOMBROS, 10_000_001f, 0f, 0), "kilometrajeTotal"),
-                Arguments.of("sin kilometraje desde la última reparación",
-                        neumaticoRequest(null, EstadoNeumatico.HOMBROS, 0f, null, 0), "kilometrajeUltimaReparacion"),
                 Arguments.of("kilometraje desde la última reparación negativo",
                         neumaticoRequest(null, EstadoNeumatico.HOMBROS, 0f, -5f, 0), "kilometrajeUltimaReparacion"),
                 Arguments.of("kilometraje desde la última reparación mayor al total",
                         neumaticoRequest(null, EstadoNeumatico.HOMBROS, 100f, 101f, 0),
                         "kilometrajeUltimaReparacionValido"),
-                Arguments.of("sin recapados", neumaticoRequest(null, EstadoNeumatico.HOMBROS, 0f, 0f, null),
-                        "cantidadRecapados"),
                 Arguments.of("recapados negativos", neumaticoRequest(null, EstadoNeumatico.HOMBROS, 0f, 0f, -1),
                         "cantidadRecapados"),
                 Arguments.of("más de 20 recapados", neumaticoRequest(null, EstadoNeumatico.HOMBROS, 0f, 0f, 21),
@@ -123,6 +123,14 @@ class NeumaticoRequestDTOTest {
                         "recapadoConRecapados"),
                 Arguments.of("recapado usado sin recapados",
                         neumaticoRequest(null, EstadoNeumatico.RECAPADO_USADO, 0f, 0f, 0), "recapadoConRecapados"),
+                Arguments.of("recapado sin indicar recapados",
+                        neumaticoRequest(null, EstadoNeumatico.RECAPADO, 0f, 0f, null), "recapadoConRecapados"),
+                Arguments.of("nuevo sin kilometraje total", neumaticoRequest(null, EstadoNeumatico.NUEVO, null, 0f, 0),
+                        "nuevoSinUso"),
+                Arguments.of("nuevo sin kilometraje desde la última reparación",
+                        neumaticoRequest(null, EstadoNeumatico.NUEVO, 0f, null, 0), "nuevoSinUso"),
+                Arguments.of("nuevo sin recapados", neumaticoRequest(null, EstadoNeumatico.NUEVO, 0f, 0f, null),
+                        "nuevoSinUso"),
                 Arguments.of("sin tipo de origen", conTipos(null, TipoEjeUnidadTransporte.TRACCION), "tipoOrigen"),
                 Arguments.of("sin tipo actual", conTipos(TipoEjeUnidadTransporte.TRACCION, null), "tipoActual"),
                 Arguments.of("comentario de 513 caracteres", conComentarioYMarca("x".repeat(513), 1L), "comentario"),
@@ -137,20 +145,20 @@ class NeumaticoRequestDTOTest {
     }
 
     @Test
-    @DisplayName("sin datos, las reglas entre campos no se suman a los errores de obligatorios")
+    @DisplayName("sin datos, solo se informan los obligatorios: sin estado no aplican las reglas de uso")
     void vacio() {
         NeumaticoRequestDTO vacio = new NeumaticoRequestDTO(null, null, null, null, null, null, null, null, null, null);
 
-        assertThat(propiedadesInvalidas(vacio)).containsExactlyInAnyOrder("estadoActual", "kilometrajeTotal",
-                "kilometrajeUltimaReparacion", "tipoOrigen", "tipoActual", "cantidadRecapados", "marcaId");
+        assertThat(propiedadesInvalidas(vacio)).containsExactlyInAnyOrder("estadoActual", "tipoOrigen", "tipoActual",
+                "marcaId");
     }
 
     @Test
-    @DisplayName("un neumático nuevo sin datos de uso no viola las reglas entre campos")
+    @DisplayName("un neumático nuevo exige indicar los datos de uso en 0")
     void nuevoConNulos() {
         NeumaticoRequestDTO request = neumaticoRequest(null, EstadoNeumatico.NUEVO, null, null, null);
 
-        assertThat(request.isNuevoSinUso()).isTrue();
+        assertThat(request.isNuevoSinUso()).isFalse();
         assertThat(request.isKilometrajeUltimaReparacionValido()).isTrue();
     }
 

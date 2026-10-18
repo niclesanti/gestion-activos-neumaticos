@@ -53,11 +53,12 @@ CREATE TABLE neumaticos.neumaticos (
     numero_serie                  VARCHAR(100),
     estado_actual                 VARCHAR(30)  NOT NULL,
     en_espera                     BOOLEAN      NOT NULL DEFAULT true,
-    kilometraje_total             REAL         NOT NULL DEFAULT 0,
-    kilometraje_ultima_reparacion REAL         NOT NULL DEFAULT 0,
+    -- Kilometrajes y recapados: NULL = dato desconocido (ver NeumaticoRequestDTO).
+    kilometraje_total             REAL,
+    kilometraje_ultima_reparacion REAL,
     tipo_origen                   VARCHAR(20)  NOT NULL,
     tipo_actual                   VARCHAR(20)  NOT NULL,
-    cantidad_recapados            INTEGER      NOT NULL DEFAULT 0,
+    cantidad_recapados            INTEGER,
     situacion_operativa_vigente   VARCHAR(20)  NOT NULL,
     comentario                    VARCHAR(512),
     slot_montado_id               BIGINT,
@@ -82,7 +83,11 @@ CREATE TABLE neumaticos.neumaticos (
     CONSTRAINT ck_neumaticos_situacion_operativa CHECK (situacion_operativa_vigente IN
         ('EN_STOCK', 'MONTADO', 'EN_REPARACION', 'EN_ESPERA', 'DE_BAJA')),
     CONSTRAINT ck_neumaticos_kilometraje CHECK (kilometraje_total >= 0 AND kilometraje_ultima_reparacion >= 0),
-    CONSTRAINT ck_neumaticos_cantidad_recapados CHECK (cantidad_recapados >= 0)
+    CONSTRAINT ck_neumaticos_cantidad_recapados CHECK (cantidad_recapados >= 0),
+    -- Defensa en profundidad de la regla de la app: un recapado tiene al menos un recapado.
+    CONSTRAINT ck_neumaticos_recapado_con_recapados CHECK (
+        estado_actual NOT IN ('RECAPADO', 'RECAPADO_USADO', 'RECAPADO_SIN_GARANTIA')
+        OR coalesce(cantidad_recapados, 0) >= 1)
 );
 
 CREATE INDEX ix_neumaticos_marca_id ON neumaticos.neumaticos (marca_id);

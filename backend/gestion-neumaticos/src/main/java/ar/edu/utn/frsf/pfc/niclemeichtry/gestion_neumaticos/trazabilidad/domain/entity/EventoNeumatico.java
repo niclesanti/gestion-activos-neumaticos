@@ -3,9 +3,9 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.trazabilidad.domain
 import java.time.Instant;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorColumn;
+import jakarta.persistence.DiscriminatorType;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,11 +22,16 @@ import lombok.experimental.SuperBuilder;
  * Hecho del historial de un neumático. Trazabilidad es un observador: solo
  * persiste eventos ya consumados en otros módulos, con sus referencias como
  * id + snapshot (los datos de exhibición "congelados" al momento del hecho).
- * Cada subtipo vive en su propia tabla (JOINED).
+ *
+ * <p>Todos los subtipos comparten la tabla {@code eventos_neumatico}
+ * (SINGLE_TABLE, ver V11): el historial completo de un neumático se lee sin
+ * joins. La columna {@code tipo} es el discriminador y la escribe Hibernate a
+ * partir del {@code @DiscriminatorValue} de cada subtipo.
  */
 @Entity
 @Table(name = "eventos_neumatico", schema = "trazabilidad")
-@Inheritance(strategy = InheritanceType.JOINED)
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "tipo", discriminatorType = DiscriminatorType.STRING, length = 30)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,10 +41,6 @@ public abstract class EventoNeumatico {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "eventos_neumatico_id_gen")
     @SequenceGenerator(name = "eventos_neumatico_id_gen", schema = "trazabilidad", sequenceName = "eventos_neumatico_id_seq", allocationSize = 50)
     private Long id;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo", nullable = false, length = 30)
-    private TipoEventoNeumatico tipo;
 
     @Column(name = "fecha", nullable = false)
     private Instant fecha;
@@ -55,4 +56,7 @@ public abstract class EventoNeumatico {
 
     @Column(name = "numero_serie_neumatico", length = 100)
     private String numeroSerieNeumatico;
+
+    /** El tipo de evento; coincide con el valor del discriminador del subtipo. */
+    public abstract TipoEventoNeumatico getTipo();
 }

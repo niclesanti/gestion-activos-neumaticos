@@ -17,11 +17,11 @@ export type Tire = {
   numeroSerie: string | null
   estadoActual: TireStatus
   enEspera: boolean
-  kilometrajeTotal: number
-  kilometrajeUltimaReparacion: number
+  kilometrajeTotal: number | null
+  kilometrajeUltimaReparacion: number | null
   tipoOrigen: AxleType
   tipoActual: AxleType
-  cantidadRecapados: number
+  cantidadRecapados: number | null
   situacionOperativaVigente: string
   comentario: string | null
   marcaNombre: string

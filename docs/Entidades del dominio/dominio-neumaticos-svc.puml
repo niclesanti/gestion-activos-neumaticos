@@ -16,6 +16,9 @@ class MarcaNeumatico <<Entity>> {
 ' Agregado raíz del módulo. Único escritor del estado operativo del
 ' neumático (estadoActual, situacionOperativaVigente, nodoUbicacion,
 ' kilometraje) — ver criterio 3 de vista-de-modulos.md.
+' kilometrajeTotal, kilometrajeUltimaReparacion y cantidadRecapados son
+' opcionales (null = dato desconocido), salvo: NUEVO exige los tres en 0 y
+' los estados recapados exigen cantidadRecapados >= 1 (HU-11).
 class Neumatico <<Entity>> <<Auditable>> {
   - id: Long
   - publicId: UUID <<unique>>

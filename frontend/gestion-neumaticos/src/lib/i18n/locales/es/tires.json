@@ -1,6 +1,6 @@
 {
   "title": "Neumáticos",
-  "subtitle": "Registrá y gestioná los neumáticos de la flota a lo largo de todo su ciclo de vida.",
+  "subtitle": "Gestioná los neumáticos de la flota a lo largo de todo su ciclo de vida.",
   "actions": {
     "register": "Registrar neumático"
   },
@@ -51,13 +51,16 @@
       "placeholder": "Elegí el tipo de eje"
     },
     "totalKm": {
-      "label": "Kilometraje actual (km)"
+      "label": "Kilometraje actual (km)",
+      "placeholder": "Ej.: 85000"
     },
     "kmSinceRepair": {
-      "label": "Km desde la última reparación"
+      "label": "Km desde la última reparación",
+      "placeholder": "Ej.: 12000"
     },
     "retreads": {
-      "label": "Cantidad de recapados"
+      "label": "Cantidad de recapados",
+      "placeholder": "Ej.: 1"
     },
     "comment": {
       "label": "Comentarios",

@@ -25,7 +25,9 @@ import { useTireBrands } from "@/features/tires/hooks/use-tire-brands"
 import {
   AXLE_TYPES,
   REGISTRABLE_TIRE_STATUSES,
+  RETREADED_STATUSES,
   tireSchema,
+  toNullableNumber,
   type TireFormInput,
   type TireFormValues,
 } from "@/features/tires/schemas/tire-schema"
@@ -57,6 +59,9 @@ const EMPTY_TIRE: Partial<TireFormInput> = {
   numeroSerie: "",
   marcaId: "",
   proveedorId: "",
+  kilometrajeTotal: null,
+  kilometrajeUltimaReparacion: null,
+  cantidadRecapados: null,
   comentario: "",
 }
 
@@ -98,6 +103,9 @@ export function TireForm({
 
   const status = useWatch({ control, name: "estadoActual" })
   const isNew = status === "NUEVO"
+  // Los datos de uso son opcionales salvo donde el estado los exige (ver tire-schema).
+  const retreadsRequired =
+    isNew || (status !== undefined && RETREADED_STATUSES.includes(status))
 
   const statusOptions: Option[] = REGISTRABLE_TIRE_STATUSES.map((value) => ({
     value,
@@ -286,7 +294,7 @@ export function TireForm({
           id={`${id}-total-km`}
           label={t("form.totalKm.label")}
           error={errorOf("kilometrajeTotal")}
-          required
+          required={isNew}
         >
           <Input
             id={`${id}-total-km`}
@@ -294,8 +302,9 @@ export function TireForm({
             inputMode="decimal"
             min={0}
             step="any"
-            {...ariaFor(`${id}-total-km`, errorOf("kilometrajeTotal"), true)}
-            {...register("kilometrajeTotal", { valueAsNumber: true })}
+            placeholder={t("form.totalKm.placeholder")}
+            {...ariaFor(`${id}-total-km`, errorOf("kilometrajeTotal"), isNew)}
+            {...register("kilometrajeTotal", { setValueAs: toNullableNumber })}
           />
         </TextField>
 
@@ -303,7 +312,7 @@ export function TireForm({
           id={`${id}-km-since-repair`}
           label={t("form.kmSinceRepair.label")}
           error={errorOf("kilometrajeUltimaReparacion")}
-          required
+          required={isNew}
         >
           <Input
             id={`${id}-km-since-repair`}
@@ -311,13 +320,14 @@ export function TireForm({
             inputMode="decimal"
             min={0}
             step="any"
+            placeholder={t("form.kmSinceRepair.placeholder")}
             {...ariaFor(
               `${id}-km-since-repair`,
               errorOf("kilometrajeUltimaReparacion"),
-              true
+              isNew
             )}
             {...register("kilometrajeUltimaReparacion", {
-              valueAsNumber: true,
+              setValueAs: toNullableNumber,
             })}
           />
         </TextField>
@@ -327,7 +337,7 @@ export function TireForm({
           label={t("form.retreads.label")}
           description={isNew ? t("form.newTireHint") : undefined}
           error={errorOf("cantidadRecapados")}
-          required
+          required={retreadsRequired}
         >
           <Input
             id={`${id}-retreads`}
@@ -336,8 +346,13 @@ export function TireForm({
             min={0}
             max={20}
             step={1}
-            {...ariaFor(`${id}-retreads`, errorOf("cantidadRecapados"), true)}
-            {...register("cantidadRecapados", { valueAsNumber: true })}
+            placeholder={t("form.retreads.placeholder")}
+            {...ariaFor(
+              `${id}-retreads`,
+              errorOf("cantidadRecapados"),
+              retreadsRequired
+            )}
+            {...register("cantidadRecapados", { setValueAs: toNullableNumber })}
           />
         </TextField>
 
@@ -459,10 +474,7 @@ function SelectField({
   )
 }
 
+/** Hereda el color del label: neutro, y rojo solo cuando el campo tiene error. */
 function RequiredMark() {
-  return (
-    <span aria-hidden className="text-destructive">
-      *
-    </span>
-  )
+  return <span aria-hidden>*</span>
 }

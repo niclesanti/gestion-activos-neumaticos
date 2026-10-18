@@ -1,6 +1,6 @@
 {
   "title": "Tires",
-  "subtitle": "Register and manage the fleet's tires throughout their whole lifecycle.",
+  "subtitle": "Manage the fleet's tires throughout their whole lifecycle.",
   "actions": {
     "register": "Register tire"
   },
@@ -51,13 +51,16 @@
       "placeholder": "Choose the axle type"
     },
     "totalKm": {
-      "label": "Current mileage (km)"
+      "label": "Current mileage (km)",
+      "placeholder": "E.g. 85000"
     },
     "kmSinceRepair": {
-      "label": "Km since last repair"
+      "label": "Km since last repair",
+      "placeholder": "E.g. 12000"
     },
     "retreads": {
-      "label": "Number of retreads"
+      "label": "Number of retreads",
+      "placeholder": "E.g. 1"
     },
     "comment": {
       "label": "Comments",

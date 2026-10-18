@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   TireForm,
   type TireFormHelpers,
@@ -115,28 +116,37 @@ export function CreateTireDialog() {
           <PlusIcon />
           {t("actions.register")}
         </DialogTrigger>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
+        {/* Margen fijo de 2rem arriba y abajo; header y footer quedan fijos y
+            solo el formulario scrollea dentro del ScrollArea. */}
+        <DialogContent className="flex max-h-[calc(100dvh-4rem)] flex-col gap-0 p-0 sm:max-w-2xl">
+          <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>{t("dialog.createTitle")}</DialogTitle>
             <DialogDescription>
               {t("dialog.createDescription")}
             </DialogDescription>
           </DialogHeader>
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-3xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {t(error)}
-            </p>
-          ) : null}
-          <TireForm
-            id={FORM_ID}
-            mode="create"
-            disabled={isSubmitting}
-            onSubmit={(values, helpers) => setPending({ values, helpers })}
-          />
-          <DialogFooter>
+          {/* El Viewport del ScrollArea mide h-full, que no resuelve contra un
+              padre con solo max-height: se lo vuelve un ítem flex para que
+              tome el alto que le deja el dialog y scrollee adentro. */}
+          <ScrollArea className="flex min-h-0 flex-1 flex-col *:data-[slot=scroll-area-viewport]:min-h-0 *:data-[slot=scroll-area-viewport]:flex-1">
+            <div className="flex flex-col gap-5 px-6 py-2">
+              {error ? (
+                <p
+                  role="alert"
+                  className="rounded-3xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {t(error)}
+                </p>
+              ) : null}
+              <TireForm
+                id={FORM_ID}
+                mode="create"
+                disabled={isSubmitting}
+                onSubmit={(values, helpers) => setPending({ values, helpers })}
+              />
+            </div>
+          </ScrollArea>
+          <DialogFooter className="px-6 pt-4 pb-6">
             <DialogClose
               render={<Button variant="outline" disabled={isSubmitting} />}
             >

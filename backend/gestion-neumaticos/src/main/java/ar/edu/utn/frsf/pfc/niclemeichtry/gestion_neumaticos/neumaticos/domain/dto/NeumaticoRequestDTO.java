@@ -35,12 +35,12 @@ public record NeumaticoRequestDTO(
     @NotNull(message = "es obligatorio")
     EstadoNeumatico estadoActual,
 
-    @NotNull(message = "es obligatorio")
+    // Kilometrajes y recapados son opcionales (null = dato desconocido), salvo
+    // donde el estado los exige (ver las reglas entre campos).
     @PositiveOrZero(message = "no puede ser negativo")
     @DecimalMax(value = MAX_KILOMETRAJE, message = "no puede superar los 9.999.999 km")
     Float kilometrajeTotal,
 
-    @NotNull(message = "es obligatorio")
     @PositiveOrZero(message = "no puede ser negativo")
     @DecimalMax(value = MAX_KILOMETRAJE, message = "no puede superar los 9.999.999 km")
     Float kilometrajeUltimaReparacion,
@@ -51,7 +51,6 @@ public record NeumaticoRequestDTO(
     @NotNull(message = "es obligatorio")
     TipoEjeUnidadTransporte tipoActual,
 
-    @NotNull(message = "es obligatorio")
     @Min(value = 0, message = "no puede ser negativa")
     @Max(value = MAX_RECAPADOS, message = "no puede superar los 20 recapados")
     Integer cantidadRecapados,
@@ -81,7 +80,8 @@ public record NeumaticoRequestDTO(
     /*
      * Reglas entre campos. Cada una es una propiedad booleana: Bean Validation
      * la informa como error del campo (ej. "estadoActualRegistrable: ...") y
-     * se omite (true) si faltan los datos, que ya reporta su @NotNull.
+     * se omite (true) si faltan datos que ya reporta su @NotNull. Los datos
+     * opcionales que el estado vuelve obligatorios se exigen acá.
      */
 
     @JsonIgnore
@@ -98,23 +98,24 @@ public record NeumaticoRequestDTO(
     }
 
     @JsonIgnore
-    @AssertTrue(message = "un neumático nuevo debe tener kilometraje 0 y ningún recapado")
+    @AssertTrue(message = "un neumático nuevo debe indicar kilometraje 0 y ningún recapado")
     public boolean isNuevoSinUso() {
         if (estadoActual != EstadoNeumatico.NUEVO) {
             return true;
         }
-        return esCeroONulo(kilometrajeTotal) && esCeroONulo(kilometrajeUltimaReparacion)
-                && (cantidadRecapados == null || cantidadRecapados == 0);
+        // En un neumático nuevo el uso se conoce: los tres datos son obligatorios.
+        return esCero(kilometrajeTotal) && esCero(kilometrajeUltimaReparacion)
+                && cantidadRecapados != null && cantidadRecapados == 0;
     }
 
     @JsonIgnore
-    @AssertTrue(message = "un neumático recapado debe tener al menos un recapado")
+    @AssertTrue(message = "un neumático recapado debe indicar al menos un recapado")
     public boolean isRecapadoConRecapados() {
-        return !ESTADOS_RECAPADOS.contains(estadoActual) || cantidadRecapados == null || cantidadRecapados >= 1;
+        return !ESTADOS_RECAPADOS.contains(estadoActual) || (cantidadRecapados != null && cantidadRecapados >= 1);
     }
 
-    private static boolean esCeroONulo(Float valor) {
-        return valor == null || valor == 0f;
+    private static boolean esCero(Float valor) {
+        return valor != null && valor == 0f;
     }
 
 }

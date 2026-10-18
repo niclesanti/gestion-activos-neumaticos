@@ -47,11 +47,19 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     @Transactional
     public NeumaticoResponseDTO registrarNeumatico(NeumaticoRequestDTO neumaticoRequestDTO, String usuario) {
         String numeroSerie = normalizarNumeroSerie(neumaticoRequestDTO.numeroSerie());
+        log.debug("Registrando neumático: usuario={}, estado={}, numeroSerie={}, marcaId={}, proveedorId={}", usuario,
+                neumaticoRequestDTO.estadoActual(), numeroSerie, neumaticoRequestDTO.marcaId(),
+                neumaticoRequestDTO.proveedorId());
         if (numeroSerie != null && neumaticoRepository.existsByNumeroSerie(numeroSerie)) {
+            log.warn("Alta rechazada: número de serie {} duplicado (usuario {})", numeroSerie, usuario);
             throw new EntidadDuplicadaException(MENSAJE_SERIE_DUPLICADA.formatted(numeroSerie));
         }
         MarcaNeumatico marca = marcaNeumaticoRepository.findById(neumaticoRequestDTO.marcaId())
-                .orElseThrow(() -> new EntidadNoEncontradaException(MENSAJE_MARCA_INEXISTENTE));
+                .orElseThrow(() -> {
+                    log.warn("Alta rechazada: la marca {} no existe (usuario {})", neumaticoRequestDTO.marcaId(),
+                            usuario);
+                    return new EntidadNoEncontradaException(MENSAJE_MARCA_INEXISTENTE);
+                });
         // Se resuelve antes de guardar: un proveedor inexistente no deja un alta a medias.
         ProveedorResumen proveedor = neumaticoRequestDTO.estadoActual() == EstadoNeumatico.NUEVO
                 ? buscarProveedor(neumaticoRequestDTO.proveedorId())
@@ -68,6 +76,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
         } catch (DataIntegrityViolationException ex) {
             // Otra alta concurrente con el mismo número de serie ganó la carrera
             // entre la verificación y el INSERT: la restricción UNIQUE la frena.
+            log.warn("Alta rechazada por la base: número de serie {} duplicado (usuario {})", numeroSerie, usuario);
             throw new EntidadDuplicadaException(MENSAJE_SERIE_DUPLICADA.formatted(numeroSerie), ex);
         }
         log.info("Neumático {} registrado por {} (estado {})", neumatico.getPublicId(), usuario,
@@ -82,9 +91,11 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     @Override
     @Transactional(readOnly = true)
     public List<MarcaNeumaticoResponseDTO> listarMarcas() {
-        return marcaNeumaticoRepository.findAllByOrderByNombreAsc().stream()
+        List<MarcaNeumaticoResponseDTO> marcas = marcaNeumaticoRepository.findAllByOrderByNombreAsc().stream()
                 .map(neumaticoMapper::toMarcaDTO)
                 .toList();
+        log.debug("Marcas de neumáticos listadas: {}", marcas.size());
+        return marcas;
     }
 
     /*
@@ -109,7 +120,10 @@ public class NeumaticoServiceImpl implements NeumaticoService {
             return null;
         }
         return proveedorConsulta.buscarPorPublicId(proveedorId)
-                .orElseThrow(() -> new EntidadNoEncontradaException(MENSAJE_PROVEEDOR_INEXISTENTE));
+                .orElseThrow(() -> {
+                    log.warn("Alta rechazada: el proveedor {} no existe", proveedorId);
+                    return new EntidadNoEncontradaException(MENSAJE_PROVEEDOR_INEXISTENTE);
+                });
     }
 
     /**
@@ -126,6 +140,8 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 usuario,
                 Instant.now(),
                 neumatico.getComentario()));
+        log.info("Evento de compra publicado para el neumático {} (proveedor {})", neumatico.getPublicId(),
+                proveedor == null ? null : proveedor.publicId());
     }
 
 }

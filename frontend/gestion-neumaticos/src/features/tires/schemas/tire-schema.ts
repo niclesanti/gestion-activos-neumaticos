@@ -25,7 +25,8 @@ export const AXLE_TYPES = [
 ] as const
 export type AxleType = (typeof AXLE_TYPES)[number]
 
-const RETREADED_STATUSES: readonly TireStatus[] = [
+/** Estados que exigen indicar al menos un recapado. */
+export const RETREADED_STATUSES: readonly TireStatus[] = [
   "RECAPADO",
   "RECAPADO_USADO",
   "RECAPADO_SIN_GARANTIA",
@@ -42,14 +43,25 @@ const MAX_KM = 9_999_999
 const MAX_RETREADS = 20
 const MAX_COMMENT_LENGTH = 512
 
+/*
+ * Kilometrajes y recapados son opcionales (null = dato desconocido), salvo
+ * donde el estado los exige: eso lo valida el superRefine.
+ */
 const km = z
-  .number({ error: "validation.required" })
+  .number()
   .min(0, "validation.kmNegative")
   .max(MAX_KM, "validation.kmTooHigh")
+  .nullable()
 
-/** El valor si es un número válido; null si el campo todavía no lo es. */
+/** El valor si es un número válido; null si el campo está vacío o no lo es. */
 function validNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+/** Valor del input numérico para react-hook-form: vacío = null. */
+export function toNullableNumber(value: unknown) {
+  if (value === "" || value === null || value === undefined) return null
+  return Number(value)
 }
 
 function emptyToNull(value: string) {
@@ -71,10 +83,11 @@ export const tireSchema = z
     kilometrajeTotal: km,
     kilometrajeUltimaReparacion: km,
     cantidadRecapados: z
-      .number({ error: "validation.required" })
+      .number()
       .int("validation.retreadsInteger")
       .min(0, "validation.retreadsNegative")
-      .max(MAX_RETREADS, "validation.retreadsTooHigh"),
+      .max(MAX_RETREADS, "validation.retreadsTooHigh")
+      .nullable(),
     comentario: z.string().max(MAX_COMMENT_LENGTH, "validation.commentTooLong"),
   })
   .superRefine(
@@ -96,23 +109,30 @@ export const tireSchema = z
           "validation.kmSinceRepairAboveTotal"
         )
       }
+      // Un neumático nuevo no tiene uso: los tres datos son obligatorios y en 0.
       if (tire.estadoActual === "NUEVO") {
-        if (total !== null && total !== 0) {
+        if (tire.kilometrajeTotal === null) {
+          issue("kilometrajeTotal", "validation.required")
+        } else if (total !== null && total !== 0) {
           issue("kilometrajeTotal", "validation.newTireKm")
         }
-        if (sinceRepair !== null && sinceRepair !== 0) {
+        if (tire.kilometrajeUltimaReparacion === null) {
+          issue("kilometrajeUltimaReparacion", "validation.required")
+        } else if (sinceRepair !== null && sinceRepair !== 0) {
           issue("kilometrajeUltimaReparacion", "validation.newTireKm")
         }
-        if (retreads !== null && retreads !== 0) {
+        if (tire.cantidadRecapados === null) {
+          issue("cantidadRecapados", "validation.required")
+        } else if (retreads !== null && retreads !== 0) {
           issue("cantidadRecapados", "validation.newTireRetreads")
         }
       }
-      if (
-        RETREADED_STATUSES.includes(tire.estadoActual) &&
-        retreads !== null &&
-        retreads < 1
-      ) {
-        issue("cantidadRecapados", "validation.retreadedNeedsRetread")
+      if (RETREADED_STATUSES.includes(tire.estadoActual)) {
+        if (tire.cantidadRecapados === null) {
+          issue("cantidadRecapados", "validation.required")
+        } else if (retreads !== null && retreads < 1) {
+          issue("cantidadRecapados", "validation.retreadedNeedsRetread")
+        }
       }
     },
     // Por defecto zod omite las reglas entre campos mientras haya otros

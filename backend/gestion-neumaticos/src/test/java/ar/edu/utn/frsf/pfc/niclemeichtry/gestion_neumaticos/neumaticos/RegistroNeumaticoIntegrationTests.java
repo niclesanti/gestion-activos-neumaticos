@@ -62,7 +62,7 @@ class RegistroNeumaticoIntegrationTests {
 		return owner.queryForObject("SELECT id FROM neumaticos.marcas_neumaticos WHERE nombre = 'Fate'", Long.class);
 	}
 
-	private NeumaticoRequestDTO alta(String numeroSerie, EstadoNeumatico estado, float km, int recapados) {
+	private NeumaticoRequestDTO alta(String numeroSerie, EstadoNeumatico estado, Float km, Integer recapados) {
 		return new NeumaticoRequestDTO(numeroSerie, estado, km, km, TipoEjeUnidadTransporte.TRACCION,
 				TipoEjeUnidadTransporte.ARRASTRE, recapados, "alta de prueba", marcaFate(),
 				estado == EstadoNeumatico.NUEVO ? PROVEEDOR_PUBLIC_ID : null);
@@ -82,10 +82,9 @@ class RegistroNeumaticoIntegrationTests {
 				Long.class, registrado.publicId());
 
 		await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(owner.queryForList("""
-				SELECT e.tipo, e.usuario, e.numero_serie_neumatico, c.proveedor_id, c.nombre_proveedor
-				FROM trazabilidad.eventos_neumatico e
-				JOIN trazabilidad.eventos_compra c ON c.id = e.id
-				WHERE e.neumatico_id = ?""", neumaticoId))
+				SELECT tipo, usuario, numero_serie_neumatico, proveedor_id, nombre_proveedor
+				FROM trazabilidad.eventos_neumatico
+				WHERE neumatico_id = ?""", neumaticoId))
 				.containsExactly(Map.of(
 						"tipo", "COMPRA",
 						"usuario", editor.toString(),
@@ -115,6 +114,22 @@ class RegistroNeumaticoIntegrationTests {
 		assertThatThrownBy(() -> neumaticoService.registrarNeumatico(
 				alta(serie.toUpperCase(), EstadoNeumatico.HOMBROS, 10f, 0), editor.toString()))
 				.isInstanceOf(EntidadDuplicadaException.class);
+	}
+
+	@Test
+	@DisplayName("sin kilometrajes ni recapados conocidos se guardan NULL")
+	void datosDeUsoDesconocidos() {
+		SecurityContextHolder.getContext().setAuthentication(autenticacion(editor, NivelAcceso.ROLE_EDITOR));
+
+		NeumaticoResponseDTO registrado = neumaticoService.registrarNeumatico(
+				alta(null, EstadoNeumatico.HOMBROS, null, null), editor.toString());
+
+		assertThat(registrado.kilometrajeTotal()).isNull();
+		assertThat(owner.queryForMap("""
+				SELECT kilometraje_total, kilometraje_ultima_reparacion, cantidad_recapados
+				FROM neumaticos.neumaticos WHERE public_id = ?""", registrado.publicId()).values())
+				.hasSize(3)
+				.containsOnlyNulls();
 	}
 
 }

@@ -13,6 +13,10 @@ skinparam class {
 ' correspondiente, con los datos de exhibición "congelados" (denormalización
 ' deliberada). Por eso, a diferencia de los demás módulos, TODAS sus
 ' referencias hacia entidades de otros módulos llevan id + snapshot.
+'
+' Persistencia: herencia SINGLE_TABLE. Todos los subtipos viven en la tabla
+' eventos_neumatico, con "tipo" como discriminador, para leer el historial
+' completo de un neumático sin joins (ver V11).
 
 abstract class EventoNeumatico <<Entity>> {
   - id: Long
