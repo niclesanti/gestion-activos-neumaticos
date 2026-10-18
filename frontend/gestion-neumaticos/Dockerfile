@@ -18,7 +18,7 @@ RUN npm run build \
     && rm dist/_headers
 
 # Imagen sin root: nginx corre como el usuario "nginx" en el puerto 8080.
-FROM nginxinc/nginx-unprivileged:1.30-alpine AS final
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS final
 
 COPY --from=build /workspace/dist /usr/share/nginx/html
 COPY --from=build /workspace/security-headers.conf /etc/nginx/snippets/security-headers.conf
