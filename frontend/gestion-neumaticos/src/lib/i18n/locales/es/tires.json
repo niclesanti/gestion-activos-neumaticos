@@ -1,0 +1,109 @@
+{
+  "title": "Neumáticos",
+  "subtitle": "Registrá y gestioná los neumáticos de la flota a lo largo de todo su ciclo de vida.",
+  "actions": {
+    "register": "Registrar neumático"
+  },
+  "dialog": {
+    "createTitle": "Registrar neumático",
+    "createDescription": "Completá los datos del neumático. Va a quedar en espera hasta que lo asignes, lo envíes a stock o a reparación.",
+    "cancel": "Cancelar",
+    "submit": "Registrar",
+    "submitting": "Registrando…"
+  },
+  "confirm": {
+    "title": "¿Confirmás el registro?",
+    "withSerial": "El número de serie {{serial}} no se va a poder modificar una vez registrado el neumático.",
+    "withoutSerial": "Vas a registrar el neumático sin número de serie y no se lo vas a poder agregar después.",
+    "cancel": "Revisar",
+    "confirm": "Sí, registrar"
+  },
+  "form": {
+    "serialNumber": {
+      "label": "Número de serie",
+      "placeholder": "Ej.: 4B12-3456",
+      "description": "Opcional. No se puede modificar después del registro."
+    },
+    "brand": {
+      "label": "Marca",
+      "placeholder": "Elegí una marca",
+      "loading": "Cargando marcas…",
+      "error": "No pudimos cargar las marcas"
+    },
+    "status": {
+      "label": "Estado",
+      "placeholder": "Elegí el estado"
+    },
+    "supplier": {
+      "label": "Proveedor",
+      "placeholder": "Elegí el proveedor",
+      "description": "Opcional. A quién se le compró el neumático nuevo.",
+      "none": "Sin proveedor",
+      "loading": "Cargando proveedores…",
+      "error": "No pudimos cargar los proveedores"
+    },
+    "originAxle": {
+      "label": "Tipo de eje de origen",
+      "placeholder": "Elegí el tipo de eje"
+    },
+    "currentAxle": {
+      "label": "Tipo de eje actual",
+      "placeholder": "Elegí el tipo de eje"
+    },
+    "totalKm": {
+      "label": "Kilometraje actual (km)"
+    },
+    "kmSinceRepair": {
+      "label": "Km desde la última reparación"
+    },
+    "retreads": {
+      "label": "Cantidad de recapados"
+    },
+    "comment": {
+      "label": "Comentarios",
+      "placeholder": "Observaciones sobre el neumático (opcional)"
+    },
+    "newTireHint": "Un neumático nuevo se registra con 0 km y sin recapados."
+  },
+  "status": {
+    "NUEVO": "Nuevo",
+    "NUEVO_USADO": "Nuevo usado",
+    "HOMBROS": "Hombros",
+    "RECAPADO": "Recapado",
+    "RECAPADO_USADO": "Recapado usado",
+    "RECAPADO_SIN_GARANTIA": "Recapado sin garantía",
+    "DE_BAJA": "De baja"
+  },
+  "axle": {
+    "DIRECCION": "Dirección",
+    "TRACCION": "Tracción",
+    "ARRASTRE": "Arrastre",
+    "AUXILIO": "Auxilio",
+    "SIN_ESPECIFICAR": "Sin especificar"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "serialTooLong": "No puede superar los 100 caracteres",
+    "serialFormat": "Solo letras, números, espacios, puntos, guiones y barras; debe empezar con letra o número",
+    "kmNegative": "No puede ser negativo",
+    "kmTooHigh": "No puede superar los 9.999.999 km",
+    "kmSinceRepairAboveTotal": "No puede superar el kilometraje actual",
+    "retreadsInteger": "Debe ser un número entero",
+    "retreadsNegative": "No puede ser negativa",
+    "retreadsTooHigh": "No puede superar los 20 recapados",
+    "newTireKm": "Un neumático nuevo debe tener 0 km",
+    "newTireRetreads": "Un neumático nuevo no puede tener recapados",
+    "retreadedNeedsRetread": "Un neumático recapado debe tener al menos un recapado",
+    "statusNotAllowed": "No se puede registrar un neumático dado de baja",
+    "commentTooLong": "No puede superar los 512 caracteres"
+  },
+  "feedback": {
+    "created": "Neumático registrado",
+    "createdDescription": "Quedó en espera de que operes con él.",
+    "duplicateSerial": "Ya existe un neumático con ese número de serie",
+    "notFound": "La marca o el proveedor elegidos ya no existen. Recargá la página e intentá de nuevo",
+    "forbidden": "No tenés permisos para registrar neumáticos",
+    "invalid": "Revisá los datos del formulario",
+    "unexpected": "No pudimos registrar el neumático. Intentá de nuevo en unos minutos"
+  }
+}

@@ -22,8 +22,10 @@ class Neumatico <<Entity>> <<Auditable>> {
   - numeroSerie: String
   - estadoActual: EstadoNeumatico
   - enEspera: Boolean
-  - kilometraje: Float
+  - kilometrajeTotal: Float
+  - kilometrajeUltimaReparacion: Float
   - tipoOrigen: TipoEjeUnidadTransporte
+  - tipoActual: TipoEjeUnidadTransporte
   - cantidadRecapados: Integer
   - situacionOperativaVigente: SituacionOperativa
   - nodoUbicacion: String
@@ -32,10 +34,13 @@ class Neumatico <<Entity>> <<Auditable>> {
   - centroAlmacenamientoId: Long
   - servicioReparacionId: Long
   + setCalculoKm(kmAntes: Float, kmDespues: Float): void
+  + setKilometraje(kilometraje: Float): void
   + agregarNeumaticoStock(idCentroAlmacenamiento: Long): void
   + removerNeumaticoStock(): void
   + enviarNeumaticoReparacion(idServicioReparacion: Long): void
   + reingresarNeumatico(): void
+  + nuevoRecapado(): void
+  + montarEnSlot(slotMontadoId: Long): void
 }
 
 enum EstadoNeumatico {
@@ -61,6 +66,7 @@ enum TipoEjeUnidadTransporte {
   TRACCION
   ARRASTRE
   AUXILIO
+  SIN_ESPECIFICAR
 }
 
 package "common" as common {

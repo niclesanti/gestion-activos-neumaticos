@@ -20,6 +20,14 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.UsuarioSesionDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.entity.NivelAcceso;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.entity.Usuario;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.Neumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.SituacionOperativa;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.TipoEjeUnidadTransporte;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.ProveedorResumen;
 
 /**
  * Datos de prueba compartidos por todos los tests: cada método devuelve una
@@ -169,6 +177,69 @@ public final class TestDataFactory {
 	/** Codifica en base64 los bytes UTF-8 del texto, como hay que pasar el secreto JWT. */
 	public static String secretoBase64(String texto) {
 		return Base64.getEncoder().encodeToString(texto.getBytes(StandardCharsets.UTF_8));
+	}
+
+	// Neumáticos
+
+	public static final Long MARCA_ID = 1L;
+	public static final String NUMERO_SERIE = "ABC-123";
+	/** Proveedor del mock del módulo de proveedores (ProveedorConsultaMock). */
+	public static final UUID PROVEEDOR_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-000000000001");
+
+	public static MarcaNeumatico marca() {
+		return MarcaNeumatico.builder().id(MARCA_ID).nombre("Fate").build();
+	}
+
+	public static ProveedorResumen proveedorResumen() {
+		return new ProveedorResumen(1L, PROVEEDOR_PUBLIC_ID, "Neumáticos del Litoral S.A.");
+	}
+
+	/** Alta válida de un neumático nuevo, con número de serie y proveedor. */
+	public static NeumaticoRequestDTO neumaticoNuevoRequest() {
+		return new NeumaticoRequestDTO(NUMERO_SERIE, EstadoNeumatico.NUEVO, 0f, 0f, TipoEjeUnidadTransporte.TRACCION,
+				TipoEjeUnidadTransporte.TRACCION, 0, "Compra inicial", MARCA_ID, PROVEEDOR_PUBLIC_ID);
+	}
+
+	/** Alta válida de un neumático usado (recapado), sin número de serie ni proveedor. */
+	public static NeumaticoRequestDTO neumaticoUsadoRequest() {
+		return new NeumaticoRequestDTO(null, EstadoNeumatico.RECAPADO_USADO, 150_000f, 20_000f,
+				TipoEjeUnidadTransporte.DIRECCION, TipoEjeUnidadTransporte.ARRASTRE, 1, null, MARCA_ID, null);
+	}
+
+	/** Copia de {@code base} con otros valores, para casos de validación. */
+	public static NeumaticoRequestDTO neumaticoRequest(String numeroSerie, EstadoNeumatico estado, Float kmTotal,
+			Float kmUltimaReparacion, Integer recapados) {
+		NeumaticoRequestDTO base = neumaticoNuevoRequest();
+		return new NeumaticoRequestDTO(numeroSerie, estado, kmTotal, kmUltimaReparacion, base.tipoOrigen(),
+				base.tipoActual(), recapados, base.comentario(), base.marcaId(), base.proveedorId());
+	}
+
+	/** Neumático persistido (con ids) a partir de un alta. */
+	public static Neumatico neumatico(NeumaticoRequestDTO request) {
+		return Neumatico.builder()
+				.id(100L)
+				.publicId(UUID.randomUUID())
+				.numeroSerie(request.numeroSerie())
+				.estadoActual(request.estadoActual())
+				.enEspera(true)
+				.kilometrajeTotal(request.kilometrajeTotal())
+				.kilometrajeUltimaReparacion(request.kilometrajeUltimaReparacion())
+				.tipoOrigen(request.tipoOrigen())
+				.tipoActual(request.tipoActual())
+				.cantidadRecapados(request.cantidadRecapados())
+				.situacionOperativaVigente(SituacionOperativa.EN_ESPERA)
+				.comentario(request.comentario())
+				.marca(marca())
+				.build();
+	}
+
+	public static NeumaticoResponseDTO neumaticoResponse(Neumatico neumatico) {
+		return new NeumaticoResponseDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(),
+				neumatico.getEstadoActual(), neumatico.getEnEspera(), neumatico.getKilometrajeTotal(),
+				neumatico.getKilometrajeUltimaReparacion(), neumatico.getTipoOrigen(), neumatico.getTipoActual(),
+				neumatico.getCantidadRecapados(), neumatico.getSituacionOperativaVigente(), neumatico.getComentario(),
+				neumatico.getMarca() == null ? null : neumatico.getMarca().getNombre(),
+				null, null, null, null, null, null, null);
 	}
 
 	// Límite de intentos de login

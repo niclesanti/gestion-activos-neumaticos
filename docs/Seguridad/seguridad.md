@@ -157,6 +157,14 @@ Sin anotación, el endpoint queda abierto a cualquier usuario autenticado (`anyR
 
 El rol que evalúan `@PreAuthorize` y la base es el **vigente en la base** en ese request (2.2), no el que traía el token.
 
+Endpoints de negocio anotados hasta ahora:
+
+| Endpoint | Anotación | Quiénes |
+|---|---|---|
+| `POST /api/neumatico` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/neumatico/marcas` | `hasRole('LECTOR')` | Los tres roles |
+| `GET /api/proveedores` (mock provisorio) | `hasRole('LECTOR')` | Los tres roles |
+
 ### 2.10.1 Cabeceras HTTP de la API
 
 Spring Security agrega por defecto `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cache-Control: no-store` y, en requests HTTPS, `Strict-Transport-Security` (1 año, `includeSubDomains`). Además:
@@ -175,7 +183,7 @@ Principio de **privilegio mínimo y denegación por defecto**. Sigue el patrón 
 |---|---|---|
 | Superusuario de la imagen (`DB_USER`) | `SUPERUSER` | Solo crea el owner al inicializar el volumen (`infra/postgres/initdb/01-crear-owner.sh`). Ningún servicio se conecta con él. |
 | Owner (`DB_OWNER_USER`, `gn_owner`) | `LOGIN CREATEROLE`, sin `SUPERUSER` ni `BYPASSRLS`; dueño de la base, schemas y tablas | Solo DDL, desde el job de migraciones (servicio `migraciones`, imagen oficial de Flyway). `CREATEROLE` le alcanza para crear y administrar los roles `gn_*`. Sin superusuario no hay `COPY … TO PROGRAM` ni escalada al sistema operativo. |
-| `gn_app` | `LOGIN NOINHERIT` | Rol de conexión del pool. Por sí mismo solo puede: ejecutar `usuarios.buscar_para_login` y `usuarios.nivel_acceso_vigente`, leer `seguridad.tokens_revocados`, borrar los tokens ya vencidos y gestionar `event_publication` (listeners asíncronos). |
+| `gn_app` | `LOGIN NOINHERIT` | Rol de conexión del pool. Por sí mismo solo puede: ejecutar `usuarios.buscar_para_login` y `usuarios.nivel_acceso_vigente`, leer `seguridad.tokens_revocados`, borrar los tokens ya vencidos, gestionar `event_publication` e insertar en el historial de `trazabilidad` (listeners asíncronos). |
 | `gn_administrador`, `gn_editor`, `gn_lector` | `NOLOGIN` | Los permisos reales. `gn_app` puede asumirlos (`SET ROLE`), pero no los hereda (`WITH INHERIT FALSE`). |
 
 La clave de `gn_app` la fija el callback `afterMigrate__clave_rol_app.sql` desde `DB_APP_PASSWORD` en cada migrate. El placeholder va dentro de un string con *dollar quoting* de etiqueta propia y pasa por `format('%L')`: una comilla en la clave ya no rompe ni inyecta la sentencia que corre como owner.
@@ -217,10 +225,29 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 - `gn_app` borra solo filas con `expira_en < now()`: la purga diaria no puede borrar un token vigente.
 - Los tres roles insertan (logout) y leen. El `INSERT` exige `expira_en <= now() + 1 day` (`V8`): con una inyección SQL no se puede inflar la tabla con filas que la purga nunca borraría.
 
+**`neumaticos.neumaticos`** y **`neumaticos.marcas_neumaticos`** (`V10`):
+
+| | Administrador | Editor | Lector |
+|---|:-:|:-:|:-:|
+| `neumaticos` SELECT | ✔ | ✔ | ✔ |
+| `neumaticos` INSERT | ✔ | ✔ | ✘ |
+| `neumaticos` UPDATE | todas las columnas salvo `id`, `public_id` y `numero_serie` | ídem | ✘ |
+| `neumaticos` DELETE | ✘ | ✘ | ✘ |
+| `marcas_neumaticos` SELECT | ✔ | ✔ | ✔ |
+| `marcas_neumaticos` INSERT / UPDATE / DELETE | ✘ | ✘ | ✘ |
+
+- El número de serie no se puede modificar una vez registrado (HU-11): además de `updatable = false` en la entidad, la base no da `UPDATE` sobre la columna. Se guarda recortado y en mayúsculas (`CHECK`), así la unicidad no distingue mayúsculas; varios neumáticos pueden no tener número de serie (`NULL`).
+- Las marcas son un catálogo que solo se carga por migraciones.
+
+**`trazabilidad.eventos_neumatico`** y **`trazabilidad.eventos_compra`** (`V11`): el historial lo escriben solo los listeners asíncronos de eventos de dominio, que corren como el sistema (`gn_app`). Por eso `gn_app` es el único rol con `INSERT` (y una política permisiva `TO gn_app`), y ningún rol de usuario escribe, modifica, borra ni, por ahora, lee el historial (la lectura se habilita con el endpoint de consulta). Las tablas llevan igual RLS y la política restrictiva para los tres roles.
+
+**Listeners asíncronos y contexto de seguridad.** El executor de `@Async` **sí propaga** el `SecurityContext` del request que publicó el evento: `spring-modulith-starter-insight` (observability) lo decora con un `ContextPropagatingTaskDecorator`, y Spring Security registra un accesor de context-propagation. Sin cuidado, un listener escribiría con el rol del usuario (y fallaría contra trazabilidad, o al revés, tendría permisos de más). Por eso los listeners que escriben datos del sistema envuelven la escritura en `security.ComoSistema.ejecutar(...)`, que limpia el contexto, y abren la transacción adentro (sin `@Transactional` en el método, ver `CompraNeumaticoListener`). Lo verifica `RegistroNeumaticoIntegrationTests` contra PostgreSQL.
+
 **Excepciones documentadas:**
 
 - `public.flyway_schema_history`: solo la toca el owner.
-- `public.event_publication` (Spring Modulith): sin RLS, porque es infraestructura del framework sin datos por usuario y los listeners asíncronos corren sin usuario. Con privilegios mínimos (`V7`): administrador y editor publican y marcan eventos (`SELECT`, `INSERT`, `UPDATE`); el lector no tiene acceso; `gn_app` marca, reintenta y purga (`SELECT`, `UPDATE`, `DELETE`) pero no publica. Nadie más que `gn_app` borra. No se usa `MODE_INHERITABLETHREADLOCAL` para los listeners: haría que hilos del pool hereden la identidad de otro request.
+- `public.event_publication` (Spring Modulith): sin RLS, porque es infraestructura del framework sin datos por usuario. Con privilegios mínimos (`V7`): administrador y editor publican y marcan eventos (`SELECT`, `INSERT`, `UPDATE`); el lector no tiene acceso; `gn_app` marca, reintenta y purga (`SELECT`, `UPDATE`, `DELETE`) pero no publica. Nadie más que `gn_app` borra. `serialized_event` es `TEXT` (`V12`). No se usa `MODE_INHERITABLETHREADLOCAL` para los listeners: haría que hilos del pool hereden la identidad de otro request.
+- Inserción de `gn_app` en `trazabilidad` (ver arriba): riesgo aceptado de que una inyección SQL en un camino sin usuario (login) pudiera insertar eventos falsos; todo el acceso pasa por JPA o consultas parametrizadas.
 
 **Por qué no un enum de PostgreSQL para el nivel de acceso:**
 
@@ -313,7 +340,7 @@ Una única definición, `scripts/security-headers.mjs`, genera las cabeceras par
 
 ## 4. Verificación
 
-- **Backend:** `./mvnw verify` corre 195 tests y exige 85 % de cobertura de líneas y ramas (hoy 99,8 % y 98,6 %). Necesita Docker: los tests de integración levantan `postgres:18-alpine` con Testcontainers, porque roles, GRANT y RLS no existen en una base embebida. Las migraciones corren como el owner no superusuario `gn_owner`, igual que en compose.
+- **Backend:** `./mvnw verify` corre 278 tests y exige 85 % de cobertura de líneas y ramas (hoy 96,1 % y 98,2 %). Necesita Docker: los tests de integración levantan `postgres:18-alpine` con Testcontainers, porque roles, GRANT y RLS no existen en una base embebida. Las migraciones corren como el owner no superusuario `gn_owner`, igual que en compose.
   - Unit tests del service con Mockito: hash dummy, normalización, límite de intentos (bloqueo antes de buscar al usuario, fallo y éxito registrados).
   - `@WebMvcTest` del controller con la cadena de seguridad real: endpoints públicos y protegidos, validaciones 400, 401 por credenciales, por token revocado o ausente y por usuario deshabilitado en la base, login que ignora un Bearer, IP del cliente, 429 y 503 con `Retry-After`, 415 y 405 (no 500), cabeceras de seguridad y HSTS sobre HTTPS.
   - `AutorizacionPorRolTest`: jerarquía de roles con `@PreAuthorize` y 403 en JSON.
@@ -324,6 +351,7 @@ Una única definición, `scripts/security-headers.mjs`, genera las cabeceras par
     - Sin sesión no se lee la tabla, pero el login y `nivel_acceso_vigente` funcionan (y un usuario autenticado no puede ejecutarlos).
     - Un cambio de rol se ve en la consulta siguiente.
     - Privilegios de `event_publication` por rol.
+    - `neumaticos` (lector solo lee, nadie borra, número de serie inmutable y normalizado), `marcas_neumaticos` (solo lectura) y `trazabilidad` (solo inserta `gn_app`).
     - Logout, purga de tokens y expiración acotada al revocar.
     - Owner sin superusuario y ninguna tabla sin RLS.
   - El emisor y el validador de JWT con el encoder y decoder reales: token expirado, firmado con otra clave, revocado o para otro `aud`; secreto no base64 o corto.
@@ -345,6 +373,20 @@ Una única definición, `scripts/security-headers.mjs`, genera las cabeceras par
   - *(2026-10-04)* Ninguna violación de CSP ni error de consola navegando todas las secciones; un `<script>` inline inyectado queda bloqueado por la CSP.
   - *(2026-10-04)* Seis fallos seguidos muestran "Demasiados intentos. Esperá 3 minutos".
   - *(2026-10-04)* Cierre por inactividad: toast, vuelta al login y token revocado en el backend (204).
+  - *(2026-10-17, HU-11)* Alta de neumáticos:
+    - El editor ve el botón y el dialog.
+    - Envío vacío: todos los obligatorios marcados y ningún request.
+    - Reglas entre campos (recapado sin recapados, km desde la reparación mayor al total) marcadas en el primer envío.
+    - "De baja" no se ofrece.
+    - Marcas leídas de la base.
+    - "Nuevo" completa 0 km y 0 recapados y muestra el proveedor.
+    - Aviso de número de serie inmutable; "Revisar" no envía nada.
+    - Alta nueva → 201, `E2E-1001` en mayúsculas, `EN_ESPERA`, evento `COMPRA` registrado de forma asíncrona con el snapshot del proveedor y la publicación completada.
+    - Número de serie repetido → 409 en el campo.
+    - Alta sin número de serie (nuevo usado) → 201 sin evento.
+    - Lector sin la sección (`/tires` redirige) y `POST /api/neumatico` → 403.
+    - Administrador registra.
+    - Sin errores de consola.
 - **Base, con `psql` como `gn_app`:**
   - Sin rol, `SELECT` sobre `usuarios` → `permission denied`.
   - `gn_lector` ve 1 fila y no puede actualizar ni borrar.
@@ -362,20 +404,21 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 
 ### Al construir los módulos de negocio
 
-1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). El mecanismo está listo; falta aplicarlo endpoint por endpoint.
-2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy solo entra a Inicio.
+1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11); falta en los endpoints que vengan.
+2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy solo entra a Inicio, aunque la base ya le da `SELECT` sobre neumáticos y marcas. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
+3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 
 ### Con la gestión de usuarios (alta, edición, baja)
 
-3. **Baja lógica** (`activo` / `deletedAt`, según `AuditableEntity` del diagrama). Basta con que `usuarios.buscar_para_login` y `usuarios.nivel_acceso_vigente` ignoren a los inactivos para que el login y los tokens vigentes dejen de servir de inmediato.
-4. **Revocar todas las sesiones de un usuario al cambiar su contraseña.** El cambio de rol y la baja ya rigen al instante (2.2), pero un token robado sigue sirviendo tras un cambio de contraseña. Opción: columna `sesiones_validas_desde` comparada con el `iat` del token en la misma consulta del rol vigente.
-5. **Política de contraseñas** para el alta y el cambio (largo mínimo 12, chequeo contra contraseñas filtradas). No aplica al login.
-6. **Auditoría de eventos de seguridad** (logins exitosos y fallidos, bloqueos, logouts, cambios de rol) en el módulo `trazabilidad`, que alimentaría la pantalla de Auditoría. Hoy quedan en los logs con IP e identificador.
+4. **Baja lógica** (`activo` / `deletedAt`, según `AuditableEntity` del diagrama). Basta con que `usuarios.buscar_para_login` y `usuarios.nivel_acceso_vigente` ignoren a los inactivos para que el login y los tokens vigentes dejen de servir de inmediato.
+5. **Revocar todas las sesiones de un usuario al cambiar su contraseña.** El cambio de rol y la baja ya rigen al instante (2.2), pero un token robado sigue sirviendo tras un cambio de contraseña. Opción: columna `sesiones_validas_desde` comparada con el `iat` del token en la misma consulta del rol vigente.
+6. **Política de contraseñas** para el alta y el cambio (largo mínimo 12, chequeo contra contraseñas filtradas). No aplica al login.
+7. **Auditoría de eventos de seguridad** (logins exitosos y fallidos, bloqueos, logouts, cambios de rol) en el módulo `trazabilidad`, que alimentaría la pantalla de Auditoría. Hoy quedan en los logs con IP e identificador.
 
 ### Mejoras
 
-7. **Rotación de la clave JWT con `kid`** para rotar `JWT_SECRET` sin cerrar todas las sesiones. Si otros servicios tuvieran que validar tokens, pasar a firma asimétrica (RS256 o EdDSA).
-8. **Rendimiento por request:** cada request autenticado hace dos consultas indexadas (revocación y rol vigente). Si el volumen crece, unificarlas en una función o cachear **solo los revocados** (Caffeine con TTL de segundos). *Cachear "no revocado" o el rol con un TTL largo anularía el logout y el cambio de rol inmediatos.*
-9. **Limitador distribuido** (Bucket4j sobre Redis o PostgreSQL) si el backend pasa a tener más de una instancia.
-10. **Tests automatizados del frontend** (schema de login, guards, `syncSessionOnPageRestore`, `useSessionTimeout`, interceptor de 401). Hoy la cobertura del frontend es la prueba end-to-end.
-11. **Refresh token en cookie `HttpOnly`** si frontend y API pasan a compartir dominio registrable (`app.<dominio>` / `api.<dominio>`): sacaría el token de sesión del alcance de JavaScript (3.1).
+8. **Rotación de la clave JWT con `kid`** para rotar `JWT_SECRET` sin cerrar todas las sesiones. Si otros servicios tuvieran que validar tokens, pasar a firma asimétrica (RS256 o EdDSA).
+9. **Rendimiento por request:** cada request autenticado hace dos consultas indexadas (revocación y rol vigente). Si el volumen crece, unificarlas en una función o cachear **solo los revocados** (Caffeine con TTL de segundos). *Cachear "no revocado" o el rol con un TTL largo anularía el logout y el cambio de rol inmediatos.*
+10. **Limitador distribuido** (Bucket4j sobre Redis o PostgreSQL) si el backend pasa a tener más de una instancia.
+11. **Tests automatizados del frontend** (schema de login, guards, `syncSessionOnPageRestore`, `useSessionTimeout`, interceptor de 401). Hoy la cobertura del frontend es la prueba end-to-end.
+12. **Refresh token en cookie `HttpOnly`** si frontend y API pasan a compartir dominio registrable (`app.<dominio>` / `api.<dominio>`): sacaría el token de sesión del alcance de JavaScript (3.1).
