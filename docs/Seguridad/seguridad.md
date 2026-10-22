@@ -164,6 +164,7 @@ Endpoints de negocio anotados hasta ahora:
 | `POST /api/neumatico` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/neumatico/marcas` | `hasRole('LECTOR')` | Los tres roles |
 | `GET /api/proveedores` (mock provisorio) | `hasRole('LECTOR')` | Los tres roles |
+| `POST /api/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 
 ### 2.10.1 Cabeceras HTTP de la API
 
@@ -239,6 +240,18 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 - El número de serie no se puede modificar una vez registrado (HU-11): además de `updatable = false` en la entidad, la base no da `UPDATE` sobre la columna. Se guarda recortado y en mayúsculas (`CHECK`), así la unicidad no distingue mayúsculas; varios neumáticos pueden no tener número de serie (`NULL`).
 - Las marcas son un catálogo que solo se carga por migraciones.
 
+**`conductores.conductores`** (`V13`):
+
+| | Administrador | Editor | Lector |
+|---|:-:|:-:|:-:|
+| SELECT | ✔ | ✔ | ✔ |
+| INSERT | ✔ | ✔ | ✘ |
+| UPDATE / DELETE | ✘ | ✘ | ✘ |
+
+- Por ahora solo existe el alta: `UPDATE` y `DELETE` se habilitan con las historias de edición y baja.
+- El DNI es opcional y único (varios conductores pueden no tenerlo, `NULL`). Se guarda recortado y con 7 u 8 dígitos sin puntos (`CHECK`); nombre y apellido, recortados y no vacíos.
+- `RegistroConductorIntegrationTests` verifica contra PostgreSQL que el lector no inserta ni llamando directo al servicio (`permission denied`).
+
 **`trazabilidad.eventos_neumatico`** (`V11`, una sola tabla para todos los subtipos de evento — herencia `SINGLE_TABLE` con `tipo` como discriminador): el historial lo escriben solo los listeners asíncronos de eventos de dominio, que corren como el sistema (`gn_app`). Por eso `gn_app` es el único rol con `INSERT` (y una política permisiva `TO gn_app`), y ningún rol de usuario escribe, modifica, borra ni, por ahora, lee el historial (la lectura se habilita con el endpoint de consulta). La tabla lleva igual RLS y la política restrictiva para los tres roles; un `CHECK` por subtipo impide que un evento lleve columnas de otro subtipo.
 
 **Listeners asíncronos y contexto de seguridad.** El executor de `@Async` **sí propaga** el `SecurityContext` del request que publicó el evento: `spring-modulith-starter-insight` (observability) lo decora con un `ContextPropagatingTaskDecorator`, y Spring Security registra un accesor de context-propagation. Sin cuidado, un listener escribiría con el rol del usuario (y fallaría contra trazabilidad, o al revés, tendría permisos de más). Por eso los listeners que escriben datos del sistema envuelven la escritura en `security.ComoSistema.ejecutar(...)`, que limpia el contexto, y abren la transacción adentro (sin `@Transactional` en el método, ver `CompraNeumaticoListener`). Lo verifica `RegistroNeumaticoIntegrationTests` contra PostgreSQL.
@@ -311,10 +324,21 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 |---|:-:|:-:|:-:|
 | Inicio | ✔ | ✔ | ✔ |
 | Unidades de transporte, Neumáticos, Reparaciones, Almacenamiento | ✔ | ✔ | ✘ |
-| Configuración (`/settings`) | ✔ | ✘ | ✘ |
+| Configuración (`/settings`) | ✔ | ✔ (sin Usuarios) | ✔ (sin Usuarios, solo lectura) |
 | Auditoría (`/audit`) | ✔ | ✘ | ✘ |
 
-El administrador es el "superusuario" del negocio. El editor puede hacer todo menos Configuración y Auditoría. Las restricciones del lector todavía no están definidas, así que por ahora solo entra a Inicio.
+El administrador es el "superusuario" del negocio: hace el CRUD de todo. El editor puede hacer todo menos Auditoría y la gestión de usuarios. El lector es de solo lectura: entra a Inicio y a Configuración, donde puede buscar y filtrar pero no dar de alta, modificar ni eliminar; el resto de sus permisos de lectura todavía no está definido.
+
+Dentro de Configuración, `SETTINGS_TAB_ACCESS` decide qué pestañas ve cada nivel, y `ACTION_ACCESS` (`canPerform`) qué acciones de negocio se muestran:
+
+| Catálogo | Administrador | Editor | Lector |
+|---|:-:|:-:|:-:|
+| Usuarios | CRUD | ✘ (no ve la pestaña) | ✘ (no ve la pestaña) |
+| Conductores, Proveedores, Servicios de reparación, Centros de almacenamiento | CRUD | alta, modificación, baja, búsqueda y filtro | búsqueda y filtro |
+
+Acciones implementadas hasta ahora: `drivers.create` (Registrar conductor), administrador y editor.
+
+Los features no pueden importar `features/auth` (regla de `boundaries`): leen el nivel con `useAccessLevel()` (`src/lib/access.ts`), un contexto que provee `AppLayout` (el shell) con el nivel de la sesión.
 
 > Esto es **autorización de interfaz**: decide qué se muestra, no qué se permite. Las barreras reales son `@PreAuthorize` en el backend (2.10) y los permisos de la base (2.11).
 
@@ -404,8 +428,8 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 
 ### Al construir los módulos de negocio
 
-1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11); falta en los endpoints que vengan.
-2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy solo entra a Inicio, aunque la base ya le da `SELECT` sobre neumáticos y marcas. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
+1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11) y de conductores; falta en los endpoints que vengan.
+2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas y conductores. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 
 ### Con la gestión de usuarios (alta, edición, baja)

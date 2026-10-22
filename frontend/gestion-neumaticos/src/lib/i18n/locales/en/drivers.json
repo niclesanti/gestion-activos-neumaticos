@@ -1,0 +1,43 @@
+{
+  "title": "Drivers",
+  "description": "People who drive the company's transport units.",
+  "actions": {
+    "register": "Register driver"
+  },
+  "dialog": {
+    "createTitle": "Register driver",
+    "createDescription": "Fill in the driver details. The ID number is optional.",
+    "cancel": "Cancel",
+    "submit": "Register",
+    "submitting": "Registering…"
+  },
+  "form": {
+    "firstName": {
+      "label": "First name",
+      "placeholder": "E.g.: Juan"
+    },
+    "lastName": {
+      "label": "Last name",
+      "placeholder": "E.g.: Pérez"
+    },
+    "dni": {
+      "label": "ID number (DNI)",
+      "placeholder": "E.g.: 30123456",
+      "description": "Optional. 7 or 8 digits, no dots."
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "nameTooLong": "It can't be longer than 100 characters",
+    "dniFormat": "It must have 7 or 8 digits, without dots or spaces"
+  },
+  "feedback": {
+    "created": "Driver registered",
+    "createdDescription": "You can now assign them to a transport unit.",
+    "duplicateDni": "A driver with that ID number already exists",
+    "forbidden": "You don't have permission to register drivers",
+    "invalid": "Check the form data",
+    "unexpected": "We couldn't register the driver. Try again in a few minutes"
+  },
+  "empty": "There is no driver list yet."
+}

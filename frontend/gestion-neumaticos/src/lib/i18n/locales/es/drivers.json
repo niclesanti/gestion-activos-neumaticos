@@ -1,0 +1,43 @@
+{
+  "title": "Conductores",
+  "description": "Personas que manejan las unidades de transporte de la empresa.",
+  "actions": {
+    "register": "Registrar conductor"
+  },
+  "dialog": {
+    "createTitle": "Registrar conductor",
+    "createDescription": "Completá los datos del conductor. El DNI es opcional.",
+    "cancel": "Cancelar",
+    "submit": "Registrar",
+    "submitting": "Registrando…"
+  },
+  "form": {
+    "firstName": {
+      "label": "Nombre",
+      "placeholder": "Ej.: Juan"
+    },
+    "lastName": {
+      "label": "Apellido",
+      "placeholder": "Ej.: Pérez"
+    },
+    "dni": {
+      "label": "DNI",
+      "placeholder": "Ej.: 30123456",
+      "description": "Opcional. 7 u 8 dígitos, sin puntos."
+    }
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "nameTooLong": "No puede superar los 100 caracteres",
+    "dniFormat": "Debe tener 7 u 8 dígitos, sin puntos ni espacios"
+  },
+  "feedback": {
+    "created": "Conductor registrado",
+    "createdDescription": "Ya podés asignarlo a una unidad de transporte.",
+    "duplicateDni": "Ya existe un conductor con ese DNI",
+    "forbidden": "No tenés permisos para registrar conductores",
+    "invalid": "Revisá los datos del formulario",
+    "unexpected": "No pudimos registrar el conductor. Intentá de nuevo en unos minutos"
+  },
+  "empty": "Todavía no hay listado de conductores."
+}

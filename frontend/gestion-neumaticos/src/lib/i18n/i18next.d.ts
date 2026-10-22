@@ -5,6 +5,7 @@ import type audit from "@/lib/i18n/locales/es/audit.json"
 import type auth from "@/lib/i18n/locales/es/auth.json"
 import type common from "@/lib/i18n/locales/es/common.json"
 import type dev from "@/lib/i18n/locales/es/dev.json"
+import type drivers from "@/lib/i18n/locales/es/drivers.json"
 import type home from "@/lib/i18n/locales/es/home.json"
 import type settings from "@/lib/i18n/locales/es/settings.json"
 import type tires from "@/lib/i18n/locales/es/tires.json"
@@ -20,6 +21,7 @@ declare module "i18next" {
       dev: typeof dev
       home: typeof home
       tires: typeof tires
+      drivers: typeof drivers
     }
   }
 }

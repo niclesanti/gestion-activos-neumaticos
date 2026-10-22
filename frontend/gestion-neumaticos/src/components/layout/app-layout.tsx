@@ -4,6 +4,8 @@ import { AppHeader } from "@/components/layout/app-header"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
+import { AccessLevelContext } from "@/lib/access"
 
 /** Nombre de la cookie que escribe SidebarProvider al abrir/cerrar la sidebar. */
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
@@ -25,19 +27,24 @@ function readSidebarState() {
  * sólo en el contenedor del Outlet).
  */
 export function AppLayout() {
+  const user = useCurrentUser()
+
   return (
-    <SidebarProvider
-      defaultOpen={readSidebarState()}
-      className="h-svh overflow-hidden"
-    >
-      <AppSidebar />
-      <SidebarInset className="h-svh overflow-hidden">
-        <AppHeader />
-        <div className="flex-1 overflow-y-auto p-4 pb-24 md:pb-4">
-          <Outlet />
-        </div>
-        <MobileBottomNav />
-      </SidebarInset>
-    </SidebarProvider>
+    // Las páginas leen el nivel con `useAccessLevel` (no pueden importar auth).
+    <AccessLevelContext value={user?.accessLevel ?? null}>
+      <SidebarProvider
+        defaultOpen={readSidebarState()}
+        className="h-svh overflow-hidden"
+      >
+        <AppSidebar />
+        <SidebarInset className="h-svh overflow-hidden">
+          <AppHeader />
+          <div className="flex-1 overflow-y-auto p-4 pb-24 md:pb-4">
+            <Outlet />
+          </div>
+          <MobileBottomNav />
+        </SidebarInset>
+      </SidebarProvider>
+    </AccessLevelContext>
   )
 }
