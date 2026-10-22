@@ -7,6 +7,7 @@ import { RequireAuth } from "@/features/auth/components/require-auth"
 import { RequireRouteAccess } from "@/features/auth/components/require-route-access"
 import { LoginPage } from "@/features/auth/pages/login-page"
 import { ToastShowcasePage } from "@/features/dev/pages/toast-showcase-page"
+import { DriversCatalog } from "@/features/drivers/components/drivers-catalog"
 import { HomePage } from "@/features/home/pages/home-page"
 import { RepairsPage } from "@/features/repairs/pages/repairs-page"
 import { SettingsPage } from "@/features/settings/pages/settings-page"
@@ -36,7 +37,13 @@ export function AppRouter() {
               <Route path={ROUTES.tires} element={<TiresPage />} />
               <Route path={ROUTES.repairs} element={<RepairsPage />} />
               <Route path={ROUTES.storage} element={<StoragePage />} />
-              <Route path={ROUTES.settings} element={<SettingsPage />} />
+              <Route
+                path={ROUTES.settings}
+                element={
+                  // Cada catálogo es su propio feature: se componen acá.
+                  <SettingsPage catalogs={{ drivers: <DriversCatalog /> }} />
+                }
+              />
               <Route path={ROUTES.audit} element={<AuditPage />} />
               {import.meta.env.DEV ? (
                 <Route path={ROUTES.toasts} element={<ToastShowcasePage />} />

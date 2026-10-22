@@ -12,6 +12,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.TokenService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.jwt.JwtProperties;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.limite.LimiteLoginProperties;
@@ -240,6 +243,35 @@ public final class TestDataFactory {
 				neumatico.getCantidadRecapados(), neumatico.getSituacionOperativaVigente(), neumatico.getComentario(),
 				neumatico.getMarca() == null ? null : neumatico.getMarca().getNombre(),
 				null, null, null, null, null, null, null);
+	}
+
+	// Conductores
+
+	public static final String DNI = "30123456";
+
+	/** Alta válida de un conductor con DNI. */
+	public static ConductorRequestDTO conductorRequest() {
+		return new ConductorRequestDTO(DNI, "Juan", "Pérez");
+	}
+
+	public static ConductorRequestDTO conductorRequest(String dni, String nombre, String apellido) {
+		return new ConductorRequestDTO(dni, nombre, apellido);
+	}
+
+	/** Conductor persistido (con ids) a partir de un alta. */
+	public static Conductor conductor(ConductorRequestDTO request) {
+		return Conductor.builder()
+				.id(100L)
+				.publicId(UUID.randomUUID())
+				.dni(request.dni())
+				.nombre(request.nombre())
+				.apellido(request.apellido())
+				.build();
+	}
+
+	public static ConductorResponseDTO conductorResponse(Conductor conductor) {
+		return new ConductorResponseDTO(conductor.getPublicId(), conductor.getDni(), conductor.getNombre(),
+				conductor.getApellido());
 	}
 
 	// Límite de intentos de login
