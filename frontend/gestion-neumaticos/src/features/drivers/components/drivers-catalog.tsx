@@ -10,12 +10,18 @@ export function DriversCatalog() {
 
   return (
     <div data-slot="drivers-catalog" className="flex flex-col gap-4 py-4">
-      {/* Es solo UX: el backend responde 403 al lector igual. */}
-      {canPerform(accessLevel, "drivers.create") ? (
-        <div className="flex justify-end">
-          <CreateDriverDialog />
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading text-lg font-semibold">{t("title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("description")}</p>
         </div>
-      ) : null}
+        {/* Es solo UX: el backend responde 403 al lector igual. */}
+        {canPerform(accessLevel, "drivers.create") ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <CreateDriverDialog />
+          </div>
+        ) : null}
+      </header>
       {/* TODO: listado de conductores. */}
       <p className="text-sm text-muted-foreground">{t("empty")}</p>
     </div>

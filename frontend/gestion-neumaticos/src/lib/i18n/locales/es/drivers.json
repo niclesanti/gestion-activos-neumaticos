@@ -1,4 +1,6 @@
 {
+  "title": "Conductores",
+  "description": "Personas que manejan las unidades de transporte de la empresa.",
   "actions": {
     "register": "Registrar conductor"
   },

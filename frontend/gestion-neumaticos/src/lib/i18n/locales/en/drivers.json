@@ -1,4 +1,6 @@
 {
+  "title": "Drivers",
+  "description": "People who drive the company's transport units.",
   "actions": {
     "register": "Register driver"
   },
