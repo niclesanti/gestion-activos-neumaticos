@@ -71,7 +71,7 @@ El backend ya limita el login por IP (10/min) y por cuenta (5 fallos/15 min), pe
 
 | Regla | Expresión | Límite sugerido | Acción |
 |---|---|---|---|
-| Login | `http.host eq "api.<dominio>" and http.request.uri.path eq "/api/auth/login" and http.request.method eq "POST"` | 5 requests / 10 s por IP (plan Free: período y bloqueo de 10 s) | Block |
+| Login | `http.host eq "api.<dominio>" and http.request.uri.path eq "/api/v1/auth/login" and http.request.method eq "POST"` | 5 requests / 10 s por IP (plan Free: período y bloqueo de 10 s) | Block |
 | API general *(planes pagos)* | `http.host eq "api.<dominio>" and starts_with(http.request.uri.path, "/api/")` | 300 requests / 1 min por IP | Managed Challenge o Block |
 
 Además:

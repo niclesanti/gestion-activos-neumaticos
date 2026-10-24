@@ -139,7 +139,7 @@ export const tireSchema = z
     // errores; así se muestran todos los problemas en el primer envío.
     { when: () => true }
   )
-  // Cuerpo exacto que espera `POST /api/neumatico`.
+  // Cuerpo exacto que espera `POST /api/v1/neumaticos`.
   .transform((tire) => ({
     // Normalizado como en el backend: recortado y en mayúsculas.
     numeroSerie: emptyToNull(tire.numeroSerie)?.toUpperCase() ?? null,

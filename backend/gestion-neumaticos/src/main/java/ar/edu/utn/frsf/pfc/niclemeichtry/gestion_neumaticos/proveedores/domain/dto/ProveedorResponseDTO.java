@@ -2,6 +2,14 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.
 
 import java.util.UUID;
 
-public record ProveedorResponseDTO(UUID publicId, String nombre) {
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
+
+public record ProveedorResponseDTO(
+    UUID publicId,
+    String nombre,
+    String email,
+    String telefono,
+    DomicilioResponseDTO domicilio
+) {
 
 }

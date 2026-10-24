@@ -1,6 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.controller;
 
-import org.springframework.http.HttpStatus;
+import java.net.URI;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
@@ -27,7 +29,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/conductores")
+@RequestMapping("/api/v1/conductores")
 @RequiredArgsConstructor
 @Tag(name = "Conductores", description = "Operaciones relacionadas con los conductores")
 public class ConductorController {
@@ -42,7 +44,8 @@ public class ConductorController {
                     + "puntos, único). Solo editores y administradores.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Conductor registrado"),
+            @ApiResponse(responseCode = "201", description = "Conductor registrado; el header `Location` apunta "
+                    + "al recurso creado"),
             @ApiResponse(responseCode = "400", description = "Campos obligatorios faltantes o con formato inválido",
                     content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
             @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
@@ -55,8 +58,12 @@ public class ConductorController {
     public ResponseEntity<ConductorResponseDTO> registrarConductor(
             @Valid @RequestBody ConductorRequestDTO conductorRequestDTO,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(conductorService.registrarConductor(conductorRequestDTO, jwt.getSubject()));
+        ConductorResponseDTO creado = conductorService.registrarConductor(conductorRequestDTO, jwt.getSubject());
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{publicId}")
+                .buildAndExpand(creado.publicId())
+                .toUri();
+        return ResponseEntity.created(ubicacion).body(creado);
     }
 
 }

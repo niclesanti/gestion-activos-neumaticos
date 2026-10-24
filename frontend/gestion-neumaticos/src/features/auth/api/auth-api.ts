@@ -22,7 +22,7 @@ export type LoginResponse = {
 
 export async function login(values: LoginValues) {
   const { data } = await apiClient.post<LoginResponse>(
-    "/api/auth/login",
+    "/api/v1/auth/login",
     values
   )
   return data
@@ -35,13 +35,13 @@ export async function login(values: LoginValues) {
  */
 export async function logout(token?: string) {
   await apiClient.post(
-    "/api/auth/logout",
+    "/api/v1/auth/logout",
     null,
     token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
   )
 }
 
 export async function getMe() {
-  const { data } = await apiClient.get<SessionUser>("/api/auth/me")
+  const { data } = await apiClient.get<SessionUser>("/api/v1/auth/me")
   return data
 }

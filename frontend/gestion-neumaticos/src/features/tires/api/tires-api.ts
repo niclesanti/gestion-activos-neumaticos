@@ -28,11 +28,11 @@ export type Tire = {
 }
 
 export async function registerTire(values: TireFormValues) {
-  const { data } = await apiClient.post<Tire>("/api/neumatico", values)
+  const { data } = await apiClient.post<Tire>("/api/v1/neumaticos", values)
   return data
 }
 
 export async function getTireBrands() {
-  const { data } = await apiClient.get<TireBrand[]>("/api/neumatico/marcas")
+  const { data } = await apiClient.get<TireBrand[]>("/api/v1/neumaticos/marcas")
   return data
 }

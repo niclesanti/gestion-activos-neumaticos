@@ -75,6 +75,7 @@ export const SETTINGS_TAB_ACCESS: Record<SettingsTab, readonly AccessLevel[]> =
  */
 export const ACTION_ACCESS = {
   "drivers.create": ADMIN_AND_EDITOR,
+  "suppliers.create": ADMIN_AND_EDITOR,
 } as const satisfies Record<string, readonly AccessLevel[]>
 
 export type AppAction = keyof typeof ACTION_ACCESS

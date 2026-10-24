@@ -500,6 +500,157 @@ class AutorizacionBaseDatosTests {
 	}
 
 	@Nested
+	@DisplayName("common.provincias, common.localidades y common.domicilios")
+	class Common {
+
+		private static final String INSERTAR_LOCALIDAD =
+				"INSERT INTO common.localidades (nombre, provincia_id) VALUES (?, ?)";
+		private static final String INSERTAR_DOMICILIO =
+				"INSERT INTO common.domicilios (id, calle, altura, localidad_id) "
+						+ "VALUES (nextval('common.domicilios_id_seq'), ?, ?, ?)";
+
+		private Long provincia;
+		private Long localidad;
+
+		@BeforeEach
+		void preparar() {
+			provincia = owner.queryForObject("SELECT id FROM common.provincias WHERE nombre = 'Santa Fe'", Long.class);
+			localidad = owner.queryForObject("""
+					INSERT INTO common.localidades (nombre, provincia_id) VALUES (?, ?) RETURNING id""",
+					Long.class, "Loc " + UUID.randomUUID(), provincia);
+		}
+
+		@Test
+		@DisplayName("sin sesión no se lee ni se inserta")
+		void sinSesion() {
+			for (String tabla : List.of("provincias", "localidades", "domicilios")) {
+				permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM common." + tabla, Integer.class));
+			}
+			permisoDenegado(() -> app.update(INSERTAR_LOCALIDAD, "Otra", provincia));
+			permisoDenegado(() -> app.update(INSERTAR_DOMICILIO, "Belgrano", "1", localidad));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee: hay 24 provincias")
+		void lectorSoloLee() {
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT count(*) FROM common.provincias", Integer.class)).isEqualTo(24);
+			assertThat(app.queryForObject("SELECT count(*) FROM common.localidades WHERE id = ?", Integer.class,
+					localidad)).isOne();
+			permisoDenegado(() -> app.update("INSERT INTO common.provincias (nombre) VALUES ('Otra')"));
+			permisoDenegado(() -> app.update(INSERTAR_LOCALIDAD, "Otra " + UUID.randomUUID(), provincia));
+			permisoDenegado(() -> app.update(INSERTAR_DOMICILIO, "Belgrano", "1", localidad));
+			permisoDenegado(() -> app.update("UPDATE common.localidades SET codigo_postal = '3000'"));
+			permisoDenegado(() -> app.update("DELETE FROM common.domicilios"));
+		}
+
+		@Test
+		@DisplayName("editor y administrador insertan, leen y modifican, pero no borran ni cambian ids")
+		void editorYAdministradorEscriben() {
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				String calle = "Calle " + usuario;
+
+				assertThat(app.update(INSERTAR_DOMICILIO, calle, "1", localidad)).isOne();
+				assertThat(app.update("UPDATE common.domicilios SET piso = '2' WHERE calle = ?", calle)).isOne();
+				assertThat(app.update("UPDATE common.localidades SET codigo_postal = '3000' WHERE id = ?", localidad))
+						.isOne();
+				assertThat(app.update(INSERTAR_LOCALIDAD, "Loc " + UUID.randomUUID(), provincia)).isOne();
+				permisoDenegado(() -> app.update("DELETE FROM common.domicilios"));
+				permisoDenegado(() -> app.update("DELETE FROM common.localidades"));
+				permisoDenegado(() -> app.update("DELETE FROM common.provincias"));
+				permisoDenegado(() -> app.update("UPDATE common.domicilios SET id = id + 1"));
+				permisoDenegado(() -> app.update("UPDATE common.localidades SET provincia_id = provincia_id"));
+			}
+		}
+
+		@Test
+		@DisplayName("una localidad no se repite en la provincia sin distinguir mayúsculas")
+		void localidadUnica() {
+			String nombre = owner.queryForObject("SELECT nombre FROM common.localidades WHERE id = ?", String.class,
+					localidad);
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			assertThatThrownBy(() -> app.update(INSERTAR_LOCALIDAD, nombre.toUpperCase(), provincia))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_localidades_provincia_nombre");
+			assertThatThrownBy(() -> app.update(INSERTAR_LOCALIDAD, " Con espacios ", provincia))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_localidades_nombre_formato");
+		}
+
+	}
+
+	@Nested
+	@DisplayName("proveedores.proveedores")
+	class Proveedores {
+
+		private static final String INSERTAR = """
+				INSERT INTO proveedores.proveedores (id, public_id, nombre, email)
+				VALUES (nextval('proveedores.proveedores_id_seq'), ?, ?, ?)""";
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM proveedores.proveedores");
+		}
+
+		@Test
+		@DisplayName("sin sesión no se lee ni se inserta")
+		void sinSesion() {
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM proveedores.proveedores", Integer.class));
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "P1", null));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee")
+		void lectorSoloLee() {
+			owner.update(INSERTAR, UUID.randomUUID(), "P1", null);
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT count(*) FROM proveedores.proveedores", Integer.class)).isOne();
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "P2", null));
+			permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET telefono = '455123'"));
+			permisoDenegado(() -> app.update("DELETE FROM proveedores.proveedores"));
+		}
+
+		@Test
+		@DisplayName("editor y administrador insertan, leen y modifican, pero no borran ni cambian ids")
+		void editorYAdministradorEscriben() {
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				String nombre = "P-" + usuario;
+
+				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, null)).isOne();
+				assertThat(app.update("UPDATE proveedores.proveedores SET telefono = '455123' WHERE nombre = ?",
+						nombre)).isOne();
+				permisoDenegado(() -> app.update("DELETE FROM proveedores.proveedores"));
+				permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET public_id = ?",
+						UUID.randomUUID()));
+				permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET id = 1"));
+			}
+			assertThat(owner.queryForObject(
+					"SELECT count(*) FROM proveedores.proveedores WHERE telefono = '455123'", Integer.class))
+					.isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("el nombre es único sin distinguir mayúsculas y el email se guarda normalizado")
+		void nombreUnicoYEmailNormalizado() {
+			owner.update(INSERTAR, UUID.randomUUID(), "Gomería Sur", null);
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "GOMERÍA SUR", null))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_proveedores_nombre");
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "Otro", "Ventas@Sur.com"))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_proveedores_email_formato");
+		}
+
+	}
+
+	@Nested
 	@DisplayName("trazabilidad.eventos_neumatico")
 	class Trazabilidad {
 

@@ -41,7 +41,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSec
 @EnableMethodSecurity
 public class SecurityConfig {
 
-	public static final String LOGIN_PATH = "/api/auth/login";
+	public static final String LOGIN_PATH = "/api/v1/auth/login";
 
 	private static final RequestMatcher LOGIN = PathPatternRequestMatcher.pathPattern(HttpMethod.POST, LOGIN_PATH);
 

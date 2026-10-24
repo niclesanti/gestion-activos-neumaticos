@@ -71,9 +71,9 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureRestDocs
 class AuthControllerTest {
 
-    private static final String LOGIN = "/api/auth/login";
-    private static final String LOGOUT = "/api/auth/logout";
-    private static final String ME = "/api/auth/me";
+    private static final String LOGIN = "/api/v1/auth/login";
+    private static final String LOGOUT = "/api/v1/auth/logout";
+    private static final String ME = "/api/v1/auth/me";
 
     @Autowired
     private MockMvc mockMvc;
@@ -97,7 +97,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/auth/login")
+    @DisplayName("POST /api/v1/auth/login")
     class Login {
 
         @Test
@@ -279,7 +279,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/auth/logout")
+    @DisplayName("POST /api/v1/auth/logout")
     class Logout {
 
         @Test
@@ -316,7 +316,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/auth/me")
+    @DisplayName("GET /api/v1/auth/me")
     class Me {
 
         @Test

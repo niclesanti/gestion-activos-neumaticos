@@ -44,7 +44,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.mapper.Ne
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.mapper.NeumaticoMapperImpl;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.repository.MarcaNeumaticoRepository;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.repository.NeumaticoRepository;
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.ProveedorConsulta;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.ProveedorApi;
 
 @ExtendWith(MockitoExtension.class)
 class NeumaticoServiceImplTest {
@@ -53,7 +53,7 @@ class NeumaticoServiceImplTest {
 
     @Mock private NeumaticoRepository neumaticoRepository;
     @Mock private MarcaNeumaticoRepository marcaNeumaticoRepository;
-    @Mock private ProveedorConsulta proveedorConsulta;
+    @Mock private ProveedorApi proveedorApi;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     /** Mapper real (generado por MapStruct): el servicio depende de cómo copia los datos. */
@@ -64,7 +64,7 @@ class NeumaticoServiceImplTest {
     @BeforeEach
     void crearServicio() {
         servicio = new NeumaticoServiceImpl(neumaticoRepository, neumaticoMapper, marcaNeumaticoRepository,
-                proveedorConsulta, eventPublisher);
+                proveedorApi, eventPublisher);
     }
 
     /** Simula el INSERT: la base asigna id y publicId. */
@@ -99,7 +99,7 @@ class NeumaticoServiceImplTest {
             NeumaticoRequestDTO request = neumaticoNuevoRequest();
             when(neumaticoRepository.existsByNumeroSerie("ABC-123")).thenReturn(false);
             when(marcaNeumaticoRepository.findById(MARCA_ID)).thenReturn(Optional.of(marca()));
-            when(proveedorConsulta.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
+            when(proveedorApi.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
             guardarAsignandoIds();
 
             NeumaticoResponseDTO respuesta = servicio.registrarNeumatico(request, USUARIO);
@@ -139,7 +139,7 @@ class NeumaticoServiceImplTest {
             NeumaticoComprado evento = eventoPublicado();
             assertThat(evento.proveedorId()).isNull();
             assertThat(evento.nombreProveedor()).isNull();
-            verifyNoInteractions(proveedorConsulta);
+            verifyNoInteractions(proveedorApi);
         }
 
         @Test
@@ -156,7 +156,7 @@ class NeumaticoServiceImplTest {
 
             assertThat(respuesta.numeroSerie()).isNull();
             assertThat(respuesta.estadoActual()).isEqualTo(EstadoNeumatico.RECAPADO_USADO);
-            verifyNoInteractions(proveedorConsulta, eventPublisher);
+            verifyNoInteractions(proveedorApi, eventPublisher);
         }
 
         @Test
@@ -164,7 +164,7 @@ class NeumaticoServiceImplTest {
         void normalizaNumeroSerie() {
             when(neumaticoRepository.existsByNumeroSerie("AB 12/X")).thenReturn(false);
             when(marcaNeumaticoRepository.findById(MARCA_ID)).thenReturn(Optional.of(marca()));
-            when(proveedorConsulta.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
+            when(proveedorApi.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
             guardarAsignandoIds();
 
             servicio.registrarNeumatico(neumaticoRequest("  ab 12/x ", EstadoNeumatico.NUEVO, 0f, 0f, 0), USUARIO);
@@ -176,7 +176,7 @@ class NeumaticoServiceImplTest {
         @DisplayName("un número de serie en blanco equivale a no tenerlo y no se busca duplicado")
         void numeroSerieEnBlanco() {
             when(marcaNeumaticoRepository.findById(MARCA_ID)).thenReturn(Optional.of(marca()));
-            when(proveedorConsulta.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
+            when(proveedorApi.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
             guardarAsignandoIds();
 
             servicio.registrarNeumatico(neumaticoRequest("   ", EstadoNeumatico.NUEVO, 0f, 0f, 0), USUARIO);
@@ -204,7 +204,7 @@ class NeumaticoServiceImplTest {
         void duplicadoConcurrente() {
             when(neumaticoRepository.existsByNumeroSerie("ABC-123")).thenReturn(false);
             when(marcaNeumaticoRepository.findById(MARCA_ID)).thenReturn(Optional.of(marca()));
-            when(proveedorConsulta.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
+            when(proveedorApi.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.of(proveedorResumen()));
             when(neumaticoRepository.saveAndFlush(any(Neumatico.class)))
                     .thenThrow(new DataIntegrityViolationException("uk_neumaticos_numero_serie"));
 
@@ -233,7 +233,7 @@ class NeumaticoServiceImplTest {
         void proveedorInexistente() {
             when(neumaticoRepository.existsByNumeroSerie("ABC-123")).thenReturn(false);
             when(marcaNeumaticoRepository.findById(MARCA_ID)).thenReturn(Optional.of(marca()));
-            when(proveedorConsulta.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.empty());
+            when(proveedorApi.buscarPorPublicId(PROVEEDOR_PUBLIC_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> servicio.registrarNeumatico(neumaticoNuevoRequest(), USUARIO))
                     .isInstanceOf(EntidadNoEncontradaException.class)

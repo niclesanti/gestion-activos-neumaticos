@@ -23,8 +23,8 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.event.Neu
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.mapper.NeumaticoMapper;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.repository.MarcaNeumaticoRepository;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.repository.NeumaticoRepository;
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.ProveedorConsulta;
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.ProveedorResumen;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.ProveedorApi;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.ProveedorResumenDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -40,7 +40,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     private final NeumaticoRepository neumaticoRepository;
     private final NeumaticoMapper neumaticoMapper;
     private final MarcaNeumaticoRepository marcaNeumaticoRepository;
-    private final ProveedorConsulta proveedorConsulta;
+    private final ProveedorApi proveedorApi;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -61,7 +61,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                     return new EntidadNoEncontradaException(MENSAJE_MARCA_INEXISTENTE);
                 });
         // Se resuelve antes de guardar: un proveedor inexistente no deja un alta a medias.
-        ProveedorResumen proveedor = neumaticoRequestDTO.estadoActual() == EstadoNeumatico.NUEVO
+        ProveedorResumenDTO proveedor = neumaticoRequestDTO.estadoActual() == EstadoNeumatico.NUEVO
                 ? buscarProveedor(neumaticoRequestDTO.proveedorId())
                 : null;
 
@@ -115,11 +115,11 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     }
 
     /** El proveedor es opcional: null si no se indicó, error si se indicó uno inexistente. */
-    private ProveedorResumen buscarProveedor(UUID proveedorId) {
+    private ProveedorResumenDTO buscarProveedor(UUID proveedorId) {
         if (proveedorId == null) {
             return null;
         }
-        return proveedorConsulta.buscarPorPublicId(proveedorId)
+        return proveedorApi.buscarPorPublicId(proveedorId)
                 .orElseThrow(() -> {
                     log.warn("Alta rechazada: el proveedor {} no existe", proveedorId);
                     return new EntidadNoEncontradaException(MENSAJE_PROVEEDOR_INEXISTENTE);
@@ -131,7 +131,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
      * {@code event_publication} dentro de esta transacción y lo entrega después
      * del commit: si el alta se revierte, el evento no existe.
      */
-    private void publicarCompra(Neumatico neumatico, ProveedorResumen proveedor, String usuario) {
+    private void publicarCompra(Neumatico neumatico, ProveedorResumenDTO proveedor, String usuario) {
         eventPublisher.publishEvent(new NeumaticoComprado(
                 neumatico.getId(),
                 neumatico.getNumeroSerie(),

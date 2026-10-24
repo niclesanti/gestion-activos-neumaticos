@@ -5,11 +5,14 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorResponse;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
@@ -19,6 +22,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.requestF
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -31,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restdocs.test.autoconfigure.AutoConfigureRestDocs;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -53,7 +58,7 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureRestDocs
 class ConductorControllerTest {
 
-    private static final String CONDUCTORES = "/api/conductores";
+    private static final String CONDUCTORES = "/api/v1/conductores";
     private static final UUID USUARIO = UUID.randomUUID();
 
     @Autowired private MockMvc mockMvc;
@@ -71,7 +76,7 @@ class ConductorControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/conductores")
+    @DisplayName("POST /api/v1/conductores")
     class Registrar {
 
         @Test
@@ -86,6 +91,8 @@ class ConductorControllerTest {
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.publicId").value(conductor.getPublicId().toString()))
+                    .andExpect(header().string(HttpHeaders.LOCATION,
+                            endsWith("/api/v1/conductores/" + conductor.getPublicId())))
                     .andExpect(jsonPath("$.dni").value("30123456"))
                     .andExpect(jsonPath("$.nombre").value("Juan"))
                     .andExpect(jsonPath("$.apellido").value("Pérez"))
@@ -93,6 +100,8 @@ class ConductorControllerTest {
                     .andDo(document("conductor-registrar",
                             preprocessRequest(prettyPrint()),
                             preprocessResponse(prettyPrint()),
+                            responseHeaders(
+                                    headerWithName(HttpHeaders.LOCATION).description("URL del conductor creado")),
                             requestFields(
                                     fieldWithPath("dni").description("DNI: 7 u 8 dígitos sin puntos (opcional, "
                                             + "único)").optional(),

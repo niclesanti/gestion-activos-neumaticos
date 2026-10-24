@@ -1,9 +1,9 @@
 import { apiClient } from "@/lib/api/client"
 
 /**
- * Proveedor (`ProveedorResponseDTO` del backend). Vive en este feature porque
- * todavía no existe uno de proveedores y un feature no importa a otro: cuando
- * se cree, este archivo se muda allá o a `src/lib`.
+ * Proveedor como opción del select (`ProveedorListadoDTO` del backend). Vive en
+ * este feature porque un feature no importa a otro (`features/suppliers` tiene
+ * el alta); si otro feature también lo necesita, se muda a `src/lib`.
  */
 export type Supplier = {
   publicId: string
@@ -11,6 +11,6 @@ export type Supplier = {
 }
 
 export async function getSuppliers() {
-  const { data } = await apiClient.get<Supplier[]>("/api/proveedores")
+  const { data } = await apiClient.get<Supplier[]>("/api/v1/proveedores")
   return data
 }

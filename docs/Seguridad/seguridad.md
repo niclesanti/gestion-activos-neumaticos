@@ -15,7 +15,7 @@ Decisiones de diseño tomadas al implementar **HU-01 (Iniciar sesión)**, **HU-0
 ```
  Navegador (React)                          Backend (Spring Boot)
  ─────────────────                          ─────────────────────
- LoginCard ── POST /api/auth/login ───────► AuthController ─► AuthServiceImpl
+ LoginCard ── POST /api/v1/auth/login ────► AuthController ─► AuthServiceImpl
                                                                 ├─ UsuarioRepository (Argon2id)
             ◄── { token JWT, expiraEn, usuario } ───────────────┘─ TokenService.generar()
 
@@ -24,7 +24,7 @@ Decisiones de diseño tomadas al implementar **HU-01 (Iniciar sesión)**, **HU-0
                                               ├─ jti no revocado (seguridad.tokens_revocados)
                                               └─ rol vigente en la base (usuarios.nivel_acceso_vigente)
 
- Logout ── POST /api/auth/logout ─────────► TokenService.revocar(jti)
+ Logout ── POST /api/v1/auth/logout ──────► TokenService.revocar(jti)
 ```
 
 | Pieza | Dónde |
@@ -73,7 +73,7 @@ Decisiones de diseño tomadas al implementar **HU-01 (Iniciar sesión)**, **HU-0
 
 Un JWT no tiene estado: una vez firmado, es válido hasta que vence. Para que "cerrar sesión" invalide de verdad el token, se mantiene una **lista de revocación**:
 
-- `POST /api/auth/logout` guarda el `jti` y su expiración en `seguridad.tokens_revocados`.
+- `POST /api/v1/auth/logout` guarda el `jti` y su expiración en `seguridad.tokens_revocados`.
 - `TokenNoRevocadoValidator` rechaza cualquier token cuyo `jti` esté en esa tabla, y también los tokens sin `jti` o con un `jti` que no sea un UUID.
 - Una tarea diaria (`LimpiezaTokensRevocadosTask`, 03:00) borra las filas ya vencidas, que de todos modos rechaza la validación de `exp`. La tabla solo crece con logouts de tokens que todavía no vencieron.
 
@@ -161,10 +161,12 @@ Endpoints de negocio anotados hasta ahora:
 
 | Endpoint | Anotación | Quiénes |
 |---|---|---|
-| `POST /api/neumatico` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
-| `GET /api/neumatico/marcas` | `hasRole('LECTOR')` | Los tres roles |
-| `GET /api/proveedores` (mock provisorio) | `hasRole('LECTOR')` | Los tres roles |
-| `POST /api/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `POST /api/v1/neumaticos` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/v1/neumaticos/marcas` | `hasRole('LECTOR')` | Los tres roles |
+| `POST /api/v1/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/v1/proveedores` | `hasRole('LECTOR')` | Los tres roles |
+| `GET /api/v1/provincias` | `hasRole('LECTOR')` | Los tres roles |
+| `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 
 ### 2.10.1 Cabeceras HTTP de la API
 
@@ -252,6 +254,20 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 - El DNI es opcional y único (varios conductores pueden no tenerlo, `NULL`). Se guarda recortado y con 7 u 8 dígitos sin puntos (`CHECK`); nombre y apellido, recortados y no vacíos.
 - `RegistroConductorIntegrationTests` verifica contra PostgreSQL que el lector no inserta ni llamando directo al servicio (`permission denied`).
 
+**`common.provincias`, `common.localidades`, `common.domicilios`** (`V14`) y **`proveedores.proveedores`** (`V15`):
+
+| | Administrador | Editor | Lector |
+|---|:-:|:-:|:-:|
+| SELECT | ✔ | ✔ | ✔ |
+| INSERT | ✔ | ✔ | ✘ |
+| UPDATE (sin `id` ni `public_id`) | ✔ | ✔ | ✘ |
+| DELETE | ✘ | ✘ | ✘ |
+
+- Las provincias (24) las carga `V14`. Las localidades se crean al registrar un domicilio con una localidad nueva, con un upsert (`INSERT … ON CONFLICT`) sobre el índice único `(provincia_id, lower(nombre))`; por eso editor y administrador tienen `UPDATE` sobre `codigo_postal` (completa uno faltante, nunca pisa uno cargado).
+- **Domicilio por referencia, sin FK entre módulos.** `proveedores.proveedores.domicilio_id` guarda solo el id (`UNIQUE`: composición 1-1) y el domicilio se crea y se lee únicamente por la fachada `common.api.DomicilioApi`, en la misma transacción que el proveedor: si el alta del proveedor falla, el domicilio se revierte con ella. Como nadie tiene `DELETE`, la referencia no queda colgada.
+- El nombre del proveedor es único sin distinguir mayúsculas (índice sobre `lower(nombre)`); el email se guarda recortado y en minúsculas (`CHECK`).
+- `AutorizacionBaseDatosTests` cubre los permisos de las cuatro tablas y `RegistroProveedorIntegrationTests` que el lector no inserta ni llamando directo al servicio.
+
 **`trazabilidad.eventos_neumatico`** (`V11`, una sola tabla para todos los subtipos de evento — herencia `SINGLE_TABLE` con `tipo` como discriminador): el historial lo escriben solo los listeners asíncronos de eventos de dominio, que corren como el sistema (`gn_app`). Por eso `gn_app` es el único rol con `INSERT` (y una política permisiva `TO gn_app`), y ningún rol de usuario escribe, modifica, borra ni, por ahora, lee el historial (la lectura se habilita con el endpoint de consulta). La tabla lleva igual RLS y la política restrictiva para los tres roles; un `CHECK` por subtipo impide que un evento lleve columnas de otro subtipo.
 
 **Listeners asíncronos y contexto de seguridad.** El executor de `@Async` **sí propaga** el `SecurityContext` del request que publicó el evento: `spring-modulith-starter-insight` (observability) lo decora con un `ContextPropagatingTaskDecorator`, y Spring Security registra un accesor de context-propagation. Sin cuidado, un listener escribiría con el rol del usuario (y fallaría contra trazabilidad, o al revés, tendría permisos de más). Por eso los listeners que escriben datos del sistema envuelven la escritura en `security.ComoSistema.ejecutar(...)`, que limpia el contexto, y abren la transacción adentro (sin `@Transactional` en el método, ver `CompraNeumaticoListener`). Lo verifica `RegistroNeumaticoIntegrationTests` contra PostgreSQL.
@@ -304,7 +320,7 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
   - Al volver a una pestaña en segundo plano se revisa de inmediato, porque los navegadores frenan los timers de las pestañas ocultas.
   - Cerrar la pestaña borra el `sessionStorage` pero no revoca el token (no hay forma confiable de hacerlo al cerrar: `sendBeacon` no admite el header `Authorization` y `pagehide` también se dispara al recargar). Ese token queda acotado por los 2 h de vigencia.
 - **Login rechazado por límite:** un 429 muestra "Demasiados intentos. Esperá N minutos" con los minutos del header `Retry-After`; un 503, "El servicio está ocupado".
-- **Sesión restaurada:** al recargar, `useSessionSync` la valida contra `GET /api/auth/me` y refresca los datos del usuario, cuyo nivel pudo cambiar. La clave de esa consulta incluye el `publicId` del usuario, para que nunca se reutilice la respuesta cacheada de otro usuario.
+- **Sesión restaurada:** al recargar, `useSessionSync` la valida contra `GET /api/v1/auth/me` y refresca los datos del usuario, cuyo nivel pudo cambiar. La clave de esa consulta incluye el `publicId` del usuario, para que nunca se reutilice la respuesta cacheada de otro usuario.
 - **Logout:** pide confirmación y revoca el token en el backend. La sesión local se limpia aunque esa llamada falle: si el usuario pidió salir, no debe quedar adentro.
 - **Botón "atrás" (back/forward cache):** el navegador puede restaurar una página anterior con la memoria de JavaScript intacta, con la sesión todavía cargada aunque se haya cerrado después. `syncSessionOnPageRestore` escucha `pageshow` con `persisted`, vacía la caché y vuelve a leer `sessionStorage`. Sin esto, "atrás" después de un logout mostraba la app como si el usuario siguiera logueado. El problema apareció en la prueba end-to-end.
 
@@ -408,7 +424,7 @@ Una única definición, `scripts/security-headers.mjs`, genera las cabeceras par
     - Alta nueva → 201, `E2E-1001` en mayúsculas, `EN_ESPERA`, evento `COMPRA` registrado de forma asíncrona con el snapshot del proveedor y la publicación completada.
     - Número de serie repetido → 409 en el campo.
     - Alta sin número de serie (nuevo usado) → 201 sin evento.
-    - Lector sin la sección (`/tires` redirige) y `POST /api/neumatico` → 403.
+    - Lector sin la sección (`/tires` redirige) y `POST /api/v1/neumaticos` → 403.
     - Administrador registra.
     - Sin errores de consola.
 - **Base, con `psql` como `gn_app`:**
@@ -428,8 +444,8 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 
 ### Al construir los módulos de negocio
 
-1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11) y de conductores; falta en los endpoints que vengan.
-2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas y conductores. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
+1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores y de proveedores (HU-24); falta en los endpoints que vengan.
+2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas, conductores, proveedores y las tablas de `common`. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 
 ### Con la gestión de usuarios (alta, edición, baja)

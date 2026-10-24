@@ -17,7 +17,7 @@ type ApiClientAuth = {
 }
 
 /** Requests que pueden devolver 401 sin que eso signifique "sesión vencida". */
-const AUTH_ENDPOINTS_WITHOUT_SESSION = ["/api/auth/login"]
+const AUTH_ENDPOINTS_WITHOUT_SESSION = ["/api/v1/auth/login"]
 
 /**
  * `src/lib` no puede importar features: el feature de autenticación registra

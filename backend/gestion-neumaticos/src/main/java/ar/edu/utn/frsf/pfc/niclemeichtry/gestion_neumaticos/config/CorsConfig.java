@@ -22,8 +22,9 @@ public class CorsConfig {
 		configuration.setAllowedOrigins(List.of(frontendUrl));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("*"));
-		// El frontend lee Retry-After de los 429/503 para decir cuánto esperar.
-		configuration.setExposedHeaders(List.of(HttpHeaders.RETRY_AFTER));
+		// El frontend lee Retry-After de los 429/503 para decir cuánto esperar, y
+		// Location de los 201 para ubicar el recurso creado.
+		configuration.setExposedHeaders(List.of(HttpHeaders.RETRY_AFTER, HttpHeaders.LOCATION));
 		// La autenticación viaja en el header Authorization, no en cookies: el
 		// navegador no necesita enviar credenciales ambientes a la API.
 		configuration.setAllowCredentials(false);
