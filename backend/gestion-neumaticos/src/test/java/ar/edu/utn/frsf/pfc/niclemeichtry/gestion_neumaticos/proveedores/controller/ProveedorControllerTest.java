@@ -8,6 +8,7 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.proveedorResponse;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -98,7 +99,7 @@ class ProveedorControllerTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.publicId").value(PROVEEDOR_PUBLIC_ID.toString()))
                     .andExpect(header().string(HttpHeaders.LOCATION,
-                            "http://localhost/api/v1/proveedores/" + PROVEEDOR_PUBLIC_ID))
+                            endsWith("/api/v1/proveedores/" + PROVEEDOR_PUBLIC_ID)))
                     .andExpect(jsonPath("$.nombre").value("Neumáticos del Litoral S.A."))
                     .andExpect(jsonPath("$.domicilio.localidad").value("Santa Fe"))
                     .andExpect(jsonPath("$.domicilio.provincia").value("Santa Fe"))

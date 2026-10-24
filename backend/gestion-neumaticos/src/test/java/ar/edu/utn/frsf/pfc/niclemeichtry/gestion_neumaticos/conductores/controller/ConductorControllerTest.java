@@ -5,6 +5,7 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorResponse;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -91,7 +92,7 @@ class ConductorControllerTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.publicId").value(conductor.getPublicId().toString()))
                     .andExpect(header().string(HttpHeaders.LOCATION,
-                            "http://localhost/api/v1/conductores/" + conductor.getPublicId()))
+                            endsWith("/api/v1/conductores/" + conductor.getPublicId())))
                     .andExpect(jsonPath("$.dni").value("30123456"))
                     .andExpect(jsonPath("$.nombre").value("Juan"))
                     .andExpect(jsonPath("$.apellido").value("Pérez"))

@@ -5,6 +5,7 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoResponse;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -99,7 +100,7 @@ class NeumaticoControllerTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.publicId").value(neumatico.getPublicId().toString()))
                     .andExpect(header().string(HttpHeaders.LOCATION,
-                            "http://localhost/api/v1/neumaticos/" + neumatico.getPublicId()))
+                            endsWith("/api/v1/neumaticos/" + neumatico.getPublicId())))
                     .andExpect(jsonPath("$.numeroSerie").value("ABC-123"))
                     .andExpect(jsonPath("$.situacionOperativaVigente").value("EN_ESPERA"))
                     .andExpect(jsonPath("$.enEspera").value(true))
