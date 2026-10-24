@@ -8,6 +8,7 @@ import type dev from "@/lib/i18n/locales/es/dev.json"
 import type drivers from "@/lib/i18n/locales/es/drivers.json"
 import type home from "@/lib/i18n/locales/es/home.json"
 import type settings from "@/lib/i18n/locales/es/settings.json"
+import type suppliers from "@/lib/i18n/locales/es/suppliers.json"
 import type tires from "@/lib/i18n/locales/es/tires.json"
 
 declare module "i18next" {
@@ -22,6 +23,7 @@ declare module "i18next" {
       home: typeof home
       tires: typeof tires
       drivers: typeof drivers
+      suppliers: typeof suppliers
     }
   }
 }

@@ -18,6 +18,7 @@ export const NAMESPACES = [
   "home",
   "tires",
   "drivers",
+  "suppliers",
 ] as const
 
 export const DEFAULT_NAMESPACE = "common"

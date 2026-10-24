@@ -30,7 +30,15 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.en
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.Neumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.SituacionOperativa;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.TipoEjeUnidadTransporte;
-import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.ProveedorResumen;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.ProveedorResumenDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.entity.ProveedorNeumaticos;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Domicilio;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Localidad;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Provincia;
 
 /**
  * Datos de prueba compartidos por todos los tests: cada método devuelve una
@@ -186,15 +194,15 @@ public final class TestDataFactory {
 
 	public static final Long MARCA_ID = 1L;
 	public static final String NUMERO_SERIE = "ABC-123";
-	/** Proveedor del mock del módulo de proveedores (ProveedorConsultaMock). */
+	/** Proveedor de compra de los tests de neumáticos (ver {@link #proveedorResumen()}). */
 	public static final UUID PROVEEDOR_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-000000000001");
 
 	public static MarcaNeumatico marca() {
 		return MarcaNeumatico.builder().id(MARCA_ID).nombre("Fate").build();
 	}
 
-	public static ProveedorResumen proveedorResumen() {
-		return new ProveedorResumen(1L, PROVEEDOR_PUBLIC_ID, "Neumáticos del Litoral S.A.");
+	public static ProveedorResumenDTO proveedorResumen() {
+		return new ProveedorResumenDTO(1L, PROVEEDOR_PUBLIC_ID, "Neumáticos del Litoral S.A.");
 	}
 
 	/** Alta válida de un neumático nuevo, con número de serie y proveedor. */
@@ -272,6 +280,80 @@ public final class TestDataFactory {
 	public static ConductorResponseDTO conductorResponse(Conductor conductor) {
 		return new ConductorResponseDTO(conductor.getPublicId(), conductor.getDni(), conductor.getNombre(),
 				conductor.getApellido());
+	}
+
+	// Domicilios (common)
+
+	/** Id de ejemplo de Santa Fe (en la base, buscarla por nombre). */
+	public static final Long PROVINCIA_ID = 21L;
+
+	public static Provincia provincia() {
+		return Provincia.builder().id(PROVINCIA_ID).nombre("Santa Fe").build();
+	}
+
+	/** Alta válida de un domicilio completo en Santa Fe capital. */
+	public static DomicilioRequestDTO domicilioRequest() {
+		return new DomicilioRequestDTO("San Martín", "2550", "3", "B", PROVINCIA_ID, "Santa Fe", "3000");
+	}
+
+	public static DomicilioRequestDTO domicilioRequest(String calle, String altura, String piso, String departamento,
+			Long provinciaId, String localidad, String codigoPostal) {
+		return new DomicilioRequestDTO(calle, altura, piso, departamento, provinciaId, localidad, codigoPostal);
+	}
+
+	/** Domicilio persistido (con ids, localidad y provincia) a partir de un alta. */
+	public static Domicilio domicilio(DomicilioRequestDTO request) {
+		return Domicilio.builder()
+				.id(200L)
+				.calle(request.calle())
+				.altura(request.altura())
+				.piso(request.piso())
+				.departamento(request.departamento())
+				.localidad(Localidad.builder()
+						.id(10L)
+						.nombre(request.localidad())
+						.codigoPostal(request.codigoPostal())
+						.provincia(provincia())
+						.build())
+				.build();
+	}
+
+	public static DomicilioResponseDTO domicilioResponse(Domicilio domicilio) {
+		Localidad localidad = domicilio.getLocalidad();
+		return new DomicilioResponseDTO(domicilio.getCalle(), domicilio.getAltura(), domicilio.getPiso(),
+				domicilio.getDepartamento(), localidad.getNombre(), localidad.getCodigoPostal(),
+				localidad.getProvincia().getId(), localidad.getProvincia().getNombre());
+	}
+
+	// Proveedores
+
+	/** Alta válida de un proveedor con contacto y domicilio. */
+	public static ProveedorRequestDTO proveedorRequest() {
+		return new ProveedorRequestDTO("Neumáticos del Litoral S.A.", "ventas@litoral.com.ar", "+54 342 455-1234",
+				domicilioRequest());
+	}
+
+	public static ProveedorRequestDTO proveedorRequest(String nombre, String email, String telefono,
+			DomicilioRequestDTO domicilio) {
+		return new ProveedorRequestDTO(nombre, email, telefono, domicilio);
+	}
+
+	/** Proveedor persistido (con ids) a partir de un alta; el domicilio, como id de referencia. */
+	public static ProveedorNeumaticos proveedor(ProveedorRequestDTO request) {
+		return ProveedorNeumaticos.builder()
+				.id(1L)
+				.publicId(PROVEEDOR_PUBLIC_ID)
+				.nombre(request.nombre())
+				.email(request.email())
+				.telefono(request.telefono())
+				.domicilioId(request.domicilio() == null ? null : 200L)
+				.build();
+	}
+
+	public static ProveedorResponseDTO proveedorResponse(ProveedorNeumaticos proveedor,
+			DomicilioResponseDTO domicilio) {
+		return new ProveedorResponseDTO(proveedor.getPublicId(), proveedor.getNombre(), proveedor.getEmail(),
+				proveedor.getTelefono(), domicilio);
 	}
 
 	// Límite de intentos de login

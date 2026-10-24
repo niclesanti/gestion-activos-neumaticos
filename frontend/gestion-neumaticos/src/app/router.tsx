@@ -12,6 +12,7 @@ import { HomePage } from "@/features/home/pages/home-page"
 import { RepairsPage } from "@/features/repairs/pages/repairs-page"
 import { SettingsPage } from "@/features/settings/pages/settings-page"
 import { StoragePage } from "@/features/storage/pages/storage-page"
+import { SuppliersCatalog } from "@/features/suppliers/components/suppliers-catalog"
 import { TiresPage } from "@/features/tires/pages/tires-page"
 import { TransportUnitsPage } from "@/features/transport-units/pages/transport-units-page"
 import { ROUTES } from "@/lib/routes"
@@ -41,7 +42,12 @@ export function AppRouter() {
                 path={ROUTES.settings}
                 element={
                   // Cada catálogo es su propio feature: se componen acá.
-                  <SettingsPage catalogs={{ drivers: <DriversCatalog /> }} />
+                  <SettingsPage
+                    catalogs={{
+                      drivers: <DriversCatalog />,
+                      suppliers: <SuppliersCatalog />,
+                    }}
+                  />
                 }
               />
               <Route path={ROUTES.audit} element={<AuditPage />} />

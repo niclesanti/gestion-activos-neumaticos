@@ -1,4 +1,4 @@
-package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores;
+package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api;
 
 import java.util.UUID;
 
@@ -7,6 +7,6 @@ import java.util.UUID;
  * interno (referencia formal, ej. en los eventos de trazabilidad) y el nombre
  * para los snapshots. El {@code id} nunca sale por la API REST.
  */
-public record ProveedorResumen(Long id, UUID publicId, String nombre) {
+public record ProveedorResumenDTO(Long id, UUID publicId, String nombre) {
 
 }

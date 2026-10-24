@@ -163,7 +163,9 @@ Endpoints de negocio anotados hasta ahora:
 |---|---|---|
 | `POST /api/neumatico` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/neumatico/marcas` | `hasRole('LECTOR')` | Los tres roles |
-| `GET /api/proveedores` (mock provisorio) | `hasRole('LECTOR')` | Los tres roles |
+| `POST /api/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/proveedores` | `hasRole('LECTOR')` | Los tres roles |
+| `GET /api/provincias` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 
 ### 2.10.1 Cabeceras HTTP de la API
@@ -251,6 +253,20 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 - Por ahora solo existe el alta: `UPDATE` y `DELETE` se habilitan con las historias de edición y baja.
 - El DNI es opcional y único (varios conductores pueden no tenerlo, `NULL`). Se guarda recortado y con 7 u 8 dígitos sin puntos (`CHECK`); nombre y apellido, recortados y no vacíos.
 - `RegistroConductorIntegrationTests` verifica contra PostgreSQL que el lector no inserta ni llamando directo al servicio (`permission denied`).
+
+**`common.provincias`, `common.localidades`, `common.domicilios`** (`V14`) y **`proveedores.proveedores`** (`V15`):
+
+| | Administrador | Editor | Lector |
+|---|:-:|:-:|:-:|
+| SELECT | ✔ | ✔ | ✔ |
+| INSERT | ✔ | ✔ | ✘ |
+| UPDATE (sin `id` ni `public_id`) | ✔ | ✔ | ✘ |
+| DELETE | ✘ | ✘ | ✘ |
+
+- Las provincias (24) las carga `V14`. Las localidades se crean al registrar un domicilio con una localidad nueva, con un upsert (`INSERT … ON CONFLICT`) sobre el índice único `(provincia_id, lower(nombre))`; por eso editor y administrador tienen `UPDATE` sobre `codigo_postal` (completa uno faltante, nunca pisa uno cargado).
+- **Domicilio por referencia, sin FK entre módulos.** `proveedores.proveedores.domicilio_id` guarda solo el id (`UNIQUE`: composición 1-1) y el domicilio se crea y se lee únicamente por la fachada `common.api.DomicilioApi`, en la misma transacción que el proveedor: si el alta del proveedor falla, el domicilio se revierte con ella. Como nadie tiene `DELETE`, la referencia no queda colgada.
+- El nombre del proveedor es único sin distinguir mayúsculas (índice sobre `lower(nombre)`); el email se guarda recortado y en minúsculas (`CHECK`).
+- `AutorizacionBaseDatosTests` cubre los permisos de las cuatro tablas y `RegistroProveedorIntegrationTests` que el lector no inserta ni llamando directo al servicio.
 
 **`trazabilidad.eventos_neumatico`** (`V11`, una sola tabla para todos los subtipos de evento — herencia `SINGLE_TABLE` con `tipo` como discriminador): el historial lo escriben solo los listeners asíncronos de eventos de dominio, que corren como el sistema (`gn_app`). Por eso `gn_app` es el único rol con `INSERT` (y una política permisiva `TO gn_app`), y ningún rol de usuario escribe, modifica, borra ni, por ahora, lee el historial (la lectura se habilita con el endpoint de consulta). La tabla lleva igual RLS y la política restrictiva para los tres roles; un `CHECK` por subtipo impide que un evento lleve columnas de otro subtipo.
 
@@ -428,8 +444,8 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 
 ### Al construir los módulos de negocio
 
-1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11) y de conductores; falta en los endpoints que vengan.
-2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas y conductores. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
+1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores y de proveedores (HU-24); falta en los endpoints que vengan.
+2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas, conductores, proveedores y las tablas de `common`. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 
 ### Con la gestión de usuarios (alta, edición, baja)

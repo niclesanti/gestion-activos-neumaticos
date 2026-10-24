@@ -39,6 +39,8 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.enti
 @Import(TestcontainersConfiguration.class)
 class RegistroNeumaticoIntegrationTests {
 
+	private static final String NOMBRE_PROVEEDOR = "Proveedor de neumáticos (test)";
+
 	private final UUID editor = UUID.randomUUID();
 
 	@Autowired
@@ -62,6 +64,14 @@ class RegistroNeumaticoIntegrationTests {
 		return owner.queryForObject("SELECT id FROM neumaticos.marcas_neumaticos WHERE nombre = 'Fate'", Long.class);
 	}
 
+	/** Crea (una sola vez) el proveedor de {@code PROVEEDOR_PUBLIC_ID} con el owner y devuelve su id interno. */
+	private Long asegurarProveedor() {
+		owner.update("INSERT INTO proveedores.proveedores (public_id, nombre) VALUES (?, ?) ON CONFLICT DO NOTHING",
+				PROVEEDOR_PUBLIC_ID, NOMBRE_PROVEEDOR);
+		return owner.queryForObject("SELECT id FROM proveedores.proveedores WHERE public_id = ?", Long.class,
+				PROVEEDOR_PUBLIC_ID);
+	}
+
 	private NeumaticoRequestDTO alta(String numeroSerie, EstadoNeumatico estado, Float km, Integer recapados) {
 		return new NeumaticoRequestDTO(numeroSerie, estado, km, km, TipoEjeUnidadTransporte.TRACCION,
 				TipoEjeUnidadTransporte.ARRASTRE, recapados, "alta de prueba", marcaFate(),
@@ -71,6 +81,7 @@ class RegistroNeumaticoIntegrationTests {
 	@Test
 	@DisplayName("un neumático nuevo queda registrado y trazabilidad guarda la compra de forma asíncrona")
 	void nuevoGeneraEventoDeCompra() {
+		Long proveedorId = asegurarProveedor();
 		SecurityContextHolder.getContext().setAuthentication(autenticacion(editor, NivelAcceso.ROLE_EDITOR));
 		String serie = "it-" + UUID.randomUUID();
 
@@ -89,8 +100,8 @@ class RegistroNeumaticoIntegrationTests {
 						"tipo", "COMPRA",
 						"usuario", editor.toString(),
 						"numero_serie_neumatico", serie.toUpperCase(),
-						"proveedor_id", 1L,
-						"nombre_proveedor", "Neumáticos del Litoral S.A.")));
+						"proveedor_id", proveedorId,
+						"nombre_proveedor", NOMBRE_PROVEEDOR)));
 		// El listener terminó bien: la publicación quedó completada.
 		await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> assertThat(owner.queryForObject(
 				"SELECT count(*) FROM public.event_publication WHERE completion_date IS NULL AND event_type LIKE ?",
