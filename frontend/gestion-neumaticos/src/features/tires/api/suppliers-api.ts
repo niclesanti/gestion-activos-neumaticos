@@ -11,6 +11,6 @@ export type Supplier = {
 }
 
 export async function getSuppliers() {
-  const { data } = await apiClient.get<Supplier[]>("/api/proveedores")
+  const { data } = await apiClient.get<Supplier[]>("/api/v1/proveedores")
   return data
 }

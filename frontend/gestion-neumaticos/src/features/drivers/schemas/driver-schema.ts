@@ -25,7 +25,7 @@ export const driverSchema = z
     nombre: requiredName,
     apellido: requiredName,
   })
-  // Cuerpo exacto que espera `POST /api/conductores`.
+  // Cuerpo exacto que espera `POST /api/v1/conductores`.
   .transform((driver) => ({
     dni: emptyToNull(driver.dni),
     nombre: driver.nombre.trim(),

@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/provincias")
+@RequestMapping("/api/v1/provincias")
 @RequiredArgsConstructor
 @Tag(name = "Provincias", description = "Catálogo de provincias para los domicilios")
 public class ProvinciaController {

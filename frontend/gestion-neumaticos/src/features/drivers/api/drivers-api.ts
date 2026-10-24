@@ -10,6 +10,6 @@ export type Driver = {
 }
 
 export async function registerDriver(values: DriverFormValues) {
-  const { data } = await apiClient.post<Driver>("/api/conductores", values)
+  const { data } = await apiClient.post<Driver>("/api/v1/conductores", values)
   return data
 }

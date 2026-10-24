@@ -1,8 +1,8 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.controller;
 
+import java.net.URI;
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.OpenApiConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ExceptionInfo;
@@ -31,7 +32,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/neumatico")
+@RequestMapping("/api/v1/neumaticos")
 @RequiredArgsConstructor
 @Tag(name = "Neumáticos", description = "Operaciones relacionadas con los neumáticos")
 public class NeumaticoController {
@@ -48,7 +49,8 @@ public class NeumaticoController {
                     + "de compra en la trazabilidad (con el proveedor, si se indica). Solo editores y administradores.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Neumático registrado"),
+            @ApiResponse(responseCode = "201", description = "Neumático registrado; el header `Location` apunta "
+                    + "al recurso creado"),
             @ApiResponse(responseCode = "400", description = "Campos obligatorios faltantes, con formato inválido "
                     + "o que violan una regla del alta",
                     content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
@@ -64,8 +66,12 @@ public class NeumaticoController {
     public ResponseEntity<NeumaticoResponseDTO> registrarNeumatico(
             @Valid @RequestBody NeumaticoRequestDTO neumaticoRequestDTO,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(neumaticoService.registrarNeumatico(neumaticoRequestDTO, jwt.getSubject()));
+        NeumaticoResponseDTO creado = neumaticoService.registrarNeumatico(neumaticoRequestDTO, jwt.getSubject());
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{publicId}")
+                .buildAndExpand(creado.publicId())
+                .toUri();
+        return ResponseEntity.created(ubicacion).body(creado);
     }
 
     @GetMapping("/marcas")

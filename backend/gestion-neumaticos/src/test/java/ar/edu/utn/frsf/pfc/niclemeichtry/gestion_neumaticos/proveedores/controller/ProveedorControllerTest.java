@@ -13,6 +13,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
@@ -23,6 +25,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,6 +39,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restdocs.test.autoconfigure.AutoConfigureRestDocs;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -60,7 +64,7 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureRestDocs
 class ProveedorControllerTest {
 
-    private static final String PROVEEDORES = "/api/proveedores";
+    private static final String PROVEEDORES = "/api/v1/proveedores";
     private static final UUID USUARIO = UUID.randomUUID();
 
     @Autowired private MockMvc mockMvc;
@@ -78,7 +82,7 @@ class ProveedorControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/proveedores")
+    @DisplayName("POST /api/v1/proveedores")
     class Registrar {
 
         @Test
@@ -93,6 +97,8 @@ class ProveedorControllerTest {
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.publicId").value(PROVEEDOR_PUBLIC_ID.toString()))
+                    .andExpect(header().string(HttpHeaders.LOCATION,
+                            "http://localhost/api/v1/proveedores/" + PROVEEDOR_PUBLIC_ID))
                     .andExpect(jsonPath("$.nombre").value("Neumáticos del Litoral S.A."))
                     .andExpect(jsonPath("$.domicilio.localidad").value("Santa Fe"))
                     .andExpect(jsonPath("$.domicilio.provincia").value("Santa Fe"))
@@ -102,6 +108,8 @@ class ProveedorControllerTest {
                     .andDo(document("proveedor-registrar",
                             preprocessRequest(prettyPrint()),
                             preprocessResponse(prettyPrint()),
+                            responseHeaders(
+                                    headerWithName(HttpHeaders.LOCATION).description("URL del proveedor creado")),
                             requestFields(
                                     fieldWithPath("nombre").description("Nombre (hasta 150 caracteres, único sin "
                                             + "distinguir mayúsculas)"),
@@ -115,7 +123,7 @@ class ProveedorControllerTest {
                                     fieldWithPath("domicilio.departamento").description("Departamento (opcional)")
                                             .optional(),
                                     fieldWithPath("domicilio.provinciaId").description("Id de la provincia "
-                                            + "(GET /api/provincias)"),
+                                            + "(GET /api/v1/provincias)"),
                                     fieldWithPath("domicilio.localidad").description("Localidad: si no existe en la "
                                             + "provincia, se crea"),
                                     fieldWithPath("domicilio.codigoPostal").description("Código postal: 4 dígitos o "
@@ -222,7 +230,7 @@ class ProveedorControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/proveedores")
+    @DisplayName("GET /api/v1/proveedores")
     class Listar {
 
         @Test

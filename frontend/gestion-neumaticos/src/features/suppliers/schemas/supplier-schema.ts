@@ -75,7 +75,7 @@ export const supplierSchema = z
       }
     }
   })
-  // Cuerpo exacto que espera `POST /api/proveedores`.
+  // Cuerpo exacto que espera `POST /api/v1/proveedores`.
   .transform((supplier) => ({
     nombre: supplier.nombre.trim(),
     email: emptyToNull(supplier.email),

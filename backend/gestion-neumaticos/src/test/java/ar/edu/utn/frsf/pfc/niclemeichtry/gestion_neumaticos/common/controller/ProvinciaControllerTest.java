@@ -40,7 +40,7 @@ class ProvinciaControllerTest {
     void lista() throws Exception {
         when(provinciaService.listarProvincias()).thenReturn(List.of(new ProvinciaResponseDTO(21L, "Santa Fe")));
 
-        mockMvc.perform(get("/api/provincias").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_LECTOR"))))
+        mockMvc.perform(get("/api/v1/provincias").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_LECTOR"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(21))
                 .andExpect(jsonPath("$[0].nombre").value("Santa Fe"));
@@ -49,7 +49,7 @@ class ProvinciaControllerTest {
     @Test
     @DisplayName("401 sin token")
     void sinToken() throws Exception {
-        mockMvc.perform(get("/api/provincias")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/provincias")).andExpect(status().isUnauthorized());
 
         verifyNoInteractions(provinciaService);
     }

@@ -29,11 +29,11 @@ export type Supplier = {
 }
 
 export async function registerSupplier(values: SupplierFormValues) {
-  const { data } = await apiClient.post<Supplier>("/api/proveedores", values)
+  const { data } = await apiClient.post<Supplier>("/api/v1/proveedores", values)
   return data
 }
 
 export async function getProvinces() {
-  const { data } = await apiClient.get<Province[]>("/api/provincias")
+  const { data } = await apiClient.get<Province[]>("/api/v1/provincias")
   return data
 }

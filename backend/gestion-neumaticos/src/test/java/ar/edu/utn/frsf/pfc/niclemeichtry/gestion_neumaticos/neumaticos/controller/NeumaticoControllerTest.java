@@ -10,6 +10,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
+import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
@@ -20,6 +22,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restdocs.test.autoconfigure.AutoConfigureRestDocs;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -60,8 +64,8 @@ import tools.jackson.databind.json.JsonMapper;
 @AutoConfigureRestDocs
 class NeumaticoControllerTest {
 
-    private static final String NEUMATICO = "/api/neumatico";
-    private static final String MARCAS = "/api/neumatico/marcas";
+    private static final String NEUMATICOS = "/api/v1/neumaticos";
+    private static final String MARCAS = "/api/v1/neumaticos/marcas";
     private static final UUID USUARIO = UUID.randomUUID();
 
     @Autowired private MockMvc mockMvc;
@@ -79,7 +83,7 @@ class NeumaticoControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/neumatico")
+    @DisplayName("POST /api/v1/neumaticos")
     class Registrar {
 
         @Test
@@ -90,10 +94,12 @@ class NeumaticoControllerTest {
             when(neumaticoService.registrarNeumatico(request, USUARIO.toString()))
                     .thenReturn(neumaticoResponse(neumatico));
 
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_EDITOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_EDITOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.publicId").value(neumatico.getPublicId().toString()))
+                    .andExpect(header().string(HttpHeaders.LOCATION,
+                            "http://localhost/api/v1/neumaticos/" + neumatico.getPublicId()))
                     .andExpect(jsonPath("$.numeroSerie").value("ABC-123"))
                     .andExpect(jsonPath("$.situacionOperativaVigente").value("EN_ESPERA"))
                     .andExpect(jsonPath("$.enEspera").value(true))
@@ -102,6 +108,8 @@ class NeumaticoControllerTest {
                     .andDo(document("neumatico-registrar",
                             preprocessRequest(prettyPrint()),
                             preprocessResponse(prettyPrint()),
+                            responseHeaders(
+                                    headerWithName(HttpHeaders.LOCATION).description("URL del neumático creado")),
                             requestFields(
                                     fieldWithPath("numeroSerie").description("Número de serie (opcional, único, "
                                             + "no modificable)").optional(),
@@ -152,7 +160,7 @@ class NeumaticoControllerTest {
             when(neumaticoService.registrarNeumatico(eq(request), anyString()))
                     .thenReturn(neumaticoResponse(neumatico(request)));
 
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_ADMINISTRADOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_ADMINISTRADOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isCreated());
         }
@@ -160,7 +168,7 @@ class NeumaticoControllerTest {
         @Test
         @DisplayName("403 para el lector, sin llegar al servicio")
         void lectorNoRegistra() throws Exception {
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_LECTOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_LECTOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(json(neumaticoNuevoRequest())))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.status").value(403));
@@ -171,7 +179,7 @@ class NeumaticoControllerTest {
         @Test
         @DisplayName("401 sin token")
         void sinToken() throws Exception {
-            mockMvc.perform(post(NEUMATICO).contentType(MediaType.APPLICATION_JSON).content(json(neumaticoNuevoRequest())))
+            mockMvc.perform(post(NEUMATICOS).contentType(MediaType.APPLICATION_JSON).content(json(neumaticoNuevoRequest())))
                     .andExpect(status().isUnauthorized());
 
             verifyNoInteractions(neumaticoService);
@@ -182,7 +190,7 @@ class NeumaticoControllerTest {
         void reglaDeNegocio() throws Exception {
             NeumaticoRequestDTO request = neumaticoRequest(null, EstadoNeumatico.NUEVO, 1000f, 0f, 0);
 
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_EDITOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_EDITOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(json(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value(containsString("nuevoSinUso:")));
@@ -196,7 +204,7 @@ class NeumaticoControllerTest {
         void enumDesconocido(String valor) throws Exception {
             String cuerpo = json(neumaticoNuevoRequest()).replace("\"NUEVO\"", valor);
 
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_EDITOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_EDITOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
                     .andExpect(status().isBadRequest());
         }
@@ -207,7 +215,7 @@ class NeumaticoControllerTest {
             when(neumaticoService.registrarNeumatico(any(), anyString()))
                     .thenThrow(new EntidadDuplicadaException("Ya existe un neumático con el número de serie ABC-123"));
 
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_EDITOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_EDITOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(json(neumaticoNuevoRequest())))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value("Ya existe un neumático con el número de serie ABC-123"));
@@ -219,7 +227,7 @@ class NeumaticoControllerTest {
             when(neumaticoService.registrarNeumatico(any(), anyString()))
                     .thenThrow(new EntidadNoEncontradaException("La marca de neumático indicada no existe"));
 
-            mockMvc.perform(post(NEUMATICO).with(usuario("ROLE_EDITOR"))
+            mockMvc.perform(post(NEUMATICOS).with(usuario("ROLE_EDITOR"))
                             .contentType(MediaType.APPLICATION_JSON).content(json(neumaticoNuevoRequest())))
                     .andExpect(status().isNotFound());
         }
@@ -227,7 +235,7 @@ class NeumaticoControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/neumatico/marcas")
+    @DisplayName("GET /api/v1/neumaticos/marcas")
     class Marcas {
 
         @Test
