@@ -18,6 +18,7 @@ import enHome from "@/lib/i18n/locales/en/home.json"
 import enSettings from "@/lib/i18n/locales/en/settings.json"
 import enSuppliers from "@/lib/i18n/locales/en/suppliers.json"
 import enTires from "@/lib/i18n/locales/en/tires.json"
+import enTransportUnits from "@/lib/i18n/locales/en/transport-units.json"
 import esAudit from "@/lib/i18n/locales/es/audit.json"
 import esAuth from "@/lib/i18n/locales/es/auth.json"
 import esCommon from "@/lib/i18n/locales/es/common.json"
@@ -27,6 +28,7 @@ import esHome from "@/lib/i18n/locales/es/home.json"
 import esSettings from "@/lib/i18n/locales/es/settings.json"
 import esSuppliers from "@/lib/i18n/locales/es/suppliers.json"
 import esTires from "@/lib/i18n/locales/es/tires.json"
+import esTransportUnits from "@/lib/i18n/locales/es/transport-units.json"
 
 export const resources = {
   es: {
@@ -39,6 +41,7 @@ export const resources = {
     tires: esTires,
     drivers: esDrivers,
     suppliers: esSuppliers,
+    "transport-units": esTransportUnits,
   },
   en: {
     common: enCommon,
@@ -50,6 +53,7 @@ export const resources = {
     tires: enTires,
     drivers: enDrivers,
     suppliers: enSuppliers,
+    "transport-units": enTransportUnits,
   },
 } as const
 

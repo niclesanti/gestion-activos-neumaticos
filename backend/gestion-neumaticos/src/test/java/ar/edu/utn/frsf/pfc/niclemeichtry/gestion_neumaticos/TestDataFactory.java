@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +40,12 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.Domicilio
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Domicilio;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Localidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Provincia;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.EjeConfiguracion;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.TipoEje;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.TipoRodado;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.TipoUnidad;
 
 /**
  * Datos de prueba compartidos por todos los tests: cada método devuelve una
@@ -354,6 +361,65 @@ public final class TestDataFactory {
 			DomicilioResponseDTO domicilio) {
 		return new ProveedorResponseDTO(proveedor.getPublicId(), proveedor.getNombre(), proveedor.getEmail(),
 				proveedor.getTelefono(), domicilio);
+	}
+
+	// Unidades de transporte
+
+	public static final String PATENTE = "AB123CD";
+	public static final Long CONFIGURACION_ID = 1L;
+	public static final UUID UNIDAD_PUBLIC_ID = UUID.fromString("01928f3e-7b1a-7c2d-9e4f-5a6b7c8d9e0f");
+
+	public static UnidadTransporteRequestDTO unidadTransporteRequest() {
+		return new UnidadTransporteRequestDTO(PATENTE, CONFIGURACION_ID);
+	}
+
+	public static UnidadTransporteRequestDTO unidadTransporteRequest(String patente, Long configuracionId) {
+		return new UnidadTransporteRequestDTO(patente, configuracionId);
+	}
+
+	/** Config 1 de V16: E1 DIRECCION SIMPLE, E2 TRACCION DUAL y un auxilio (7 slots). */
+	public static ConfiguracionUnidad tractorComun() {
+		return configuracion(1L, "Tractor común", TipoUnidad.TRACTOR, 1,
+				eje(1, TipoEje.DIRECCION, TipoRodado.SIMPLE), eje(2, TipoEje.TRACCION, TipoRodado.DUAL));
+	}
+
+	/** Config 2 de V16: E1 DIRECCION SIMPLE, E2 y E3 TRACCION DUAL y un auxilio (11 slots). */
+	public static ConfiguracionUnidad tractorPesado() {
+		return configuracion(2L, "Tractor para cargas pesadas", TipoUnidad.TRACTOR, 1,
+				eje(1, TipoEje.DIRECCION, TipoRodado.SIMPLE), eje(2, TipoEje.TRACCION, TipoRodado.DUAL),
+				eje(3, TipoEje.TRACCION, TipoRodado.DUAL));
+	}
+
+	/** Config 3 de V16: E1 a E3 ARRASTRE DUAL y un auxilio (13 slots). */
+	public static ConfiguracionUnidad semirremolque() {
+		return configuracion(3L, "Semirremolque", TipoUnidad.SEMIRREMOLQUE, 1,
+				eje(1, TipoEje.ARRASTRE, TipoRodado.DUAL), eje(2, TipoEje.ARRASTRE, TipoRodado.DUAL),
+				eje(3, TipoEje.ARRASTRE, TipoRodado.DUAL));
+	}
+
+	/** Configuración con sus ejes enlazados en ambos sentidos. */
+	public static ConfiguracionUnidad configuracion(Long id, String nombre, TipoUnidad tipoUnidad,
+			int cantSlotsAuxilio, EjeConfiguracion... ejes) {
+		ConfiguracionUnidad configuracion = ConfiguracionUnidad.builder()
+				.id(id)
+				.nombre(nombre)
+				.tipoUnidad(tipoUnidad)
+				.cantSlotsAuxilio(cantSlotsAuxilio)
+				.ejes(new ArrayList<>(List.of(ejes)))
+				.build();
+		for (EjeConfiguracion eje : ejes) {
+			eje.setConfiguracion(configuracion);
+		}
+		return configuracion;
+	}
+
+	public static EjeConfiguracion eje(int orden, TipoEje tipoEje, TipoRodado rodado) {
+		return EjeConfiguracion.builder()
+				.id((long) orden)
+				.orden(orden)
+				.tipoEje(tipoEje)
+				.rodado(rodado)
+				.build();
 	}
 
 	// Límite de intentos de login

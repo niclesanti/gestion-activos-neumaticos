@@ -10,6 +10,7 @@ import type home from "@/lib/i18n/locales/es/home.json"
 import type settings from "@/lib/i18n/locales/es/settings.json"
 import type suppliers from "@/lib/i18n/locales/es/suppliers.json"
 import type tires from "@/lib/i18n/locales/es/tires.json"
+import type transportUnits from "@/lib/i18n/locales/es/transport-units.json"
 
 declare module "i18next" {
   interface CustomTypeOptions {
@@ -24,6 +25,7 @@ declare module "i18next" {
       tires: typeof tires
       drivers: typeof drivers
       suppliers: typeof suppliers
+      "transport-units": typeof transportUnits
     }
   }
 }

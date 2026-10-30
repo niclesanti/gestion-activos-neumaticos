@@ -12,56 +12,97 @@ skinparam class {
     HeaderBackgroundColor<<Service>> #ace46d
 }
 
-' PATRÓN TYPE OBJECT: configuraciones de unidad sin subclasificar por tipo
+' ============================================================
+' PATRÓN TYPE OBJECT: la configuración describe sus ejes en orden
+' ============================================================
 class ConfiguracionUnidad <<Entity>> {
   - id: Long
   - nombre: String
-  - cantEjesDireccion: Integer
-  - cantEjesTraccion: Integer
-  - cantEjesArrastre: Integer
+  - tipoUnidad: TipoUnidad
   - cantSlotsAuxilio: Integer
+  + getEjes(): List<EjeConfiguracion>
   + obtenerTotalEjes(): Integer
+  + obtenerTotalSlots(): Integer
 }
 
+class EjeConfiguracion <<Entity>> {
+  - id: Long
+  - orden: Integer
+  - tipoEje: TipoEje
+  - rodado: TipoRodado
+  + cantidadNeumaticos(): Integer
+}
+
+enum TipoUnidad {
+  TRACTOR
+  SEMIRREMOLQUE
+}
+
+enum TipoEje {
+  DIRECCION
+  TRACCION
+  ARRASTRE
+}
+
+enum TipoRodado {
+  SIMPLE
+  DUAL
+}
+
+' ============================================================
 ' Agregado raíz del módulo. Único escritor de sus propios datos.
+' ============================================================
 class UnidadTransporte <<Entity>> <<Auditable>> {
   - id: Long
   - publicId: UUID <<unique>>
-  - patente: String
+  - patente: String <<unique>>
   + addSlot(slot: SlotUnidadTransporte): void
   + getSlots(): List<SlotUnidadTransporte>
+  + getSlotsDeEje(nroEje: Integer): List<SlotUnidadTransporte>
+  + getSlotsAuxilio(): List<SlotUnidadTransporte>
 }
 
 class SlotUnidadTransporte <<Entity>> {
   - id: Long
-  - posicion: PosicionEje
-  - nroEje: Integer
-  - tipoEje: TipoEjeUnidadTransporte
-  - neumaticoActualId: Long
+  - tipoSlot: TipoSlot
+  - nroEje: Integer [0..1]
+  - tipoEje: TipoEje [0..1]
+  - lado: Lado [0..1]
+  - posicionRueda: PosicionRueda [0..1]
+  - nroAuxilio: Integer [0..1]
+  - neumaticoActualId: Long [0..1]
+  + getCodigo(): String
+  + estaOcupado(): boolean
   + montarNeumatico(neumaticoId: Long): void
   + desmontarNeumatico(): Long
 }
 
-enum PosicionEje {
-  IZQ_DIR
-  DER_DIR
-  EXT_IZQ
-  EXT_DER
-  INT_IZQ
-  INT_DER
-  AUX
-}
-
-enum TipoEjeUnidadTransporte {
-  DIRECCION
-  TRACCION
-  ARRASTRE
+enum TipoSlot {
+  EJE
   AUXILIO
 }
 
-' PATRÓN CREACIONAL: FACTORY / BUILDER
-class UnidadTransporteFactory <<Service>> {
-    + crearUnidad(patente: String, 
+enum Lado {
+  IZQUIERDO
+  DERECHO
+}
+
+enum PosicionRueda {
+  SIMPLE
+  EXTERIOR
+  INTERIOR
+}
+
+' ============================================================
+' PATRÓN CREACIONAL: FACTORY (interfaz + implementación, IoC)
+' ============================================================
+interface UnidadTransporteFactory {
+  + crearUnidad(patente: String,
+    config: ConfiguracionUnidad): UnidadTransporte
+}
+
+class UnidadTransporteFactoryImpl <<Service>> {
+  + crearUnidad(patente: String,
     config: ConfiguracionUnidad): UnidadTransporte
 }
 
@@ -77,20 +118,49 @@ package "common" as common {
 }
 
 UnidadTransporte --|> AuditableEntity
+ConfiguracionUnidad "1" *-- "1..*" EjeConfiguracion : ejes >
 UnidadTransporte "*" --> "1" ConfiguracionUnidad : configuracion >
-UnidadTransporte "1" *-- "*" SlotUnidadTransporte : slots >
-SlotUnidadTransporte "*" --> "1" UnidadTransporte : unidadTransporte >
-UnidadTransporteFactory ..> UnidadTransporte : <<instancia>>
-UnidadTransporteFactory ..> ConfiguracionUnidad : <<usa>>
-UnidadTransporteFactory ..> SlotUnidadTransporte : <<instancia>>
+UnidadTransporte "1" *-- "*" SlotUnidadTransporte : slots
+UnidadTransporteFactoryImpl ..|> UnidadTransporteFactory: <<implementa>>
+UnidadTransporteFactoryImpl ..> UnidadTransporte : <<instancia>>
+UnidadTransporteFactoryImpl ..> ConfiguracionUnidad : <<usa>>
+UnidadTransporteFactoryImpl ..> SlotUnidadTransporte : <<instancia>>
 
 note right of SlotUnidadTransporte
-  <b>neumaticoActualId (Long):</b> reemplaza la
-  asociación directa a un neumático. Neumatico 
-  pertenece a neumaticos-svc, otro módulo: solo se 
-  guarda su id. Si se necesita mostrar en pantalla 
-  el detalle se resuelve con una llamada api a 
-  neumaticos-svc en el momento.
+  <b>Posición = (nroEje, lado, posicionRueda)</b>
+  Slot de eje: nroEje, tipoEje, lado y posicionRueda
+  obligatorios; nroAuxilio nulo.
+  Slot de auxilio: solo nroAuxilio; el resto nulo.
+
+  <b>getCodigo()</b> (derivado, no persistido):
+  "E1-IZQ", "E2-IZQ-EXT", "E2-DER-INT", "AUX-1"
+
+  <b>Unicidad:</b>
+  (unidad_id, nro_eje, lado, posicion_rueda)
+  (unidad_id, nro_auxilio)
+
+  <b>neumaticoActualId:</b> referencia por id a
+  neumaticos-svc (otro módulo). El detalle se resuelve
+  con una llamada a su API en el momento.
+end note
+
+note right of UnidadTransporteFactoryImpl
+  Recorre config.getEjes() ordenado por orden:
+  - SIMPLE: IZQ-SIMPLE, DER-SIMPLE
+  - DUAL:   IZQ-EXT, IZQ-INT, DER-INT, DER-EXT
+  nroEje = orden; tipoEje se copia del eje.
+  Luego crea cantSlotsAuxilio slots AUXILIO (1..n).
+  Todos sin neumático asignado.
+end note
+
+note bottom of ConfiguracionUnidad
+  Datos precargados:
+  Config 1 Tractor común:   E1 DIRECCION SIMPLE,
+    E2 TRACCION DUAL, 1 aux  -> 7 slots
+  Config 2 Tractor pesado:  E1 DIRECCION SIMPLE,
+    E2 y E3 TRACCION DUAL, 1 aux -> 11 slots
+  Config 3 Semirremolque:   E1..E3 ARRASTRE DUAL,
+    1 aux -> 13 slots
 end note
 
 @enduml
