@@ -1,0 +1,59 @@
+{
+  "title": "Transport units",
+  "subtitle": "Fleet tractors and semi-trailers, with the positions of their tires.",
+  "actions": { "register": "Register unit" },
+  "dialog": {
+    "createTitle": "Register transport unit",
+    "createDescription": "Enter the license plate and choose the axle configuration. Tire positions are generated automatically, with no tires assigned.",
+    "cancel": "Cancel",
+    "submit": "Register",
+    "submitting": "Registering…"
+  },
+  "form": {
+    "plate": {
+      "label": "License plate",
+      "placeholder": "E.g.: AB123CD",
+      "description": "Format ABC123 or AB123CD. Spaces and hyphens are allowed."
+    },
+    "configuration": {
+      "label": "Axle configuration",
+      "placeholder": "Choose a configuration",
+      "loading": "Loading configurations…",
+      "error": "We couldn't load the configurations",
+      "option": "{{name}} · {{slots}} positions"
+    }
+  },
+  "preview": {
+    "title": "Axle layout: {{name}}",
+    "summary": "{{axles}} axles · {{slots}} positions",
+    "front": "Front",
+    "axle": "Axle {{number}} · {{type}} · {{wheels}}",
+    "spares": "Spares",
+    "empty": "Choose a configuration to see its axle and tire layout."
+  },
+  "axleTypes": {
+    "DIRECCION": "Steer",
+    "TRACCION": "Drive",
+    "ARRASTRE": "Trailer"
+  },
+  "wheelTypes": {
+    "SIMPLE": "single wheels",
+    "DUAL": "dual wheels"
+  },
+  "validation": {
+    "required": "This field is required",
+    "configurationRequired": "Choose a configuration",
+    "maxLength15": "Must be at most 15 characters",
+    "plateFormat": "Enter a plate in the ABC123 or AB123CD format"
+  },
+  "feedback": {
+    "created": "Unit registered",
+    "createdDescription": "{{count}} positions were generated for unit {{plate}}.",
+    "duplicatePlate": "A unit with that license plate already exists",
+    "configurationNotFound": "The selected configuration doesn't exist",
+    "forbidden": "You don't have permission to register transport units",
+    "invalid": "Check the form data",
+    "unexpected": "We couldn't register the unit. Try again in a few minutes"
+  },
+  "empty": "There is no transport unit list yet."
+}

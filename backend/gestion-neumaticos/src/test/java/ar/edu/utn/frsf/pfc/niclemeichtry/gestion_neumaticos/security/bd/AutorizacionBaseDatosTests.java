@@ -651,6 +651,178 @@ class AutorizacionBaseDatosTests {
 	}
 
 	@Nested
+	@DisplayName("unidades_transporte.configuraciones_unidad y ejes_configuracion")
+	class ConfiguracionesUnidad {
+
+		@Test
+		@DisplayName("los tres roles leen las configuraciones y sus ejes cargados por la migración")
+		void todosLeen() {
+			for (UUID usuario : List.of(admin, editor, lector)) {
+				autenticar(usuario, nivelDe(usuario));
+				assertThat(app.queryForList("SELECT nombre FROM unidades_transporte.configuraciones_unidad ORDER BY id",
+						String.class)).containsExactly("Tractor común", "Tractor para cargas pesadas", "Semirremolque");
+				assertThat(app.queryForObject("SELECT count(*) FROM unidades_transporte.ejes_configuracion",
+						Integer.class)).isEqualTo(8);
+			}
+		}
+
+		@Test
+		@DisplayName("nadie inserta, modifica ni borra configuraciones ni ejes desde la app")
+		void nadieEscribe() {
+			for (UUID usuario : List.of(admin, editor, lector)) {
+				autenticar(usuario, nivelDe(usuario));
+				permisoDenegado(() -> app.update("INSERT INTO unidades_transporte.configuraciones_unidad "
+						+ "(nombre, tipo_unidad, cant_slots_auxilio) VALUES ('Otra', 'TRACTOR', 1)"));
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.configuraciones_unidad SET nombre = 'x'"));
+				permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.configuraciones_unidad"));
+				permisoDenegado(() -> app.update("INSERT INTO unidades_transporte.ejes_configuracion "
+						+ "(configuracion_id, orden, tipo_eje, rodado) VALUES (1, 9, 'ARRASTRE', 'DUAL')"));
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.ejes_configuracion SET rodado = 'SIMPLE'"));
+				permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.ejes_configuracion"));
+			}
+		}
+
+		@Test
+		@DisplayName("sin sesión no se leen")
+		void sinSesionNoLee() {
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM unidades_transporte.configuraciones_unidad",
+					Integer.class));
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM unidades_transporte.ejes_configuracion",
+					Integer.class));
+		}
+
+	}
+
+	@Nested
+	@DisplayName("unidades_transporte.unidades_transporte y slots_unidad_transporte")
+	class UnidadesTransporte {
+
+		private static final String INSERTAR_UNIDAD = """
+				INSERT INTO unidades_transporte.unidades_transporte (id, public_id, patente, configuracion_id)
+				VALUES (nextval('unidades_transporte.unidades_transporte_id_seq'), ?, ?, ?)""";
+		private static final String INSERTAR_SLOT_EJE = """
+				INSERT INTO unidades_transporte.slots_unidad_transporte
+				    (id, unidad_id, tipo_slot, nro_eje, tipo_eje, lado, posicion_rueda)
+				VALUES (nextval('unidades_transporte.slots_unidad_transporte_id_seq'), ?, 'EJE', 1, 'DIRECCION',
+				    'IZQUIERDO', 'SIMPLE')""";
+
+		private Long configuracion;
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM unidades_transporte.slots_unidad_transporte");
+			owner.update("DELETE FROM unidades_transporte.unidades_transporte");
+			configuracion = owner.queryForObject(
+					"SELECT id FROM unidades_transporte.configuraciones_unidad WHERE nombre = 'Tractor común'", Long.class);
+		}
+
+		private Long insertarUnidadConOwner(String patente) {
+			owner.update(INSERTAR_UNIDAD, UUID.randomUUID(), patente, configuracion);
+			return owner.queryForObject("SELECT id FROM unidades_transporte.unidades_transporte WHERE patente = ?",
+					Long.class, patente);
+		}
+
+		@Test
+		@DisplayName("sin sesión no se lee ni se inserta")
+		void sinSesion() {
+			Long unidad = insertarUnidadConOwner("AB123CD");
+
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM unidades_transporte.unidades_transporte",
+					Integer.class));
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM unidades_transporte.slots_unidad_transporte",
+					Integer.class));
+			permisoDenegado(() -> app.update(INSERTAR_UNIDAD, UUID.randomUUID(), "AC456DE", configuracion));
+			permisoDenegado(() -> app.update(INSERTAR_SLOT_EJE, unidad));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee")
+		void lectorSoloLee() {
+			Long unidad = insertarUnidadConOwner("AB123CD");
+			owner.update(INSERTAR_SLOT_EJE, unidad);
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT count(*) FROM unidades_transporte.unidades_transporte",
+					Integer.class)).isOne();
+			assertThat(app.queryForObject("SELECT count(*) FROM unidades_transporte.slots_unidad_transporte",
+					Integer.class)).isOne();
+			permisoDenegado(() -> app.update(INSERTAR_UNIDAD, UUID.randomUUID(), "AC456DE", configuracion));
+			permisoDenegado(() -> app.update(INSERTAR_SLOT_EJE, unidad));
+			permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET patente = 'ZZ999ZZ'"));
+			permisoDenegado(() -> app.update("UPDATE unidades_transporte.slots_unidad_transporte "
+					+ "SET neumatico_actual_id = 1"));
+			permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.slots_unidad_transporte"));
+			permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.unidades_transporte"));
+		}
+
+		@Test
+		@DisplayName("editor y administrador insertan unidades y slots, pero no los modifican ni borran")
+		void editorYAdministradorInsertan() {
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				String patente = usuario == editor ? "AB123CD" : "ABC123";
+
+				assertThat(app.update(INSERTAR_UNIDAD, UUID.randomUUID(), patente, configuracion)).isOne();
+				Long unidad = app.queryForObject(
+						"SELECT id FROM unidades_transporte.unidades_transporte WHERE patente = ?", Long.class, patente);
+				assertThat(app.update(INSERTAR_SLOT_EJE, unidad)).isOne();
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET patente = 'ZZ999ZZ'"));
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET public_id = ?",
+						UUID.randomUUID()));
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.slots_unidad_transporte "
+						+ "SET neumatico_actual_id = 1"));
+				permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.slots_unidad_transporte"));
+				permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.unidades_transporte"));
+			}
+			assertThat(owner.queryForObject("SELECT count(*) FROM unidades_transporte.slots_unidad_transporte",
+					Integer.class)).isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("la patente es única y está normalizada")
+		void patenteUnicaYNormalizada() {
+			insertarUnidadConOwner("AB123CD");
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			assertThatThrownBy(() -> app.update(INSERTAR_UNIDAD, UUID.randomUUID(), "AB123CD", configuracion))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_unidades_transporte_patente");
+			for (String invalida : List.of("ab123cd", "AB 123 CD", "AB-123-CD", "A1B2C3")) {
+				assertThatThrownBy(() -> app.update(INSERTAR_UNIDAD, UUID.randomUUID(), invalida, configuracion))
+						.isInstanceOf(DataAccessException.class)
+						.hasStackTraceContaining("ck_unidades_transporte_patente_formato");
+			}
+		}
+
+		@Test
+		@DisplayName("un slot de eje no tiene número de auxilio, uno de auxilio no tiene datos de eje, y no se repiten")
+		void slotsConsistentes() {
+			Long unidad = insertarUnidadConOwner("AB123CD");
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+			String insertar = """
+					INSERT INTO unidades_transporte.slots_unidad_transporte
+					    (id, unidad_id, tipo_slot, nro_eje, tipo_eje, lado, posicion_rueda, nro_auxilio)
+					VALUES (nextval('unidades_transporte.slots_unidad_transporte_id_seq'), ?, ?, ?, ?, ?, ?, ?)""";
+
+			assertThat(app.update(insertar, unidad, "AUXILIO", null, null, null, null, 1)).isOne();
+			assertThat(app.update(INSERTAR_SLOT_EJE, unidad)).isOne();
+			assertThatThrownBy(() -> app.update(insertar, unidad, "EJE", 1, "DIRECCION", "IZQUIERDO", "SIMPLE", 2))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_slots_unidad_transporte_consistencia");
+			assertThatThrownBy(() -> app.update(insertar, unidad, "AUXILIO", 1, null, null, null, 2))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_slots_unidad_transporte_consistencia");
+			assertThatThrownBy(() -> app.update(INSERTAR_SLOT_EJE, unidad))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_slots_unidad_transporte_posicion");
+			assertThatThrownBy(() -> app.update(insertar, unidad, "AUXILIO", null, null, null, null, 1))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_slots_unidad_transporte_auxilio");
+		}
+
+	}
+
+	@Nested
 	@DisplayName("trazabilidad.eventos_neumatico")
 	class Trazabilidad {
 

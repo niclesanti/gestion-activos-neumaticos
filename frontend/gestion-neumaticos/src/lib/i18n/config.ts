@@ -19,6 +19,7 @@ export const NAMESPACES = [
   "tires",
   "drivers",
   "suppliers",
+  "transport-units",
 ] as const
 
 export const DEFAULT_NAMESPACE = "common"

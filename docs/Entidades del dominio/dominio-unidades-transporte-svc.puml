@@ -94,9 +94,14 @@ enum PosicionRueda {
 }
 
 ' ============================================================
-' PATRÓN CREACIONAL: FACTORY
+' PATRÓN CREACIONAL: FACTORY (interfaz + implementación, IoC)
 ' ============================================================
-class UnidadTransporteFactory <<Service>> {
+interface UnidadTransporteFactory {
+  + crearUnidad(patente: String,
+    config: ConfiguracionUnidad): UnidadTransporte
+}
+
+class UnidadTransporteFactoryImpl <<Service>> {
   + crearUnidad(patente: String,
     config: ConfiguracionUnidad): UnidadTransporte
 }
@@ -116,9 +121,10 @@ UnidadTransporte --|> AuditableEntity
 ConfiguracionUnidad "1" *-- "1..*" EjeConfiguracion : ejes >
 UnidadTransporte "*" --> "1" ConfiguracionUnidad : configuracion >
 UnidadTransporte "1" *-- "*" SlotUnidadTransporte : slots
-UnidadTransporteFactory ..> UnidadTransporte : <<instancia>>
-UnidadTransporteFactory ..> ConfiguracionUnidad : <<usa>>
-UnidadTransporteFactory ..> SlotUnidadTransporte : <<instancia>>
+UnidadTransporteFactoryImpl ..|> UnidadTransporteFactory: <<implementa>>
+UnidadTransporteFactoryImpl ..> UnidadTransporte : <<instancia>>
+UnidadTransporteFactoryImpl ..> ConfiguracionUnidad : <<usa>>
+UnidadTransporteFactoryImpl ..> SlotUnidadTransporte : <<instancia>>
 
 note right of SlotUnidadTransporte
   <b>Posición = (nroEje, lado, posicionRueda)</b>
@@ -138,7 +144,7 @@ note right of SlotUnidadTransporte
   con una llamada a su API en el momento.
 end note
 
-note right of UnidadTransporteFactory
+note right of UnidadTransporteFactoryImpl
   Recorre config.getEjes() ordenado por orden:
   - SIMPLE: IZQ-SIMPLE, DER-SIMPLE
   - DUAL:   IZQ-EXT, IZQ-INT, DER-INT, DER-EXT

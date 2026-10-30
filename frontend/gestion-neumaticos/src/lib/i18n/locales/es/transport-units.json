@@ -1,0 +1,59 @@
+{
+  "title": "Unidades de transporte",
+  "subtitle": "Tractores y semirremolques de la flota, con las posiciones de sus neumáticos.",
+  "actions": { "register": "Registrar unidad" },
+  "dialog": {
+    "createTitle": "Registrar unidad de transporte",
+    "createDescription": "Ingresá la patente y elegí la configuración de ejes. Las posiciones de los neumáticos se generan solas, sin neumáticos asignados.",
+    "cancel": "Cancelar",
+    "submit": "Registrar",
+    "submitting": "Registrando…"
+  },
+  "form": {
+    "plate": {
+      "label": "Patente",
+      "placeholder": "Ej.: AB123CD",
+      "description": "Formato ABC123 o AB123CD. Podés usar espacios o guiones."
+    },
+    "configuration": {
+      "label": "Configuración de ejes",
+      "placeholder": "Elegí una configuración",
+      "loading": "Cargando configuraciones…",
+      "error": "No pudimos cargar las configuraciones",
+      "option": "{{name}} · {{slots}} posiciones"
+    }
+  },
+  "preview": {
+    "title": "Esquema de ejes: {{name}}",
+    "summary": "{{axles}} ejes · {{slots}} posiciones",
+    "front": "Frente",
+    "axle": "Eje {{number}} · {{type}} · {{wheels}}",
+    "spares": "Auxilios",
+    "empty": "Elegí una configuración para ver el esquema de ejes y neumáticos."
+  },
+  "axleTypes": {
+    "DIRECCION": "Dirección",
+    "TRACCION": "Tracción",
+    "ARRASTRE": "Arrastre"
+  },
+  "wheelTypes": {
+    "SIMPLE": "rodado simple",
+    "DUAL": "rodado dual"
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "configurationRequired": "Elegí una configuración",
+    "maxLength15": "No puede superar los 15 caracteres",
+    "plateFormat": "Ingresá una patente con formato ABC123 o AB123CD"
+  },
+  "feedback": {
+    "created": "Unidad registrada",
+    "createdDescription": "Se generaron {{count}} posiciones para la unidad {{plate}}.",
+    "duplicatePlate": "Ya existe una unidad con esa patente",
+    "configurationNotFound": "La configuración elegida no existe",
+    "forbidden": "No tenés permisos para registrar unidades de transporte",
+    "invalid": "Revisá los datos del formulario",
+    "unexpected": "No pudimos registrar la unidad. Intentá de nuevo en unos minutos"
+  },
+  "empty": "Todavía no hay listado de unidades de transporte."
+}
