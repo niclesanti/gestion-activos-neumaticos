@@ -1,3 +1,7 @@
 # Los scripts que corren dentro de contenedores Linux necesitan LF aunque se
 # clone el repo en Windows.
 *.sh text eol=lf
+
+# El frontend se formatea con Prettier (`endOfLine: lf`): si el checkout en
+# Windows lo dejara en CRLF, `npm run format` reescribiría todos los archivos.
+frontend/gestion-neumaticos/** text=auto eol=lf

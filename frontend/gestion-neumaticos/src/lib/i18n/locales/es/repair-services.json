@@ -1,0 +1,37 @@
+{
+  "title": "Servicios de reparación",
+  "description": "Gomerías y servicios externos a los que la empresa deriva neumáticos para repararlos.",
+  "actions": { "register": "Registrar servicio" },
+  "dialog": {
+    "createTitle": "Registrar servicio de reparación",
+    "createDescription": "Completá los datos del servicio. El contacto y el domicilio son opcionales.",
+    "cancel": "Cancelar",
+    "submit": "Registrar",
+    "submitting": "Registrando…"
+  },
+  "form": {
+    "name": { "label": "Nombre", "placeholder": "Ej.: Gomería Del Centro" },
+    "contact": {
+      "legend": "Contacto",
+      "description": "Opcional."
+    },
+    "email": { "label": "Email", "placeholder": "Ej.: contacto@gomeria.com.ar" },
+    "phone": { "label": "Teléfono", "placeholder": "Ej.: (0342) 455-1234" }
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "maxLength150": "No puede superar los 150 caracteres",
+    "maxLength254": "No puede superar los 254 caracteres",
+    "emailFormat": "Ingresá un email válido (ej.: contacto@gomeria.com.ar)",
+    "phoneFormat": "Usá solo dígitos, espacios, +, -, ( y ), entre 6 y 30 caracteres"
+  },
+  "feedback": {
+    "created": "Servicio de reparación registrado",
+    "createdDescription": "Ya podés derivarle neumáticos a reparación.",
+    "duplicateName": "Ya existe un servicio de reparación con ese nombre",
+    "forbidden": "No tenés permisos para registrar servicios de reparación",
+    "invalid": "Revisá los datos del formulario",
+    "unexpected": "No pudimos registrar el servicio. Intentá de nuevo en unos minutos"
+  },
+  "empty": "Todavía no hay listado de servicios de reparación."
+}

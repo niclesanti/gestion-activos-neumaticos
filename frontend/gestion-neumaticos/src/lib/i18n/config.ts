@@ -19,6 +19,8 @@ export const NAMESPACES = [
   "tires",
   "drivers",
   "suppliers",
+  "repair-services",
+  "address",
   "transport-units",
 ] as const
 

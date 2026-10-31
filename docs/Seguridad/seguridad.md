@@ -165,6 +165,7 @@ Endpoints de negocio anotados hasta ahora:
 | `GET /api/v1/neumaticos/marcas` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/proveedores` | `hasRole('LECTOR')` | Los tres roles |
+| `POST /api/v1/servicios-reparacion` (alta de servicio de reparación, HU-18) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/provincias` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
@@ -269,6 +270,8 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 - **Domicilio por referencia, sin FK entre módulos.** `proveedores.proveedores.domicilio_id` guarda solo el id (`UNIQUE`: composición 1-1) y el domicilio se crea y se lee únicamente por la fachada `common.api.DomicilioApi`, en la misma transacción que el proveedor: si el alta del proveedor falla, el domicilio se revierte con ella. Como nadie tiene `DELETE`, la referencia no queda colgada.
 - El nombre del proveedor es único sin distinguir mayúsculas (índice sobre `lower(nombre)`); el email se guarda recortado y en minúsculas (`CHECK`).
 - `AutorizacionBaseDatosTests` cubre los permisos de las cuatro tablas y `RegistroProveedorIntegrationTests` que el lector no inserta ni llamando directo al servicio.
+
+**`reparacion.servicios_reparacion`** (`V17`, HU-18): mismo esquema de permisos que proveedores (los tres roles `SELECT`; administrador y editor `INSERT` y `UPDATE` de columnas, sin `id` ni `public_id`; nadie `DELETE`; RLS con la política restrictiva de autenticación). El domicilio se guarda por referencia (`domicilio_id UNIQUE`, sin FK entre módulos) y se crea por `common.api.DomicilioApi` en la misma transacción. El nombre es único sin distinguir mayúsculas y `cantidad_neumaticos_en_reparacion` tiene un `CHECK (>= 0)`: la entidad la incrementa (`enviarNeumaticoReparacion`) y decrementa (`reingresarNeumatico`, que rechaza bajar de 0); por eso esa columna es actualizable por administrador y editor. Cubierto por `AutorizacionBaseDatosTests` y `RegistroServicioReparacionIntegrationTests`.
 
 **`unidades_transporte.configuraciones_unidad`, `unidades_transporte.ejes_configuracion`** (`V16`, catálogo):
 
@@ -467,7 +470,7 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 
 ### Al construir los módulos de negocio
 
-1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores, de proveedores (HU-24) y de unidades de transporte (HU-07); falta en los endpoints que vengan. El montaje de neumáticos en unidades tendrá que agregar `UPDATE (neumatico_actual_id)` sobre `unidades_transporte.slots_unidad_transporte` para administrador y editor.
+1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores, de proveedores (HU-24), de unidades de transporte (HU-07) y de servicios de reparación (HU-18); falta en los endpoints que vengan. El montaje de neumáticos en unidades tendrá que agregar `UPDATE (neumatico_actual_id)` sobre `unidades_transporte.slots_unidad_transporte` para administrador y editor.
 2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas, conductores, proveedores, unidades de transporte (con sus slots y configuraciones) y las tablas de `common`. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 

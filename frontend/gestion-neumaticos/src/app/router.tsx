@@ -9,6 +9,7 @@ import { LoginPage } from "@/features/auth/pages/login-page"
 import { ToastShowcasePage } from "@/features/dev/pages/toast-showcase-page"
 import { DriversCatalog } from "@/features/drivers/components/drivers-catalog"
 import { HomePage } from "@/features/home/pages/home-page"
+import { RepairServicesCatalog } from "@/features/repair-services/components/repair-services-catalog"
 import { RepairsPage } from "@/features/repairs/pages/repairs-page"
 import { SettingsPage } from "@/features/settings/pages/settings-page"
 import { StoragePage } from "@/features/storage/pages/storage-page"
@@ -46,6 +47,7 @@ export function AppRouter() {
                     catalogs={{
                       drivers: <DriversCatalog />,
                       suppliers: <SuppliersCatalog />,
+                      "repair-services": <RepairServicesCatalog />,
                     }}
                   />
                 }

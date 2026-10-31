@@ -651,6 +651,84 @@ class AutorizacionBaseDatosTests {
 	}
 
 	@Nested
+	@DisplayName("reparacion.servicios_reparacion")
+	class ServiciosReparacion {
+
+		private static final String INSERTAR = """
+				INSERT INTO reparacion.servicios_reparacion (id, public_id, nombre, email)
+				VALUES (nextval('reparacion.servicios_reparacion_id_seq'), ?, ?, ?)""";
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM reparacion.servicios_reparacion");
+		}
+
+		@Test
+		@DisplayName("sin sesión no se lee ni se inserta")
+		void sinSesion() {
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM reparacion.servicios_reparacion",
+					Integer.class));
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "S1", null));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee")
+		void lectorSoloLee() {
+			owner.update(INSERTAR, UUID.randomUUID(), "S1", null);
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT count(*) FROM reparacion.servicios_reparacion", Integer.class))
+					.isOne();
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "S2", null));
+			permisoDenegado(() -> app.update(
+					"UPDATE reparacion.servicios_reparacion SET cantidad_neumaticos_en_reparacion = 1"));
+			permisoDenegado(() -> app.update("DELETE FROM reparacion.servicios_reparacion"));
+		}
+
+		@Test
+		@DisplayName("editor y administrador insertan, leen y modifican, pero no borran ni cambian ids")
+		void editorYAdministradorEscriben() {
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				String nombre = "S-" + usuario;
+
+				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, null)).isOne();
+				assertThat(app.update("""
+						UPDATE reparacion.servicios_reparacion
+						SET telefono = '455123', cantidad_neumaticos_en_reparacion = 1 WHERE nombre = ?""",
+						nombre)).isOne();
+				permisoDenegado(() -> app.update("DELETE FROM reparacion.servicios_reparacion"));
+				permisoDenegado(() -> app.update("UPDATE reparacion.servicios_reparacion SET public_id = ?",
+						UUID.randomUUID()));
+				permisoDenegado(() -> app.update("UPDATE reparacion.servicios_reparacion SET id = 1"));
+			}
+			assertThat(owner.queryForObject("""
+					SELECT count(*) FROM reparacion.servicios_reparacion
+					WHERE telefono = '455123' AND cantidad_neumaticos_en_reparacion = 1""", Integer.class))
+					.isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("el nombre es único sin distinguir mayúsculas, el email se guarda normalizado y la cantidad no es negativa")
+		void restricciones() {
+			owner.update(INSERTAR, UUID.randomUUID(), "Gomería Sur", null);
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "GOMERÍA SUR", null))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_servicios_reparacion_nombre");
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "Otro", "Ventas@Sur.com"))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_servicios_reparacion_email_formato");
+			assertThatThrownBy(() -> app.update("""
+					UPDATE reparacion.servicios_reparacion SET cantidad_neumaticos_en_reparacion = -1"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_servicios_reparacion_cantidad");
+		}
+
+	}
+
+	@Nested
 	@DisplayName("unidades_transporte.configuraciones_unidad y ejes_configuracion")
 	class ConfiguracionesUnidad {
 

@@ -1,12 +1,14 @@
 import "i18next"
 
 import type { DEFAULT_NAMESPACE } from "@/lib/i18n/config"
+import type address from "@/lib/i18n/locales/es/address.json"
 import type audit from "@/lib/i18n/locales/es/audit.json"
 import type auth from "@/lib/i18n/locales/es/auth.json"
 import type common from "@/lib/i18n/locales/es/common.json"
 import type dev from "@/lib/i18n/locales/es/dev.json"
 import type drivers from "@/lib/i18n/locales/es/drivers.json"
 import type home from "@/lib/i18n/locales/es/home.json"
+import type repairServices from "@/lib/i18n/locales/es/repair-services.json"
 import type settings from "@/lib/i18n/locales/es/settings.json"
 import type suppliers from "@/lib/i18n/locales/es/suppliers.json"
 import type tires from "@/lib/i18n/locales/es/tires.json"
@@ -25,6 +27,8 @@ declare module "i18next" {
       tires: typeof tires
       drivers: typeof drivers
       suppliers: typeof suppliers
+      "repair-services": typeof repairServices
+      address: typeof address
       "transport-units": typeof transportUnits
     }
   }
