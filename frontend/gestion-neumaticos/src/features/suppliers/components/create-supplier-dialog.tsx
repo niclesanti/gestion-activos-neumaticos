@@ -24,7 +24,6 @@ const FORM_ID = "create-supplier-form"
 
 type FeedbackKey =
   | "feedback.duplicateName"
-  | "feedback.provinceNotFound"
   | "feedback.forbidden"
   | "feedback.invalid"
   | "feedback.unexpected"
@@ -33,8 +32,6 @@ function toFeedbackKey(error: unknown): FeedbackKey {
   switch (getHttpStatus(error)) {
     case 409:
       return "feedback.duplicateName"
-    case 404:
-      return "feedback.provinceNotFound"
     case 403:
       return "feedback.forbidden"
     case 400:
@@ -100,11 +97,20 @@ export function CreateSupplierDialog() {
                     })
                   },
                   onError: (mutationError) => {
+                    // 404: la única referencia que el alta resuelve es la provincia.
+                    if (getHttpStatus(mutationError) === 404) {
+                      helpers.setServerError(
+                        "provinciaId",
+                        "feedback.provinceNotFound"
+                      )
+                      notify.error({
+                        titleKey: "address:feedback.provinceNotFound",
+                      })
+                      return
+                    }
                     const key = toFeedbackKey(mutationError)
                     if (key === "feedback.duplicateName") {
                       helpers.setServerError("nombre", key)
-                    } else if (key === "feedback.provinceNotFound") {
-                      helpers.setServerError("provinciaId", key)
                     } else {
                       setError(key)
                     }

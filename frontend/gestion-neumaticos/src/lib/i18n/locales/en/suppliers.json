@@ -16,48 +16,19 @@
       "description": "Optional."
     },
     "email": { "label": "Email", "placeholder": "E.g.: sales@supplier.com" },
-    "phone": { "label": "Phone", "placeholder": "E.g.: (0342) 455-1234" },
-    "address": {
-      "legend": "Address",
-      "description": "Optional. If you enter one, fill in street, number, province and city."
-    },
-    "street": { "label": "Street", "placeholder": "E.g.: San Martín" },
-    "number": { "label": "Number", "placeholder": "E.g.: 2550" },
-    "floor": { "label": "Floor", "placeholder": "E.g.: 3" },
-    "apartment": { "label": "Apartment", "placeholder": "E.g.: B" },
-    "province": {
-      "label": "Province",
-      "placeholder": "Choose a province",
-      "loading": "Loading provinces…",
-      "error": "We couldn't load the provinces"
-    },
-    "city": {
-      "label": "City",
-      "placeholder": "E.g.: Santa Fe",
-      "description": "If it doesn't exist in the province, it will be added."
-    },
-    "postalCode": {
-      "label": "Postal code",
-      "placeholder": "E.g.: 3000",
-      "description": "Optional. 4 digits or CPA (e.g.: S3000ABC)."
-    }
+    "phone": { "label": "Phone", "placeholder": "E.g.: (0342) 455-1234" }
   },
   "validation": {
     "required": "This field is required",
-    "addressRequired": "Fill in this field or leave the address empty",
-    "maxLength10": "It can't be longer than 10 characters",
-    "maxLength100": "It can't be longer than 100 characters",
     "maxLength150": "It can't be longer than 150 characters",
     "maxLength254": "It can't be longer than 254 characters",
     "emailFormat": "Enter a valid email (e.g.: sales@supplier.com)",
-    "phoneFormat": "Use only digits, spaces, +, -, ( and ), between 6 and 30 characters",
-    "postalCodeFormat": "It must have 4 digits or the CPA format (e.g.: S3000ABC)"
+    "phoneFormat": "Use only digits, spaces, +, -, ( and ), between 6 and 30 characters"
   },
   "feedback": {
     "created": "Supplier registered",
     "createdDescription": "You can now link it to a tire purchase.",
     "duplicateName": "A supplier with that name already exists",
-    "provinceNotFound": "The chosen province doesn't exist",
     "forbidden": "You don't have permission to register suppliers",
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the supplier. Try again in a few minutes"

@@ -1,0 +1,37 @@
+{
+  "title": "Repair services",
+  "description": "Tire shops and external services where the company sends tires to be repaired.",
+  "actions": { "register": "Register service" },
+  "dialog": {
+    "createTitle": "Register repair service",
+    "createDescription": "Fill in the service details. Contact and address are optional.",
+    "cancel": "Cancel",
+    "submit": "Register",
+    "submitting": "Registering…"
+  },
+  "form": {
+    "name": { "label": "Name", "placeholder": "E.g.: Gomería Del Centro" },
+    "contact": {
+      "legend": "Contact",
+      "description": "Optional."
+    },
+    "email": { "label": "Email", "placeholder": "E.g.: contact@tireshop.com" },
+    "phone": { "label": "Phone", "placeholder": "E.g.: (0342) 455-1234" }
+  },
+  "validation": {
+    "required": "This field is required",
+    "maxLength150": "It can't be longer than 150 characters",
+    "maxLength254": "It can't be longer than 254 characters",
+    "emailFormat": "Enter a valid email (e.g.: contact@tireshop.com)",
+    "phoneFormat": "Use only digits, spaces, +, -, ( and ), between 6 and 30 characters"
+  },
+  "feedback": {
+    "created": "Repair service registered",
+    "createdDescription": "You can now send tires to it for repair.",
+    "duplicateName": "A repair service with that name already exists",
+    "forbidden": "You don't have permission to register repair services",
+    "invalid": "Check the form data",
+    "unexpected": "We couldn't register the service. Try again in a few minutes"
+  },
+  "empty": "There is no repair service list yet."
+}

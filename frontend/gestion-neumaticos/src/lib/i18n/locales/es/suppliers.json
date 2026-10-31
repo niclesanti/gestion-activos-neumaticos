@@ -16,48 +16,19 @@
       "description": "Opcional."
     },
     "email": { "label": "Email", "placeholder": "Ej.: ventas@proveedor.com.ar" },
-    "phone": { "label": "Teléfono", "placeholder": "Ej.: (0342) 455-1234" },
-    "address": {
-      "legend": "Domicilio",
-      "description": "Opcional. Si lo cargás, completá calle, altura, provincia y localidad."
-    },
-    "street": { "label": "Calle", "placeholder": "Ej.: San Martín" },
-    "number": { "label": "Altura", "placeholder": "Ej.: 2550" },
-    "floor": { "label": "Piso", "placeholder": "Ej.: 3" },
-    "apartment": { "label": "Departamento", "placeholder": "Ej.: B" },
-    "province": {
-      "label": "Provincia",
-      "placeholder": "Elegí una provincia",
-      "loading": "Cargando provincias…",
-      "error": "No pudimos cargar las provincias"
-    },
-    "city": {
-      "label": "Localidad",
-      "placeholder": "Ej.: Santa Fe",
-      "description": "Si no existe en la provincia, se agrega."
-    },
-    "postalCode": {
-      "label": "Código postal",
-      "placeholder": "Ej.: 3000",
-      "description": "Opcional. 4 dígitos o CPA (ej.: S3000ABC)."
-    }
+    "phone": { "label": "Teléfono", "placeholder": "Ej.: (0342) 455-1234" }
   },
   "validation": {
     "required": "Este campo es obligatorio",
-    "addressRequired": "Completá este dato o dejá el domicilio vacío",
-    "maxLength10": "No puede superar los 10 caracteres",
-    "maxLength100": "No puede superar los 100 caracteres",
     "maxLength150": "No puede superar los 150 caracteres",
     "maxLength254": "No puede superar los 254 caracteres",
     "emailFormat": "Ingresá un email válido (ej.: ventas@proveedor.com.ar)",
-    "phoneFormat": "Usá solo dígitos, espacios, +, -, ( y ), entre 6 y 30 caracteres",
-    "postalCodeFormat": "Debe tener 4 dígitos o el formato CPA (ej.: S3000ABC)"
+    "phoneFormat": "Usá solo dígitos, espacios, +, -, ( y ), entre 6 y 30 caracteres"
   },
   "feedback": {
     "created": "Proveedor registrado",
     "createdDescription": "Ya podés asociarlo a la compra de un neumático.",
     "duplicateName": "Ya existe un proveedor con ese nombre",
-    "provinceNotFound": "La provincia elegida no existe",
     "forbidden": "No tenés permisos para registrar proveedores",
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el proveedor. Intentá de nuevo en unos minutos"

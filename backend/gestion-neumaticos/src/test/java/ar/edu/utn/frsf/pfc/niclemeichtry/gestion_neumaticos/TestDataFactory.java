@@ -35,6 +35,9 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.Prov
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.entity.ProveedorNeumaticos;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.domain.dto.ServicioReparacionRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.domain.dto.ServicioReparacionResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.domain.entity.ServicioReparacion;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Domicilio;
@@ -361,6 +364,39 @@ public final class TestDataFactory {
 			DomicilioResponseDTO domicilio) {
 		return new ProveedorResponseDTO(proveedor.getPublicId(), proveedor.getNombre(), proveedor.getEmail(),
 				proveedor.getTelefono(), domicilio);
+	}
+
+	// Servicios de reparación
+
+	public static final UUID SERVICIO_REPARACION_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-000000000002");
+
+	/** Alta válida de un servicio de reparación con contacto y domicilio. */
+	public static ServicioReparacionRequestDTO servicioReparacionRequest() {
+		return new ServicioReparacionRequestDTO("Gomería Del Centro", "contacto@gomeriacentro.com.ar",
+				"+54 342 455-9876", domicilioRequest());
+	}
+
+	public static ServicioReparacionRequestDTO servicioReparacionRequest(String nombre, String email,
+			String telefono, DomicilioRequestDTO domicilio) {
+		return new ServicioReparacionRequestDTO(nombre, email, telefono, domicilio);
+	}
+
+	/** Servicio persistido (con ids y sin neumáticos en reparación) a partir de un alta. */
+	public static ServicioReparacion servicioReparacion(ServicioReparacionRequestDTO request) {
+		return ServicioReparacion.builder()
+				.id(1L)
+				.publicId(SERVICIO_REPARACION_PUBLIC_ID)
+				.nombre(request.nombre())
+				.email(request.email())
+				.telefono(request.telefono())
+				.domicilioId(request.domicilio() == null ? null : 200L)
+				.build();
+	}
+
+	public static ServicioReparacionResponseDTO servicioReparacionResponse(ServicioReparacion servicio,
+			DomicilioResponseDTO domicilio) {
+		return new ServicioReparacionResponseDTO(servicio.getPublicId(), servicio.getNombre(), servicio.getEmail(),
+				servicio.getTelefono(), servicio.getCantidadNeumaticosEnReparacion(), domicilio);
 	}
 
 	// Unidades de transporte
