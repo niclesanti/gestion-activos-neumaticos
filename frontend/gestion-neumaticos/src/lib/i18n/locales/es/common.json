@@ -44,6 +44,11 @@
       "confirm": "Cerrar sesión"
     }
   },
+  "accessLevel": {
+    "ROLE_ADMINISTRADOR": "Administrador",
+    "ROLE_EDITOR": "Editor",
+    "ROLE_LECTOR": "Lector"
+  },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"
   },
