@@ -25,11 +25,12 @@ public class SinCredencialesPorDefecto implements ApplicationRunner {
 
     /** Usuarios y contraseñas de {@code db/seed/dev/R__usuarios_dev.sql}. */
     static final Map<String, String> CREDENCIALES_SEED = Map.of(
-            "administrador", "Admin.1234",
-            "editor", "Editor.1234",
-            "editor2", "Editor.1234",
-            "lector", "Lector.1234",
-            "lector2", "Lector.1234");
+            "victoria.administrador", "Admin.1234",
+            "victoria.editor", "Editor.1234",
+            "victoria.lector", "Lector.1234",
+            "santiago.administrador", "Admin.1234",
+            "santiago.editor", "Editor.1234",
+            "santiago.lector", "Lector.1234");
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
