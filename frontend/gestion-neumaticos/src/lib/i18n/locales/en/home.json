@@ -6,6 +6,10 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Overview of the fleet and tire status"
+    "subtitle": "Overview of the fleet and tire status",
+    "empty": {
+      "title": "No data to show yet",
+      "description": "The dashboard with fleet and tire indicators will appear here soon."
+    }
   }
 }
