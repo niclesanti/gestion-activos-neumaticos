@@ -44,6 +44,11 @@
       "confirm": "Log out"
     }
   },
+  "accessLevel": {
+    "ROLE_ADMINISTRADOR": "Administrator",
+    "ROLE_EDITOR": "Editor",
+    "ROLE_LECTOR": "Reader"
+  },
   "footer": {
     "copyright": "© {{year}} · {{appName}}"
   },

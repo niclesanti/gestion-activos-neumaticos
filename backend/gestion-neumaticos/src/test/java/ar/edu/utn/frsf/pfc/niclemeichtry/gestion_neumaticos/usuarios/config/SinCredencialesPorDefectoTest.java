@@ -41,7 +41,7 @@ class SinCredencialesPorDefectoTest {
     @Test
     void arrancaSiLosUsuariosDelSeedYaCambiaronSuClave() {
         when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.empty());
-        when(usuarioRepository.buscarParaLogin("administrador")).thenReturn(Optional.of(administrador()));
+        when(usuarioRepository.buscarParaLogin("santiago.administrador")).thenReturn(Optional.of(administrador()));
         when(passwordEncoder.matches("Admin.1234", HASH_CLAVE)).thenReturn(false);
 
         assertThatCode(() -> verificacion.run(new DefaultApplicationArguments())).doesNotThrowAnyException();
@@ -50,12 +50,12 @@ class SinCredencialesPorDefectoTest {
     @Test
     void noArrancaSiQuedaUnUsuarioDelSeedConSuClavePorDefecto() {
         when(usuarioRepository.buscarParaLogin(anyString())).thenReturn(Optional.empty());
-        when(usuarioRepository.buscarParaLogin("lector")).thenReturn(Optional.of(lector()));
+        when(usuarioRepository.buscarParaLogin("victoria.lector")).thenReturn(Optional.of(lector()));
         when(passwordEncoder.matches("Lector.1234", HASH_CLAVE)).thenReturn(true);
 
         assertThatThrownBy(() -> verificacion.run(new DefaultApplicationArguments()))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("[lector]")
+                .hasMessageContaining("[victoria.lector]")
                 .hasMessageNotContaining("Lector.1234");
     }
 

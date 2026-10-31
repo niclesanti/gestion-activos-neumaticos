@@ -1,4 +1,15 @@
 {
-  "title": "Tablero de control",
-  "subtitle": "Resumen del estado de la flota y los neumáticos"
+  "greeting": {
+    "morning": "Buen día,",
+    "afternoon": "Buenas tardes,",
+    "evening": "Buenas noches,"
+  },
+  "dashboard": {
+    "title": "Tablero de control",
+    "subtitle": "Resumen del estado de la flota y los neumáticos",
+    "empty": {
+      "title": "Todavía no hay datos para mostrar",
+      "description": "Pronto vas a ver acá el tablero de control con los indicadores de la flota y los neumáticos."
+    }
+  }
 }

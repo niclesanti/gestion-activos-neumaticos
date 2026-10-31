@@ -125,7 +125,7 @@ Prioridad = probabilidad × impacto en el contexto de despliegue previsto (front
 
 - **N5 — Secreto JWT como texto crudo** (`JwtConfig`). Exigir base64 de 32 bytes aleatorios. *El valor de dev tiene buena entropía (TB-10).*
 - **N6 — Placeholder interpolado en SQL.** `afterMigrate__clave_rol_app.sql`: una clave con `'` rompe o inyecta la sentencia (ejecutada como owner) y viaja en claro a los logs de PG si falla. **Fix:** validar el juego de caracteres o usar un verifier SCRAM pre-hasheado.
-- **N7 — Perfil dev en entorno desplegado:** contraseñas por defecto y seed `administrador/Admin.1234` con `ON CONFLICT DO NOTHING` (sobreviven al pasar a prod). **Fix:** fallar el arranque si dev corre fuera de localhost y si en prod existen los usernames del seed.
+- **N7 — Perfil dev en entorno desplegado:** contraseñas por defecto y seed `victoria.administrador/Admin.1234` con `ON CONFLICT DO NOTHING` (sobreviven al pasar a prod). **Fix:** fallar el arranque si dev corre fuera de localhost y si en prod existen los usernames del seed.
 - **H7 — Swagger/`/api-docs` accesibles** (también en prod). *Confirmado TD-01.* Pendiente #11.
 - **H8 — `ControllerAdvisor` devuelve `ex.getMessage()`** de `IllegalArgumentException`/`IllegalStateException` al cliente. (Menor que N3.)
 - **N8 — Converter de authorities vs. validador de BD.** `JwtGrantedAuthoritiesConverter` parte el claim por espacios; `RolBaseDatosDataSource` usa el valor exacto. Solo explotable con la clave, pero conviene un converter con lista blanca del enum y agregar `aud`.
@@ -176,7 +176,7 @@ Mismo stack de `compose.yaml` (perfil **dev**, volumen recreado), ahora con el j
 | **N4** `event_publication` | `V7`: grants mínimos por rol, lector sin acceso | `psql`: `gn_lector` → `permission denied` | ✔ |
 | **N5** Secreto JWT como texto | Base64 decodificado, ≥ 32 bytes; `.env` regenerado con `openssl rand -base64 32` | Tests: frase en texto plano y base64 corto rechazados al arrancar | ✔ |
 | **N6** Placeholder interpolado | Dollar quoting + `format('%L')` | El job de migraciones aplica la clave (`psql -U gn_app` conecta) | ✔ |
-| **N7** Seed de dev en prod | `SinCredencialesPorDefecto`: `prod` no arranca con usuarios del seed y su clave por defecto | Backend con `SPRING_PROFILES_ACTIVE=prod` contra la base de dev → se detiene listando los 5 usuarios | ✔ |
+| **N7** Seed de dev en prod | `SinCredencialesPorDefecto`: `prod` no arranca con usuarios del seed y su clave por defecto | Backend con `SPRING_PROFILES_ACTIVE=prod` contra la base de dev → se detiene listando los 6 usuarios | ✔ |
 | **N8** Authorities vs. validador de BD | Authority con lista blanca desde la base; claim `aud` exigido | Token con `aud` ajeno o sin `aud` → **401** | ✔ |
 | **N9** Deploy del frontend | `_headers`, `.dockerignore` sin `.env*`/`.wrangler`, `nginx-unprivileged:1.30`, contenedor `read_only` | Imagen construida y corriendo sin root | ✔ |
 | **N10** 401 tardío | El interceptor solo cierra la sesión si el 401 es del token actual | Revisión de código | ✔ |
