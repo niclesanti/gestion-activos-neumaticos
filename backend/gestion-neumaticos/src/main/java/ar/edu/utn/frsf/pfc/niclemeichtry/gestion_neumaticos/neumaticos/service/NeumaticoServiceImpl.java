@@ -7,9 +7,17 @@ import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EspecificacionesAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
@@ -37,6 +45,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     static final String MENSAJE_MARCA_INEXISTENTE = "La marca de neumático indicada no existe";
     static final String MENSAJE_PROVEEDOR_INEXISTENTE = "El proveedor indicado no existe";
 
+    private final EnsambladorAuditoria ensamblador;
     private final NeumaticoRepository neumaticoRepository;
     private final NeumaticoMapper neumaticoMapper;
     private final MarcaNeumaticoRepository marcaNeumaticoRepository;
@@ -142,6 +151,25 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 neumatico.getComentario()));
         log.info("Evento de compra publicado para el neumático {} (proveedor {})", neumatico.getPublicId(),
                 proveedor == null ? null : proveedor.publicId());
+    }
+
+    /** Etiqueta del neumático en la auditoría: su número de serie o, si no tiene, la marca y el final del id. */
+    static String descripcion(Neumatico neumatico) {
+        if (neumatico.getNumeroSerie() != null) {
+            return neumatico.getNumeroSerie();
+        }
+        String publicId = neumatico.getPublicId().toString();
+        return neumatico.getMarca().getNombre() + " · " + publicId.substring(publicId.length() - 8);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable) {
+        log.debug("Consultando auditoría de neumáticos: filtro={}, pageable={}", filtro, pageable);
+        Specification<Neumatico> especificacion = EspecificacionesAuditoria.<Neumatico>de(filtro)
+                .and(EspecificacionesAuditoria.contiene(filtro.q(), "numeroSerie"));
+        Page<Neumatico> pagina = neumaticoRepository.findAll(especificacion, OrdenAuditoria.validar(pageable));
+        return ensamblador.ensamblar(pagina, Neumatico::getPublicId, NeumaticoServiceImpl::descripcion);
     }
 
 }

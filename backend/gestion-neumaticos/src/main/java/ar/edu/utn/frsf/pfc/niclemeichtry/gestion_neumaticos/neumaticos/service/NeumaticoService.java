@@ -2,6 +2,11 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
@@ -28,5 +33,13 @@ public interface NeumaticoService {
 
     /** Marcas de neumáticos disponibles, ordenadas por nombre. */
     List<MarcaNeumaticoResponseDTO> listarMarcas();
+
+    /**
+     * Fichas de auditoría (alta, última modificación y baja) de neumáticos, paginadas y
+     * filtradas. Solo para administradores; el orden se limita a los campos de auditoría.
+     *
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException si se ordena por otro campo.
+     */
+    Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable);
 
 }

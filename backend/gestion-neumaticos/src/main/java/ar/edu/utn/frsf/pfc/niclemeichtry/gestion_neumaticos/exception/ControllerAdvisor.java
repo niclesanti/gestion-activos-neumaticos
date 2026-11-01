@@ -87,6 +87,12 @@ public class ControllerAdvisor {
         return respuesta(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ParametroInvalidoException.class)
+    public ResponseEntity<ExceptionInfo> handleParametroInvalidoException(ParametroInvalidoException ex, WebRequest request) {
+        log.warn("Parámetro inválido: {} - Request: {}", ex.getMessage(), request.getDescription(false));
+        return respuesta(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ExceptionInfo> handleUnauthorizedException(UnauthorizedException ex, WebRequest request) {
         log.warn("Intento de acceso no autorizado: {} - Request: {}", ex.getMessage(), request.getDescription(false));

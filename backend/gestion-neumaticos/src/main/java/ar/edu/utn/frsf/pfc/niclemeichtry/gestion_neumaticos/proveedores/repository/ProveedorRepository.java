@@ -5,10 +5,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.entity.ProveedorNeumaticos;
 
-public interface ProveedorRepository extends JpaRepository<ProveedorNeumaticos, Long> {
+public interface ProveedorRepository extends JpaRepository<ProveedorNeumaticos, Long>, JpaSpecificationExecutor<ProveedorNeumaticos> {
 
     boolean existsByNombreIgnoreCase(String nombre);
 

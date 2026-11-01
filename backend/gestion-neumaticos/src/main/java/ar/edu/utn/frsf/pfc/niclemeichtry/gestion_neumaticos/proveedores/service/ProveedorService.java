@@ -2,6 +2,11 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.service
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorResponseDTO;
@@ -25,5 +30,13 @@ public interface ProveedorService {
 
     /** Todos los proveedores, ordenados por nombre. */
     List<ProveedorListadoDTO> listarProveedores();
+
+    /**
+     * Fichas de auditoría (alta, última modificación y baja) de proveedores, paginadas y
+     * filtradas. Solo para administradores; el orden se limita a los campos de auditoría.
+     *
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException si se ordena por otro campo.
+     */
+    Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable);
 
 }

@@ -1,6 +1,6 @@
 {
   "title": "Audit",
-  "subtitle": "Review the history of changes recorded for each entity of the platform.",
+  "subtitle": "See who created, modified or deactivated each record of the platform, and when.",
   "entities": {
     "users": "Users",
     "transportUnits": "Transport units",
@@ -10,5 +10,59 @@
     "drivers": "Drivers",
     "storageCenters": "Storage centers"
   },
-  "empty": "There are no audit records for this entity yet."
+  "columns": {
+    "record": "Record",
+    "created": "Created",
+    "modified": "Last modified",
+    "status": "Status"
+  },
+  "status": {
+    "ACTIVO": "Active",
+    "BAJA": "Deactivated"
+  },
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Search by name, plate, serial…",
+    "statusLabel": "Status",
+    "status": {
+      "TODOS": "All",
+      "ACTIVOS": "Active",
+      "BAJAS": "Deactivated"
+    },
+    "from": "Modified from",
+    "to": "Modified to",
+    "clear": "Clear filters"
+  },
+  "unmodified": "Not modified",
+  "system": "System",
+  "unknownUser": "Unknown user",
+  "empty": {
+    "title": "No records",
+    "description": "There are no audit records for this entity yet."
+  },
+  "noResults": {
+    "title": "No results",
+    "description": "No record matches the filters. Try different ones or clear them."
+  },
+  "unavailable": {
+    "title": "Not available yet",
+    "description": "Auditing for this entity is enabled once its module exists."
+  },
+  "error": {
+    "title": "The audit could not be loaded",
+    "description": "Check your connection and try again.",
+    "retry": "Retry"
+  },
+  "pagination": {
+    "summary_one": "{{count}} record · page {{page}} of {{pages}}",
+    "summary_other": "{{count}} records · page {{page}} of {{pages}}",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "detail": {
+    "description": "History of this record. Read only.",
+    "created": "Creation",
+    "modified": "Last modification",
+    "deleted": "Deactivation"
+  }
 }

@@ -23,9 +23,9 @@ package "common" as common {
     - createdAt: Instant
     - updatedAt: Instant
     - deletedAt: Instant
-    - createdBy: String
-    - updatedBy: String
-    - deletedBy: String
+    - createdBy: UUID
+    - updatedBy: UUID
+    - deletedBy: UUID
   }
 
   class Provincia <<Entity>> <<Compartida>> {
