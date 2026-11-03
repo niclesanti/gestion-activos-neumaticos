@@ -1,0 +1,8 @@
+{
+  "title": "Repairs",
+  "subtitle": "Send tires to repair services and record their return.",
+  "empty": {
+    "title": "There are no repairs to show yet",
+    "description": "Soon you will be able to manage here the dispatch and return of tires to repair services."
+  }
+}

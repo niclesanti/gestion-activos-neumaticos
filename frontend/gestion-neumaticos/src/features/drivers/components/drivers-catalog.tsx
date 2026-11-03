@@ -1,5 +1,7 @@
+import { IdCardIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { EmptyState } from "@/components/common/empty-state"
 import { CreateDriverDialog } from "@/features/drivers/components/create-driver-dialog"
 import { canPerform, useAccessLevel } from "@/lib/access"
 
@@ -23,7 +25,11 @@ export function DriversCatalog() {
         ) : null}
       </header>
       {/* TODO: listado de conductores. */}
-      <p className="text-sm text-muted-foreground">{t("empty")}</p>
+      <EmptyState
+        icon={IdCardIcon}
+        title={t("empty.title")}
+        description={t("empty.description")}
+      />
     </div>
   )
 }

@@ -45,12 +45,29 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.mapper.Ne
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.repository.MarcaNeumaticoRepository;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.repository.NeumaticoRepository;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.ProveedorApi;
+import static org.mockito.ArgumentMatchers.eq;
+
+import java.time.LocalDate;
+
+import org.mockito.ArgumentMatchers;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
 
 @ExtendWith(MockitoExtension.class)
 class NeumaticoServiceImplTest {
 
     private static final String USUARIO = UUID.randomUUID().toString();
 
+    @Mock private EnsambladorAuditoria ensamblador;
     @Mock private NeumaticoRepository neumaticoRepository;
     @Mock private MarcaNeumaticoRepository marcaNeumaticoRepository;
     @Mock private ProveedorApi proveedorApi;
@@ -63,7 +80,7 @@ class NeumaticoServiceImplTest {
 
     @BeforeEach
     void crearServicio() {
-        servicio = new NeumaticoServiceImpl(neumaticoRepository, neumaticoMapper, marcaNeumaticoRepository,
+        servicio = new NeumaticoServiceImpl(ensamblador, neumaticoRepository, neumaticoMapper, marcaNeumaticoRepository,
                 proveedorApi, eventPublisher);
     }
 
@@ -257,6 +274,39 @@ class NeumaticoServiceImplTest {
             assertThat(servicio.listarMarcas()).containsExactly(new MarcaNeumaticoResponseDTO(MARCA_ID, "Fate"));
         }
 
+    }
+
+
+    @Nested
+    @DisplayName("listarAuditoria")
+    class ListarAuditoria {
+
+        @Test
+        @DisplayName("aplica los filtros y ensambla la página de fichas")
+        void ensamblaLaPagina() {
+            Page<Neumatico> pagina = new PageImpl<>(List.of(new Neumatico()));
+            Page<RegistroAuditoriaDTO> esperado = new PageImpl<>(List.of());
+            when(neumaticoRepository.findAll(ArgumentMatchers.<Specification<Neumatico>>any(), any(Pageable.class))).thenReturn(pagina);
+            when(ensamblador.ensamblar(eq(pagina), any(), any())).thenReturn(esperado);
+
+            Page<RegistroAuditoriaDTO> resultado = servicio.listarAuditoria(
+                    new FiltroAuditoria("abc", FiltroAuditoria.EstadoFiltro.ACTIVOS, LocalDate.of(2026, 1, 1),
+                            LocalDate.of(2026, 12, 31)),
+                    PageRequest.of(0, 20, Sort.by("updatedAt")));
+
+            assertThat(resultado).isSameAs(esperado);
+        }
+
+        @Test
+        @DisplayName("rechaza ordenar por un campo que no es de auditoría")
+        void rechazaOrdenNoPermitido() {
+            FiltroAuditoria sinFiltros = new FiltroAuditoria(null, null, null, null);
+            PageRequest ordenInvalido = PageRequest.of(0, 20, Sort.by("clave"));
+
+            assertThatThrownBy(() -> servicio.listarAuditoria(sinFiltros, ordenInvalido))
+                    .isInstanceOf(ParametroInvalidoException.class);
+            verifyNoInteractions(ensamblador);
+        }
     }
 
 }

@@ -1,0 +1,8 @@
+{
+  "title": "Storage",
+  "subtitle": "Keep track of the tire stock in each storage center.",
+  "empty": {
+    "title": "There is no stock to show yet",
+    "description": "Soon you will be able to check the stock per center and record tire entries and withdrawals."
+  }
+}

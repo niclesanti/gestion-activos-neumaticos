@@ -35,6 +35,24 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.domain.en
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.mapper.ServicioReparacionMapper;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.mapper.ServicioReparacionMapperImpl;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.reparacion.repository.ServicioReparacionRepository;
+import static org.mockito.ArgumentMatchers.eq;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.junit.jupiter.api.Nested;
+import org.mockito.ArgumentMatchers;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
 
 @ExtendWith(MockitoExtension.class)
 class ServicioReparacionServiceImplTest {
@@ -43,6 +61,7 @@ class ServicioReparacionServiceImplTest {
     private static final String NOMBRE = "Gomería Del Centro";
     private static final Long DOMICILIO_ID = 200L;
 
+    @Mock private EnsambladorAuditoria ensamblador;
     @Mock private ServicioReparacionRepository servicioReparacionRepository;
     @Mock private DomicilioApi domicilioApi;
 
@@ -53,7 +72,7 @@ class ServicioReparacionServiceImplTest {
 
     @BeforeEach
     void crearServicio() {
-        servicio = new ServicioReparacionServiceImpl(servicioReparacionRepository, servicioReparacionMapper,
+        servicio = new ServicioReparacionServiceImpl(ensamblador, servicioReparacionRepository, servicioReparacionMapper,
                 domicilioApi);
     }
 
@@ -187,6 +206,39 @@ class ServicioReparacionServiceImplTest {
                 servicioReparacionRequest("Gomería Sur", null, null, null), USUARIO))
                 .isInstanceOf(EntidadDuplicadaException.class)
                 .hasCauseInstanceOf(DataIntegrityViolationException.class);
+    }
+
+
+    @Nested
+    @DisplayName("listarAuditoria")
+    class ListarAuditoria {
+
+        @Test
+        @DisplayName("aplica los filtros y ensambla la página de fichas")
+        void ensamblaLaPagina() {
+            Page<ServicioReparacion> pagina = new PageImpl<>(List.of(new ServicioReparacion()));
+            Page<RegistroAuditoriaDTO> esperado = new PageImpl<>(List.of());
+            when(servicioReparacionRepository.findAll(ArgumentMatchers.<Specification<ServicioReparacion>>any(), any(Pageable.class))).thenReturn(pagina);
+            when(ensamblador.ensamblar(eq(pagina), any(), any())).thenReturn(esperado);
+
+            Page<RegistroAuditoriaDTO> resultado = servicio.listarAuditoria(
+                    new FiltroAuditoria("abc", FiltroAuditoria.EstadoFiltro.ACTIVOS, LocalDate.of(2026, 1, 1),
+                            LocalDate.of(2026, 12, 31)),
+                    PageRequest.of(0, 20, Sort.by("updatedAt")));
+
+            assertThat(resultado).isSameAs(esperado);
+        }
+
+        @Test
+        @DisplayName("rechaza ordenar por un campo que no es de auditoría")
+        void rechazaOrdenNoPermitido() {
+            FiltroAuditoria sinFiltros = new FiltroAuditoria(null, null, null, null);
+            PageRequest ordenInvalido = PageRequest.of(0, 20, Sort.by("clave"));
+
+            assertThatThrownBy(() -> servicio.listarAuditoria(sinFiltros, ordenInvalido))
+                    .isInstanceOf(ParametroInvalidoException.class);
+            verifyNoInteractions(ensamblador);
+        }
     }
 
 }

@@ -23,5 +23,8 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el centro. Intentá de nuevo en unos minutos"
   },
-  "empty": "Todavía no hay listado de centros de almacenamiento."
+  "empty": {
+    "title": "Todavía no hay centros de almacenamiento para mostrar",
+    "description": "Pronto vas a poder buscar, editar y dar de baja centros de almacenamiento desde acá."
+  }
 }

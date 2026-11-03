@@ -171,6 +171,7 @@ Endpoints de negocio anotados hasta ahora:
 | `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/unidades-transporte/configuraciones` | `hasRole('LECTOR')` | Los tres roles |
+| `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion`, `unidades-transporte` y `centros-almacenamiento` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
 
 ### 2.10.1 Cabeceras HTTP de la API
 
@@ -328,6 +329,32 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 4. Las políticas permisivas que correspondan.
 
 ---
+
+### 2.12 Auditoría de registros (HU-43)
+
+Toda raíz de agregado de negocio (`Usuario`, `Neumatico`, `Conductor`, `ProveedorNeumaticos`, `ServicioReparacion`, `UnidadTransporte`, `CentroAlmacenamiento`) hereda de `common.auditoria.AuditableEntity`, una `@MappedSuperclass` con seis columnas: `created_at`/`created_by`, `updated_at`/`updated_by` y `deleted_at`/`deleted_by`. Nadie las asigna a mano (no hay setters ni entran en los `@Builder`).
+
+**Quién y cuándo se completan.** Spring Data JPA Auditing (`@CreatedBy`, `@LastModifiedBy`, `@CreatedDate`, `@LastModifiedDate`, `AuditingEntityListener`):
+
+- `security.auditoria.AuditorActual` (`AuditorAware<UUID>`) devuelve el `publicId` del JWT autenticado, el mismo valor que `RolBaseDatosDataSource` pasa a la base. Sin usuario (login, tareas del sistema con `ComoSistema`) no hay auditor y la columna queda en `NULL`.
+- El reloj es un bean `Clock` (`AuditoriaJpaConfig`), para fijar la hora en los tests.
+- La baja es **lógica**: `AuditableEntity.darDeBaja(usuario, fecha)` registra `deleted_*` y falla si el registro ya estaba dado de baja. Nunca hay `DELETE` físico. Los endpoints de baja los traen las historias de cada módulo.
+- Si un servicio modifica solo un hijo del agregado (por ejemplo, el domicilio), tiene que tocar la raíz para que su `updated_*` cambie.
+
+**Respaldo en la base de datos** (`V19__auditoria_entidades.sql`), para que la firma no dependa solo de la aplicación:
+
+- `created_*` no entra en ningún `GRANT UPDATE`: es inmutable para todos los roles. `updated_*` y `deleted_*` se agregan a los `GRANT UPDATE (...)` por columna donde ya había `UPDATE`. Conductores y unidades de transporte todavía no se modifican y siguen sin `UPDATE`.
+- Las políticas de `INSERT` exigen `created_by = seguridad.usuario_actual() AND updated_by = created_by`; las de `UPDATE`, `updated_by = seguridad.usuario_actual()` y, si hay baja, `deleted_by = seguridad.usuario_actual()`. Nadie puede firmar a nombre de otro, aunque la aplicación tuviera un bug.
+- `CHECK (deleted_at IS NULL) = (deleted_by IS NULL)`: la baja se registra completa.
+- `created_at`/`updated_at` tienen `DEFAULT now()` solo para las cargas del owner (seed, migraciones). Las filas anteriores a la auditoría tienen `created_by`/`updated_by` en `NULL`.
+
+**Consulta (solo administrador).** `GET /api/v1/<recurso>/auditoria?q=&estado=ACTIVOS|BAJAS|TODOS&desde=&hasta=&page=&size=&sort=updatedAt,desc` en cada módulo, con `@PreAuthorize("hasRole('ADMINISTRADOR')")`. Devuelve `RegistroAuditoriaDTO` (descripción del registro, fechas y usuarios de alta, última modificación y baja, y estado):
+
+- El orden se limita a `createdAt`, `updatedAt` y `deletedAt` (lista blanca, `OrdenAuditoria`; otro campo responde 400) y el tamaño de página tiene tope 100 (`PaginacionConfig`).
+- Los nombres de los usuarios se resuelven en una sola consulta por página con el puerto `common.auditoria.AuditoresResolver`, que implementa `usuarios` (sin N+1). La RLS de `usuarios` ya deja al administrador leer todas las filas, así que no hace falta ninguna función `SECURITY DEFINER`. Un usuario que ya no existe se muestra solo por su id.
+- La búsqueda de texto escapa los comodines de `LIKE`.
+
+**Toda tabla de negocio nueva que sea auditable debe**, en su migración: agregar las seis columnas con el `CHECK` de baja, no incluir `created_*` en ningún `GRANT UPDATE`, y crear las políticas de `INSERT`/`UPDATE` con la firma de arriba. Además, su entidad extiende `AuditableEntity`, su repositorio suma `JpaSpecificationExecutor` y su módulo expone `GET .../auditoria`.
 
 ## 3. Frontend
 

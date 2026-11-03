@@ -1,7 +1,9 @@
 import type * as React from "react"
 
+import { FolderOpenIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { ScrollableTabsList } from "@/components/common/scrollable-tabs-list"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
@@ -56,9 +58,15 @@ export function SettingsPage({ catalogs = {} }: SettingsPageProps) {
             <TabsContent key={tab.value} value={tab.value}>
               {/* TODO: reemplazar el placeholder por el ABM de cada catálogo. */}
               {catalogs[tab.value] ?? (
-                <p className="py-6 text-sm text-muted-foreground">
-                  {t("empty")}
-                </p>
+                <div className="py-4">
+                  <EmptyState
+                    icon={FolderOpenIcon}
+                    title={t("empty.title")}
+                    description={t("empty.description", {
+                      catalog: t(tab.labelKey).toLowerCase(),
+                    })}
+                  />
+                </div>
               )}
             </TabsContent>
           ))}

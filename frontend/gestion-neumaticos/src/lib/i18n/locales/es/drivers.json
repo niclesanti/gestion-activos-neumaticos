@@ -39,5 +39,8 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el conductor. Intentá de nuevo en unos minutos"
   },
-  "empty": "Todavía no hay listado de conductores."
+  "empty": {
+    "title": "Todavía no hay conductores para mostrar",
+    "description": "Pronto vas a poder buscar, editar y dar de baja conductores desde acá."
+  }
 }

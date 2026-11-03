@@ -55,5 +55,8 @@
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the unit. Try again in a few minutes"
   },
-  "empty": "There is no transport unit list yet."
+  "empty": {
+    "title": "There are no transport units to show yet",
+    "description": "Soon you will see the list of units, their positions and the mounted tires here."
+  }
 }

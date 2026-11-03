@@ -1,5 +1,7 @@
+import { WrenchIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { EmptyState } from "@/components/common/empty-state"
 import { CreateRepairServiceDialog } from "@/features/repair-services/components/create-repair-service-dialog"
 import { canPerform, useAccessLevel } from "@/lib/access"
 
@@ -26,7 +28,11 @@ export function RepairServicesCatalog() {
         ) : null}
       </header>
       {/* TODO: listado de servicios de reparación. */}
-      <p className="text-sm text-muted-foreground">{t("empty")}</p>
+      <EmptyState
+        icon={WrenchIcon}
+        title={t("empty.title")}
+        description={t("empty.description")}
+      />
     </div>
   )
 }

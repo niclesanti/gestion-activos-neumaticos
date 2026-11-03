@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.AuditableEntity;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.OperacionNoPermitidaException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ServicioReparacion {
+public class ServicioReparacion extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "servicios_reparacion_id_gen")
     @SequenceGenerator(name = "servicios_reparacion_id_gen", schema = "reparacion", sequenceName = "servicios_reparacion_id_seq", allocationSize = 50)

@@ -375,8 +375,7 @@ class AutorizacionBaseDatosTests {
 		void nadieEscribe() {
 			for (UUID usuario : List.of(admin, editor, lector)) {
 				autenticar(usuario, nivelDe(usuario));
-				permisoDenegado(() -> app.update("INSERT INTO neumaticos.marcas_neumaticos (nombre) VALUES ('Otra')"));
-				permisoDenegado(() -> app.update("UPDATE neumaticos.marcas_neumaticos SET nombre = 'x'"));
+				permisoDenegado(() -> app.update("INSERT INTO neumaticos.marcas_neumaticos (nombre) VALUES ('Otra')"));				permisoDenegado(() -> app.update("UPDATE neumaticos.marcas_neumaticos SET nombre = 'x'"));
 				permisoDenegado(() -> app.update("DELETE FROM neumaticos.marcas_neumaticos"));
 			}
 		}
@@ -395,8 +394,9 @@ class AutorizacionBaseDatosTests {
 
 		private static final String INSERTAR = """
 				INSERT INTO neumaticos.neumaticos (public_id, numero_serie, estado_actual, tipo_origen, tipo_actual,
-				    situacion_operativa_vigente, marca_id)
-				VALUES (?, ?, 'NUEVO', 'TRACCION', 'TRACCION', 'EN_ESPERA', ?)""";
+				    situacion_operativa_vigente, marca_id, created_by, updated_by)
+				VALUES (?, ?, 'NUEVO', 'TRACCION', 'TRACCION', 'EN_ESPERA', ?, seguridad.usuario_actual(),
+				    seguridad.usuario_actual())""";
 
 		private Long marca;
 
@@ -438,7 +438,7 @@ class AutorizacionBaseDatosTests {
 				String serie = "S-" + usuario;
 
 				assertThat(app.update(INSERTAR, UUID.randomUUID(), serie.toUpperCase(), marca)).isOne();
-				assertThat(app.update("UPDATE neumaticos.neumaticos SET comentario = 'ok', en_espera = false "
+				assertThat(app.update("UPDATE neumaticos.neumaticos SET comentario = 'ok', en_espera = false, updated_by = seguridad.usuario_actual() "
 						+ "WHERE numero_serie = ?", serie.toUpperCase())).isOne();
 				permisoDenegado(() -> app.update("DELETE FROM neumaticos.neumaticos"));
 			}
@@ -587,8 +587,9 @@ class AutorizacionBaseDatosTests {
 	class Proveedores {
 
 		private static final String INSERTAR = """
-				INSERT INTO proveedores.proveedores (id, public_id, nombre, email)
-				VALUES (nextval('proveedores.proveedores_id_seq'), ?, ?, ?)""";
+				INSERT INTO proveedores.proveedores (id, public_id, nombre, email, created_by, updated_by)
+				VALUES (nextval('proveedores.proveedores_id_seq'), ?, ?, ?, seguridad.usuario_actual(),
+				    seguridad.usuario_actual())""";
 
 		@BeforeEach
 		void limpiar() {
@@ -622,7 +623,7 @@ class AutorizacionBaseDatosTests {
 				String nombre = "P-" + usuario;
 
 				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, null)).isOne();
-				assertThat(app.update("UPDATE proveedores.proveedores SET telefono = '455123' WHERE nombre = ?",
+				assertThat(app.update("UPDATE proveedores.proveedores SET telefono = '455123', updated_by = seguridad.usuario_actual() WHERE nombre = ?",
 						nombre)).isOne();
 				permisoDenegado(() -> app.update("DELETE FROM proveedores.proveedores"));
 				permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET public_id = ?",
@@ -655,8 +656,9 @@ class AutorizacionBaseDatosTests {
 	class ServiciosReparacion {
 
 		private static final String INSERTAR = """
-				INSERT INTO reparacion.servicios_reparacion (id, public_id, nombre, email)
-				VALUES (nextval('reparacion.servicios_reparacion_id_seq'), ?, ?, ?)""";
+				INSERT INTO reparacion.servicios_reparacion (id, public_id, nombre, email, created_by, updated_by)
+				VALUES (nextval('reparacion.servicios_reparacion_id_seq'), ?, ?, ?, seguridad.usuario_actual(),
+				    seguridad.usuario_actual())""";
 
 		@BeforeEach
 		void limpiar() {
@@ -695,7 +697,8 @@ class AutorizacionBaseDatosTests {
 				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, null)).isOne();
 				assertThat(app.update("""
 						UPDATE reparacion.servicios_reparacion
-						SET telefono = '455123', cantidad_neumaticos_en_reparacion = 1 WHERE nombre = ?""",
+						SET telefono = '455123', cantidad_neumaticos_en_reparacion = 1,
+						    updated_by = seguridad.usuario_actual() WHERE nombre = ?""",
 						nombre)).isOne();
 				permisoDenegado(() -> app.update("DELETE FROM reparacion.servicios_reparacion"));
 				permisoDenegado(() -> app.update("UPDATE reparacion.servicios_reparacion SET public_id = ?",
@@ -721,7 +724,8 @@ class AutorizacionBaseDatosTests {
 					.isInstanceOf(DataAccessException.class)
 					.hasStackTraceContaining("ck_servicios_reparacion_email_formato");
 			assertThatThrownBy(() -> app.update("""
-					UPDATE reparacion.servicios_reparacion SET cantidad_neumaticos_en_reparacion = -1"""))
+					UPDATE reparacion.servicios_reparacion SET cantidad_neumaticos_en_reparacion = -1,
+						    updated_by = seguridad.usuario_actual()"""))
 					.isInstanceOf(DataAccessException.class)
 					.hasStackTraceContaining("ck_servicios_reparacion_cantidad");
 		}
@@ -733,8 +737,9 @@ class AutorizacionBaseDatosTests {
 	class CentrosAlmacenamiento {
 
 		private static final String INSERTAR = """
-				INSERT INTO almacenamiento.centros_almacenamiento (id, public_id, nombre, domicilio_id)
-				VALUES (nextval('almacenamiento.centros_almacenamiento_id_seq'), ?, ?, ?)""";
+				INSERT INTO almacenamiento.centros_almacenamiento (id, public_id, nombre, domicilio_id, created_by, updated_by)
+				VALUES (nextval('almacenamiento.centros_almacenamiento_id_seq'), ?, ?, ?, seguridad.usuario_actual(),
+				    seguridad.usuario_actual())""";
 
 		/** Sin FK entre módulos: basta un id distinto por centro (es UNIQUE). */
 		private long domicilioId = 1;
@@ -776,7 +781,8 @@ class AutorizacionBaseDatosTests {
 				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, domicilioId++)).isOne();
 				assertThat(app.update("""
 						UPDATE almacenamiento.centros_almacenamiento
-						SET cantidad_neumaticos_en_stock = 1 WHERE nombre = ?""", nombre)).isOne();
+						SET cantidad_neumaticos_en_stock = 1, updated_by = seguridad.usuario_actual()
+						WHERE nombre = ?""", nombre)).isOne();
 				permisoDenegado(() -> app.update("DELETE FROM almacenamiento.centros_almacenamiento"));
 				permisoDenegado(() -> app.update("UPDATE almacenamiento.centros_almacenamiento SET public_id = ?",
 						UUID.randomUUID()));
@@ -805,7 +811,8 @@ class AutorizacionBaseDatosTests {
 					.isInstanceOf(DataAccessException.class)
 					.hasStackTraceContaining("ck_centros_almacenamiento_nombre_formato");
 			assertThatThrownBy(() -> app.update("""
-					UPDATE almacenamiento.centros_almacenamiento SET cantidad_neumaticos_en_stock = -1"""))
+					UPDATE almacenamiento.centros_almacenamiento SET cantidad_neumaticos_en_stock = -1,
+						    updated_by = seguridad.usuario_actual()"""))
 					.isInstanceOf(DataAccessException.class)
 					.hasStackTraceContaining("ck_centros_almacenamiento_cantidad");
 		}
@@ -860,8 +867,10 @@ class AutorizacionBaseDatosTests {
 	class UnidadesTransporte {
 
 		private static final String INSERTAR_UNIDAD = """
-				INSERT INTO unidades_transporte.unidades_transporte (id, public_id, patente, configuracion_id)
-				VALUES (nextval('unidades_transporte.unidades_transporte_id_seq'), ?, ?, ?)""";
+				INSERT INTO unidades_transporte.unidades_transporte (id, public_id, patente, configuracion_id,
+				    created_by, updated_by)
+				VALUES (nextval('unidades_transporte.unidades_transporte_id_seq'), ?, ?, ?, seguridad.usuario_actual(),
+				    seguridad.usuario_actual())""";
 		private static final String INSERTAR_SLOT_EJE = """
 				INSERT INTO unidades_transporte.slots_unidad_transporte
 				    (id, unidad_id, tipo_slot, nro_eje, tipo_eje, lado, posicion_rueda)
@@ -1037,6 +1046,152 @@ class AutorizacionBaseDatosTests {
 			return NivelAcceso.ROLE_ADMINISTRADOR;
 		}
 		return usuario.equals(editor) ? NivelAcceso.ROLE_EDITOR : NivelAcceso.ROLE_LECTOR;
+	}
+
+	@Nested
+	@DisplayName("columnas de auditoría (HU-43)")
+	class Auditoria {
+
+		private static final String INSERTAR_PROVEEDOR = """
+				INSERT INTO proveedores.proveedores (id, public_id, nombre, created_by, updated_by)
+				VALUES (nextval('proveedores.proveedores_id_seq'), ?, ?, ?, ?)""";
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM proveedores.proveedores");
+		}
+
+		private UUID insertarProveedorComo(UUID usuario) {
+			UUID publicId = UUID.randomUUID();
+			autenticar(usuario, nivelDe(usuario));
+			assertThat(app.update(INSERTAR_PROVEEDOR, publicId, "P-" + publicId, usuario, usuario)).isOne();
+			return publicId;
+		}
+
+		@Test
+		@DisplayName("el alta firma con el usuario de la sesión, no con otro")
+		void altaFirmaConElUsuarioDeLaSesion() {
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			permisoDenegadoPorRls(() -> app.update(INSERTAR_PROVEEDOR, UUID.randomUUID(), "P1", admin, admin));
+			permisoDenegadoPorRls(() -> app.update(INSERTAR_PROVEEDOR, UUID.randomUUID(), "P2", editor, admin));
+			permisoDenegadoPorRls(() -> app.update(INSERTAR_PROVEEDOR, UUID.randomUUID(), "P3", null, null));
+			assertThat(app.update(INSERTAR_PROVEEDOR, UUID.randomUUID(), "P4", editor, editor)).isOne();
+		}
+
+		@Test
+		@DisplayName("created_at y created_by son inmutables para todos los roles")
+		void creacionInmutable() {
+			UUID proveedor = insertarProveedorComo(editor);
+
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET created_by = ?", usuario));
+				permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET created_at = now()"));
+			}
+			assertThat(owner.queryForObject("SELECT created_by FROM proveedores.proveedores WHERE public_id = ?",
+					UUID.class, proveedor)).isEqualTo(editor);
+		}
+
+		@Test
+		@DisplayName("la modificación firma como updated_by el usuario de la sesión")
+		void modificacionFirmaConElUsuarioDeLaSesion() {
+			UUID proveedor = insertarProveedorComo(editor);
+			autenticar(admin, NivelAcceso.ROLE_ADMINISTRADOR);
+
+			permisoDenegadoPorRls(() -> app.update(
+					"UPDATE proveedores.proveedores SET telefono = '455123', updated_by = ? WHERE public_id = ?",
+					editor, proveedor));
+			permisoDenegadoPorRls(() -> app.update(
+					"UPDATE proveedores.proveedores SET telefono = '455123', updated_by = NULL WHERE public_id = ?",
+					proveedor));
+			assertThat(app.update("""
+					UPDATE proveedores.proveedores SET telefono = '455123', updated_at = now(),
+					    updated_by = seguridad.usuario_actual() WHERE public_id = ?""", proveedor)).isOne();
+			assertThat(owner.queryForObject(
+					"SELECT created_by FROM proveedores.proveedores WHERE public_id = ?", UUID.class, proveedor))
+					.isEqualTo(editor);
+			assertThat(owner.queryForObject(
+					"SELECT updated_by FROM proveedores.proveedores WHERE public_id = ?", UUID.class, proveedor))
+					.isEqualTo(admin);
+		}
+
+		@Test
+		@DisplayName("la baja lógica firma con el usuario de la sesión, es coherente y no borra la fila")
+		void bajaLogica() {
+			UUID proveedor = insertarProveedorComo(editor);
+			autenticar(admin, NivelAcceso.ROLE_ADMINISTRADOR);
+			String dar = """
+					UPDATE proveedores.proveedores SET deleted_at = now(), deleted_by = ?,
+					    updated_at = now(), updated_by = seguridad.usuario_actual() WHERE public_id = ?""";
+
+			// Otro usuario no puede firmar la baja.
+			permisoDenegadoPorRls(() -> app.update(dar, editor, proveedor));
+			// La baja se registra completa: fecha sin usuario (y al revés) viola el CHECK.
+			assertThatThrownBy(() -> app.update(dar, null, proveedor))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_proveedores_baja_coherente");
+			assertThatThrownBy(() -> app.update("""
+					UPDATE proveedores.proveedores SET deleted_by = seguridad.usuario_actual(),
+					    updated_by = seguridad.usuario_actual() WHERE public_id = ?""", proveedor))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_proveedores_baja_coherente");
+
+			assertThat(app.update(dar, admin, proveedor)).isOne();
+			permisoDenegado(() -> app.update("DELETE FROM proveedores.proveedores WHERE public_id = ?", proveedor));
+			assertThat(owner.queryForObject("""
+					SELECT count(*) FROM proveedores.proveedores
+					WHERE public_id = ? AND deleted_by = ? AND deleted_at IS NOT NULL""",
+					Integer.class, proveedor, admin)).isOne();
+		}
+
+		@Test
+		@DisplayName("los usuarios (solo administrador) también firman altas y modificaciones")
+		void usuariosFirman() {
+			autenticar(admin, NivelAcceso.ROLE_ADMINISTRADOR);
+			String insertar = """
+					INSERT INTO usuarios.usuarios (public_id, nombre_usuario, nombre_apellido, email, clave,
+					    nivel_acceso, created_by, updated_by)
+					VALUES (?, ?, 'Nuevo', ?, ?, 'ROLE_LECTOR', ?, ?)""";
+
+			permisoDenegadoPorRls(() -> app.update(insertar, UUID.randomUUID(), "otro1", "otro1@x.com", HASH_CLAVE,
+					editor, editor));
+			assertThat(app.update(insertar, UUID.randomUUID(), "otro2", "otro2@x.com", HASH_CLAVE, admin, admin))
+					.isOne();
+			permisoDenegadoPorRls(() -> app.update(
+					"UPDATE usuarios.usuarios SET nombre_apellido = 'x', updated_by = ? WHERE public_id = ?",
+					editor, lector));
+			assertThat(app.update("""
+					UPDATE usuarios.usuarios SET nombre_apellido = 'x', updated_by = seguridad.usuario_actual()
+					WHERE public_id = ?""", lector)).isOne();
+		}
+
+		@Test
+		@DisplayName("conductores y unidades de transporte todavía no se modifican: tampoco sus columnas de auditoría")
+		void sinModificacionTodavia() {
+			autenticar(admin, NivelAcceso.ROLE_ADMINISTRADOR);
+
+			permisoDenegado(() -> app.update("UPDATE conductores.conductores SET updated_by = seguridad.usuario_actual()"));
+			permisoDenegado(() -> app.update(
+					"UPDATE unidades_transporte.unidades_transporte SET deleted_by = seguridad.usuario_actual()"));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee las columnas de auditoría y el administrador las ve de cualquiera")
+		void lecturaDeLasColumnas() {
+			UUID proveedor = insertarProveedorComo(editor);
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT created_by FROM proveedores.proveedores WHERE public_id = ?",
+					UUID.class, proveedor)).isEqualTo(editor);
+			permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET deleted_by = seguridad.usuario_actual()"));
+		}
+
+		private void permisoDenegadoPorRls(Runnable operacion) {
+			assertThatThrownBy(operacion::run)
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("row-level security");
+		}
 	}
 
 	@Nested

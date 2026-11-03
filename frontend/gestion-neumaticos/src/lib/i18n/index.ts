@@ -17,8 +17,10 @@ import enDev from "@/lib/i18n/locales/en/dev.json"
 import enDrivers from "@/lib/i18n/locales/en/drivers.json"
 import enHome from "@/lib/i18n/locales/en/home.json"
 import enRepairServices from "@/lib/i18n/locales/en/repair-services.json"
+import enRepairs from "@/lib/i18n/locales/en/repairs.json"
 import enSettings from "@/lib/i18n/locales/en/settings.json"
 import enStorageCenters from "@/lib/i18n/locales/en/storage-centers.json"
+import enStorage from "@/lib/i18n/locales/en/storage.json"
 import enSuppliers from "@/lib/i18n/locales/en/suppliers.json"
 import enTires from "@/lib/i18n/locales/en/tires.json"
 import enTransportUnits from "@/lib/i18n/locales/en/transport-units.json"
@@ -30,8 +32,10 @@ import esDev from "@/lib/i18n/locales/es/dev.json"
 import esDrivers from "@/lib/i18n/locales/es/drivers.json"
 import esHome from "@/lib/i18n/locales/es/home.json"
 import esRepairServices from "@/lib/i18n/locales/es/repair-services.json"
+import esRepairs from "@/lib/i18n/locales/es/repairs.json"
 import esSettings from "@/lib/i18n/locales/es/settings.json"
 import esStorageCenters from "@/lib/i18n/locales/es/storage-centers.json"
+import esStorage from "@/lib/i18n/locales/es/storage.json"
 import esSuppliers from "@/lib/i18n/locales/es/suppliers.json"
 import esTires from "@/lib/i18n/locales/es/tires.json"
 import esTransportUnits from "@/lib/i18n/locales/es/transport-units.json"
@@ -51,6 +55,8 @@ export const resources = {
     address: esAddress,
     "transport-units": esTransportUnits,
     "storage-centers": esStorageCenters,
+    repairs: esRepairs,
+    storage: esStorage,
   },
   en: {
     common: enCommon,
@@ -66,6 +72,8 @@ export const resources = {
     address: enAddress,
     "transport-units": enTransportUnits,
     "storage-centers": enStorageCenters,
+    repairs: enRepairs,
+    storage: enStorage,
   },
 } as const
 

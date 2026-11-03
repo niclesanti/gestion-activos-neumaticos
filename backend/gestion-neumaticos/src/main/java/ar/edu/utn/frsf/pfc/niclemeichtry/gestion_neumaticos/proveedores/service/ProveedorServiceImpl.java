@@ -4,11 +4,19 @@ import java.util.List;
 import java.util.Locale;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EspecificacionesAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorRequestDTO;
@@ -26,6 +34,7 @@ public class ProveedorServiceImpl implements ProveedorService {
 
     static final String MENSAJE_NOMBRE_DUPLICADO = "Ya existe un proveedor con el nombre %s";
 
+    private final EnsambladorAuditoria ensamblador;
     private final ProveedorRepository proveedorRepository;
     private final ProveedorMapper proveedorMapper;
     private final DomicilioApi domicilioApi;
@@ -96,6 +105,16 @@ public class ProveedorServiceImpl implements ProveedorService {
     private static String normalizarEmail(String email) {
         String recortado = opcional(email);
         return recortado == null ? null : recortado.toLowerCase(Locale.ROOT);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable) {
+        log.debug("Consultando auditoría de proveedores: filtro={}, pageable={}", filtro, pageable);
+        Specification<ProveedorNeumaticos> especificacion = EspecificacionesAuditoria.<ProveedorNeumaticos>de(filtro)
+                .and(EspecificacionesAuditoria.contiene(filtro.q(), "nombre"));
+        Page<ProveedorNeumaticos> pagina = proveedorRepository.findAll(especificacion, OrdenAuditoria.validar(pageable));
+        return ensamblador.ensamblar(pagina, ProveedorNeumaticos::getPublicId, ProveedorNeumaticos::getNombre);
     }
 
 }

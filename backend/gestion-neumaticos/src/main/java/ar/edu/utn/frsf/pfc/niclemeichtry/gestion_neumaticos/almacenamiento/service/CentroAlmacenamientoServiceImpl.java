@@ -1,5 +1,8 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +13,11 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.mappe
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.repository.CentroAlmacenamientoRepository;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EspecificacionesAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CentroAlmacenamientoServiceImpl implements CentroAlmacenamientoService {
 
+    private final EnsambladorAuditoria ensamblador;
     private final CentroAlmacenamientoRepository centroAlmacenamientoRepository;
     private final CentroAlmacenamientoMapper centroAlmacenamientoMapper;
     private final DomicilioApi domicilioApi;
@@ -41,6 +50,16 @@ public class CentroAlmacenamientoServiceImpl implements CentroAlmacenamientoServ
 
         DomicilioResponseDTO domicilio = domicilioApi.buscarDomicilio(centro.getDomicilioId()).orElse(null);
         return centroAlmacenamientoMapper.toResponseDTO(centro, domicilio);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable) {
+        log.debug("Consultando auditoría de centros de almacenamiento: filtro={}, pageable={}", filtro, pageable);
+        Specification<CentroAlmacenamiento> especificacion = EspecificacionesAuditoria.<CentroAlmacenamiento>de(filtro)
+                .and(EspecificacionesAuditoria.contiene(filtro.q(), "nombre"));
+        Page<CentroAlmacenamiento> pagina = centroAlmacenamientoRepository.findAll(especificacion, OrdenAuditoria.validar(pageable));
+        return ensamblador.ensamblar(pagina, CentroAlmacenamiento::getPublicId, CentroAlmacenamiento::getNombre);
     }
 
 }

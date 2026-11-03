@@ -1,14 +1,17 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.entity.Usuario;
 
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpecificationExecutor<Usuario> {
 
     /**
      * Login por nombre de usuario o email (ambos persistidos en minúsculas). Corre
@@ -27,5 +30,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<String> nivelAccesoVigente(UUID publicId);
 
     Optional<Usuario> findByPublicId(UUID publicId);
+
+    List<Usuario> findAllByPublicIdIn(Collection<UUID> publicIds);
 
 }

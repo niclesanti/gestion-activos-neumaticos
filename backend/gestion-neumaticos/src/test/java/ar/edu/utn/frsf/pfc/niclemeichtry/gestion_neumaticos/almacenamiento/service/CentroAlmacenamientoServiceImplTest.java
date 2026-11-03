@@ -7,22 +7,34 @@ import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFacto
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
@@ -33,7 +45,11 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.repos
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
 
 @ExtendWith(MockitoExtension.class)
 class CentroAlmacenamientoServiceImplTest {
@@ -42,6 +58,7 @@ class CentroAlmacenamientoServiceImplTest {
     private static final String NOMBRE = "Depósito Central";
     private static final Long DOMICILIO_ID = 200L;
 
+    @Mock private EnsambladorAuditoria ensamblador;
     @Mock private CentroAlmacenamientoRepository centroAlmacenamientoRepository;
     @Mock private DomicilioApi domicilioApi;
 
@@ -52,7 +69,8 @@ class CentroAlmacenamientoServiceImplTest {
 
     @BeforeEach
     void crearServicio() {
-        servicio = new CentroAlmacenamientoServiceImpl(centroAlmacenamientoRepository, centroAlmacenamientoMapper,
+        servicio = new CentroAlmacenamientoServiceImpl(ensamblador, centroAlmacenamientoRepository,
+                centroAlmacenamientoMapper,
                 domicilioApi);
     }
 
@@ -140,6 +158,40 @@ class CentroAlmacenamientoServiceImplTest {
                 .isInstanceOf(EntidadNoEncontradaException.class);
 
         verify(centroAlmacenamientoRepository, never()).saveAndFlush(any());
+    }
+
+    @Nested
+    @DisplayName("listarAuditoria")
+    class ListarAuditoria {
+
+        @Test
+        @DisplayName("aplica los filtros y ensambla la página de fichas")
+        void ensamblaLaPagina() {
+            Page<CentroAlmacenamiento> pagina = new PageImpl<>(List.of(new CentroAlmacenamiento()));
+            Page<RegistroAuditoriaDTO> esperado = new PageImpl<>(List.of());
+            when(centroAlmacenamientoRepository.findAll(
+                    ArgumentMatchers.<Specification<CentroAlmacenamiento>>any(), any(Pageable.class)))
+                    .thenReturn(pagina);
+            when(ensamblador.ensamblar(eq(pagina), any(), any())).thenReturn(esperado);
+
+            Page<RegistroAuditoriaDTO> resultado = servicio.listarAuditoria(
+                    new FiltroAuditoria("abc", FiltroAuditoria.EstadoFiltro.ACTIVOS, LocalDate.of(2026, 1, 1),
+                            LocalDate.of(2026, 12, 31)),
+                    PageRequest.of(0, 20, Sort.by("updatedAt")));
+
+            assertThat(resultado).isSameAs(esperado);
+        }
+
+        @Test
+        @DisplayName("rechaza ordenar por un campo que no es de auditoría")
+        void rechazaOrdenNoPermitido() {
+            FiltroAuditoria sinFiltros = new FiltroAuditoria(null, null, null, null);
+            PageRequest ordenInvalido = PageRequest.of(0, 20, Sort.by("clave"));
+
+            assertThatThrownBy(() -> servicio.listarAuditoria(sinFiltros, ordenInvalido))
+                    .isInstanceOf(ParametroInvalidoException.class);
+            verifyNoInteractions(ensamblador);
+        }
     }
 
 }

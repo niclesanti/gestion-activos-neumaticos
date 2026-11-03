@@ -3,9 +3,17 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte
 import java.util.List;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EspecificacionesAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.Patentes;
@@ -28,6 +36,7 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
     static final String MENSAJE_PATENTE_DUPLICADA = "Ya existe una unidad de transporte con la patente %s";
     static final String MENSAJE_CONFIGURACION_INEXISTENTE = "La configuración de unidad indicada no existe";
 
+    private final EnsambladorAuditoria ensamblador;
     private final UnidadTransporteRepository unidadTransporteRepository;
     private final ConfiguracionUnidadRepository configuracionUnidadRepository;
     private final UnidadTransporteFactory unidadTransporteFactory;
@@ -73,6 +82,16 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
                 .toList();
         log.debug("Configuraciones de unidad listadas: {}", configuraciones.size());
         return configuraciones;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable) {
+        log.debug("Consultando auditoría de unidades de transporte: filtro={}, pageable={}", filtro, pageable);
+        Specification<UnidadTransporte> especificacion = EspecificacionesAuditoria.<UnidadTransporte>de(filtro)
+                .and(EspecificacionesAuditoria.contiene(filtro.q(), "patente"));
+        Page<UnidadTransporte> pagina = unidadTransporteRepository.findAll(especificacion, OrdenAuditoria.validar(pageable));
+        return ensamblador.ensamblar(pagina, UnidadTransporte::getPublicId, UnidadTransporte::getPatente);
     }
 
 }

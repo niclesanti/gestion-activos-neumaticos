@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -22,7 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Conductor {
+public class Conductor extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "conductores_id_gen")
     @SequenceGenerator(name = "conductores_id_gen", schema = "conductores", sequenceName = "conductores_id_seq", allocationSize = 50)

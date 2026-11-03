@@ -2,6 +2,11 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
@@ -26,5 +31,13 @@ public interface UnidadTransporteService {
 
     /** Las configuraciones precargadas, con sus ejes en orden. */
     List<ConfiguracionUnidadDTO> listarConfiguraciones();
+
+    /**
+     * Fichas de auditoría (alta, última modificación y baja) de unidades de transporte, paginadas y
+     * filtradas. Solo para administradores; el orden se limita a los campos de auditoría.
+     *
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException si se ordena por otro campo.
+     */
+    Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable);
 
 }

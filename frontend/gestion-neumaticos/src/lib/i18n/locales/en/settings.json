@@ -9,5 +9,8 @@
     "repairServices": "Repair services",
     "storageCenters": "Storage centers"
   },
-  "empty": "There is no content for this catalog yet."
+  "empty": {
+    "title": "There is no content to show yet",
+    "description": "Soon you will be able to manage {{catalog}} from here."
+  }
 }

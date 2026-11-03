@@ -9,10 +9,16 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.AuditorDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EstadoRegistro;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
@@ -489,6 +495,25 @@ public final class TestDataFactory {
 				.tipoEje(tipoEje)
 				.rodado(rodado)
 				.build();
+	}
+
+	// Auditoría (HU-43)
+
+	public static final UUID AUDITOR_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-0000000000a1");
+	public static final Instant FECHA_AUDITORIA = Instant.parse("2026-10-01T12:00:00Z");
+
+	public static AuditorDTO auditor() {
+		return new AuditorDTO(AUDITOR_PUBLIC_ID, "victoria.editor", "Victoria Editora");
+	}
+
+	/** Ficha de un registro creado y modificado una vez por el mismo usuario, sin baja. */
+	public static RegistroAuditoriaDTO registroAuditoria() {
+		return new RegistroAuditoriaDTO(PROVEEDOR_PUBLIC_ID, "Neumáticos del Litoral S.A.", FECHA_AUDITORIA, auditor(),
+				FECHA_AUDITORIA.plus(1, ChronoUnit.HOURS), auditor(), null, null, EstadoRegistro.ACTIVO);
+	}
+
+	public static Page<RegistroAuditoriaDTO> paginaAuditoria() {
+		return new PageImpl<>(List.of(registroAuditoria()), PageRequest.of(0, 20), 1);
 	}
 
 	// Límite de intentos de login

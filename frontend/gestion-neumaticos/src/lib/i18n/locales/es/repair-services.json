@@ -33,5 +33,8 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el servicio. Intentá de nuevo en unos minutos"
   },
-  "empty": "Todavía no hay listado de servicios de reparación."
+  "empty": {
+    "title": "Todavía no hay servicios de reparación para mostrar",
+    "description": "Pronto vas a poder buscar, editar y dar de baja servicios de reparación desde acá."
+  }
 }

@@ -37,12 +37,29 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.mapper.UnidadTransporteMapperImpl;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.repository.ConfiguracionUnidadRepository;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.repository.UnidadTransporteRepository;
+import static org.mockito.ArgumentMatchers.eq;
+
+import java.time.LocalDate;
+
+import org.mockito.ArgumentMatchers;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
 
 @ExtendWith(MockitoExtension.class)
 class UnidadTransporteServiceImplTest {
 
     private static final String USUARIO = UUID.randomUUID().toString();
 
+    @Mock private EnsambladorAuditoria ensamblador;
     @Mock private UnidadTransporteRepository unidadTransporteRepository;
     @Mock private ConfiguracionUnidadRepository configuracionUnidadRepository;
     /** El servicio depende solo de la interfaz: la fábrica se reemplaza por un mock. */
@@ -55,7 +72,7 @@ class UnidadTransporteServiceImplTest {
 
     @BeforeEach
     void crearServicio() {
-        servicio = new UnidadTransporteServiceImpl(unidadTransporteRepository, configuracionUnidadRepository,
+        servicio = new UnidadTransporteServiceImpl(ensamblador, unidadTransporteRepository, configuracionUnidadRepository,
                 unidadTransporteFactory, unidadTransporteMapper);
     }
 
@@ -154,6 +171,39 @@ class UnidadTransporteServiceImplTest {
 
         assertThat(configuraciones).extracting(ConfiguracionUnidadDTO::totalSlots).containsExactly(7, 13);
         assertThat(configuraciones.get(0).ejes()).hasSize(2);
+    }
+
+
+    @Nested
+    @DisplayName("listarAuditoria")
+    class ListarAuditoria {
+
+        @Test
+        @DisplayName("aplica los filtros y ensambla la página de fichas")
+        void ensamblaLaPagina() {
+            Page<UnidadTransporte> pagina = new PageImpl<>(List.of(new UnidadTransporte()));
+            Page<RegistroAuditoriaDTO> esperado = new PageImpl<>(List.of());
+            when(unidadTransporteRepository.findAll(ArgumentMatchers.<Specification<UnidadTransporte>>any(), any(Pageable.class))).thenReturn(pagina);
+            when(ensamblador.ensamblar(eq(pagina), any(), any())).thenReturn(esperado);
+
+            Page<RegistroAuditoriaDTO> resultado = servicio.listarAuditoria(
+                    new FiltroAuditoria("abc", FiltroAuditoria.EstadoFiltro.ACTIVOS, LocalDate.of(2026, 1, 1),
+                            LocalDate.of(2026, 12, 31)),
+                    PageRequest.of(0, 20, Sort.by("updatedAt")));
+
+            assertThat(resultado).isSameAs(esperado);
+        }
+
+        @Test
+        @DisplayName("rechaza ordenar por un campo que no es de auditoría")
+        void rechazaOrdenNoPermitido() {
+            FiltroAuditoria sinFiltros = new FiltroAuditoria(null, null, null, null);
+            PageRequest ordenInvalido = PageRequest.of(0, 20, Sort.by("clave"));
+
+            assertThatThrownBy(() -> servicio.listarAuditoria(sinFiltros, ordenInvalido))
+                    .isInstanceOf(ParametroInvalidoException.class);
+            verifyNoInteractions(ensamblador);
+        }
     }
 
 }

@@ -1,9 +1,17 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.service;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EnsambladorAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EspecificacionesAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
@@ -20,6 +28,7 @@ public class ConductorServiceImpl implements ConductorService {
 
     static final String MENSAJE_DNI_DUPLICADO = "Ya existe un conductor con el DNI %s";
 
+    private final EnsambladorAuditoria ensamblador;
     private final ConductorRepository conductorRepository;
     private final ConductorMapper conductorMapper;
 
@@ -64,6 +73,16 @@ public class ConductorServiceImpl implements ConductorService {
             return null;
         }
         return dni.trim();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistroAuditoriaDTO> listarAuditoria(FiltroAuditoria filtro, Pageable pageable) {
+        log.debug("Consultando auditoría de conductores: filtro={}, pageable={}", filtro, pageable);
+        Specification<Conductor> especificacion = EspecificacionesAuditoria.<Conductor>de(filtro)
+                .and(EspecificacionesAuditoria.contiene(filtro.q(), "nombre", "apellido", "dni"));
+        Page<Conductor> pagina = conductorRepository.findAll(especificacion, OrdenAuditoria.validar(pageable));
+        return ensamblador.ensamblar(pagina, Conductor::getPublicId, c -> c.getApellido() + ", " + c.getNombre());
     }
 
 }

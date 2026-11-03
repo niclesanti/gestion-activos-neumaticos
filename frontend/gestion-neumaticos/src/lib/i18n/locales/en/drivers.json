@@ -39,5 +39,8 @@
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the driver. Try again in a few minutes"
   },
-  "empty": "There is no driver list yet."
+  "empty": {
+    "title": "There are no drivers to show yet",
+    "description": "Soon you will be able to search, edit and deactivate drivers from here."
+  }
 }
