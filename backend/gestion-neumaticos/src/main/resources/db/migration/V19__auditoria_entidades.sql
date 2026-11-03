@@ -4,7 +4,7 @@
 -- acá la base de datos las vuelve inmutables o infalsificables (ver docs/seguridad.md 2.11).
 
 -- ---------------------------------------------------------------------------
--- Columnas, coherencia e índice de orden por defecto, en las 6 tablas auditadas.
+-- Columnas, coherencia e índice de orden por defecto, en las 7 tablas auditadas.
 -- DEFAULT now() en created_at/updated_at: Hibernate siempre envía el valor, pero
 -- las cargas del owner (seed, tests) no pasan por la aplicación. created_by y
 -- updated_by quedan en NULL para esas filas ("anterior a la auditoría").
@@ -20,7 +20,8 @@ BEGIN
         'conductores.conductores',
         'proveedores.proveedores',
         'reparacion.servicios_reparacion',
-        'unidades_transporte.unidades_transporte'
+        'unidades_transporte.unidades_transporte',
+        'almacenamiento.centros_almacenamiento'
     ] LOOP
         nombre := split_part(tabla, '.', 2);
         EXECUTE format(
@@ -50,6 +51,7 @@ GRANT UPDATE (updated_at, updated_by, deleted_at, deleted_by) ON usuarios.usuari
 GRANT UPDATE (updated_at, updated_by, deleted_at, deleted_by) ON neumaticos.neumaticos TO gn_administrador, gn_editor;
 GRANT UPDATE (updated_at, updated_by, deleted_at, deleted_by) ON proveedores.proveedores TO gn_administrador, gn_editor;
 GRANT UPDATE (updated_at, updated_by, deleted_at, deleted_by) ON reparacion.servicios_reparacion TO gn_administrador, gn_editor;
+GRANT UPDATE (updated_at, updated_by, deleted_at, deleted_by) ON almacenamiento.centros_almacenamiento TO gn_administrador, gn_editor;
 
 -- ---------------------------------------------------------------------------
 -- RLS anti-suplantación: la firma de la operación tiene que ser del usuario de la
@@ -93,6 +95,12 @@ CREATE POLICY unidades_transporte_insert ON unidades_transporte.unidades_transpo
     TO gn_administrador, gn_editor
     WITH CHECK (created_by = (SELECT seguridad.usuario_actual()) AND updated_by = created_by);
 
+DROP POLICY centros_almacenamiento_insert ON almacenamiento.centros_almacenamiento;
+CREATE POLICY centros_almacenamiento_insert ON almacenamiento.centros_almacenamiento
+    FOR INSERT
+    TO gn_administrador, gn_editor
+    WITH CHECK (created_by = (SELECT seguridad.usuario_actual()) AND updated_by = created_by);
+
 -- UPDATE: quien modifica firma como updated_by; si da de baja, firma también deleted_by.
 DROP POLICY usuarios_update_admin ON usuarios.usuarios;
 CREATE POLICY usuarios_update_admin ON usuarios.usuarios
@@ -120,6 +128,14 @@ CREATE POLICY proveedores_update ON proveedores.proveedores
 
 DROP POLICY servicios_reparacion_update ON reparacion.servicios_reparacion;
 CREATE POLICY servicios_reparacion_update ON reparacion.servicios_reparacion
+    FOR UPDATE
+    TO gn_administrador, gn_editor
+    USING (true)
+    WITH CHECK (updated_by = (SELECT seguridad.usuario_actual())
+                AND (deleted_by IS NULL OR deleted_by = (SELECT seguridad.usuario_actual())));
+
+DROP POLICY centros_almacenamiento_update ON almacenamiento.centros_almacenamiento;
+CREATE POLICY centros_almacenamiento_update ON almacenamiento.centros_almacenamiento
     FOR UPDATE
     TO gn_administrador, gn_editor
     USING (true)

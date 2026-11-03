@@ -737,8 +737,9 @@ class AutorizacionBaseDatosTests {
 	class CentrosAlmacenamiento {
 
 		private static final String INSERTAR = """
-				INSERT INTO almacenamiento.centros_almacenamiento (id, public_id, nombre, domicilio_id)
-				VALUES (nextval('almacenamiento.centros_almacenamiento_id_seq'), ?, ?, ?)""";
+				INSERT INTO almacenamiento.centros_almacenamiento (id, public_id, nombre, domicilio_id, created_by, updated_by)
+				VALUES (nextval('almacenamiento.centros_almacenamiento_id_seq'), ?, ?, ?, seguridad.usuario_actual(),
+				    seguridad.usuario_actual())""";
 
 		/** Sin FK entre módulos: basta un id distinto por centro (es UNIQUE). */
 		private long domicilioId = 1;
@@ -780,7 +781,8 @@ class AutorizacionBaseDatosTests {
 				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, domicilioId++)).isOne();
 				assertThat(app.update("""
 						UPDATE almacenamiento.centros_almacenamiento
-						SET cantidad_neumaticos_en_stock = 1 WHERE nombre = ?""", nombre)).isOne();
+						SET cantidad_neumaticos_en_stock = 1, updated_by = seguridad.usuario_actual()
+						WHERE nombre = ?""", nombre)).isOne();
 				permisoDenegado(() -> app.update("DELETE FROM almacenamiento.centros_almacenamiento"));
 				permisoDenegado(() -> app.update("UPDATE almacenamiento.centros_almacenamiento SET public_id = ?",
 						UUID.randomUUID()));
@@ -809,7 +811,8 @@ class AutorizacionBaseDatosTests {
 					.isInstanceOf(DataAccessException.class)
 					.hasStackTraceContaining("ck_centros_almacenamiento_nombre_formato");
 			assertThatThrownBy(() -> app.update("""
-					UPDATE almacenamiento.centros_almacenamiento SET cantidad_neumaticos_en_stock = -1"""))
+					UPDATE almacenamiento.centros_almacenamiento SET cantidad_neumaticos_en_stock = -1,
+						    updated_by = seguridad.usuario_actual()"""))
 					.isInstanceOf(DataAccessException.class)
 					.hasStackTraceContaining("ck_centros_almacenamiento_cantidad");
 		}

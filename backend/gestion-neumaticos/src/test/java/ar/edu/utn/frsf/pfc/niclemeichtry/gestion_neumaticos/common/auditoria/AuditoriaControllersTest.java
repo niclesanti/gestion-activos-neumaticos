@@ -42,6 +42,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.controller.CentroAlmacenamientoController;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service.CentroAlmacenamientoService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.controller.ConductorController;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.service.ConductorService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
@@ -62,11 +64,12 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.controller.
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.service.UsuarioService;
 
 /**
- * Los seis endpoints {@code GET /api/v1/<recurso>/auditoria} (HU-43) comparten
+ * Los siete endpoints {@code GET /api/v1/<recurso>/auditoria} (HU-43) comparten
  * contrato: solo el administrador los consulta, son de solo lectura y paginan.
  */
 @WebMvcTest({ ConductorController.class, NeumaticoController.class, ProveedorController.class,
-        ServicioReparacionController.class, UnidadTransporteController.class, UsuarioController.class })
+        ServicioReparacionController.class, UnidadTransporteController.class, UsuarioController.class,
+        CentroAlmacenamientoController.class })
 @Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class, PaginacionConfig.class })
 @AutoConfigureRestDocs
 class AuditoriaControllersTest {
@@ -80,6 +83,7 @@ class AuditoriaControllersTest {
     @MockitoBean private ServicioReparacionService servicioReparacionService;
     @MockitoBean private UnidadTransporteService unidadTransporteService;
     @MockitoBean private UsuarioService usuarioService;
+    @MockitoBean private CentroAlmacenamientoService centroAlmacenamientoService;
     @MockitoBean private JwtDecoder jwtDecoder;
     @MockitoBean private NivelAccesoVigente nivelAccesoVigente;
 
@@ -90,7 +94,8 @@ class AuditoriaControllersTest {
                 Arguments.of("proveedores"),
                 Arguments.of("servicios-reparacion"),
                 Arguments.of("unidades-transporte"),
-                Arguments.of("usuarios"));
+                Arguments.of("usuarios"),
+                Arguments.of("centros-almacenamiento"));
     }
 
     private static String ruta(String recurso) {
@@ -108,11 +113,12 @@ class AuditoriaControllersTest {
         when(servicioReparacionService.listarAuditoria(any(), any())).thenReturn(paginaAuditoria());
         when(unidadTransporteService.listarAuditoria(any(), any())).thenReturn(paginaAuditoria());
         when(usuarioService.listarAuditoria(any(), any())).thenReturn(paginaAuditoria());
+        when(centroAlmacenamientoService.listarAuditoria(any(), any())).thenReturn(paginaAuditoria());
     }
 
     private void verificarSinConsultas() {
         verifyNoInteractions(conductorService, neumaticoService, proveedorService, servicioReparacionService,
-                unidadTransporteService, usuarioService);
+                unidadTransporteService, usuarioService, centroAlmacenamientoService);
     }
 
     @Nested

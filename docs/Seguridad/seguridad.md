@@ -171,7 +171,7 @@ Endpoints de negocio anotados hasta ahora:
 | `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/unidades-transporte/configuraciones` | `hasRole('LECTOR')` | Los tres roles |
-| `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion` y `unidades-transporte` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
+| `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion`, `unidades-transporte` y `centros-almacenamiento` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
 
 ### 2.10.1 Cabeceras HTTP de la API
 
@@ -332,7 +332,7 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 
 ### 2.12 Auditoría de registros (HU-43)
 
-Toda raíz de agregado de negocio (`Usuario`, `Neumatico`, `Conductor`, `ProveedorNeumaticos`, `ServicioReparacion`, `UnidadTransporte`; `CentroAlmacenamiento` cuando exista) hereda de `common.auditoria.AuditableEntity`, una `@MappedSuperclass` con seis columnas: `created_at`/`created_by`, `updated_at`/`updated_by` y `deleted_at`/`deleted_by`. Nadie las asigna a mano (no hay setters ni entran en los `@Builder`).
+Toda raíz de agregado de negocio (`Usuario`, `Neumatico`, `Conductor`, `ProveedorNeumaticos`, `ServicioReparacion`, `UnidadTransporte`, `CentroAlmacenamiento`) hereda de `common.auditoria.AuditableEntity`, una `@MappedSuperclass` con seis columnas: `created_at`/`created_by`, `updated_at`/`updated_by` y `deleted_at`/`deleted_by`. Nadie las asigna a mano (no hay setters ni entran en los `@Builder`).
 
 **Quién y cuándo se completan.** Spring Data JPA Auditing (`@CreatedBy`, `@LastModifiedBy`, `@CreatedDate`, `@LastModifiedDate`, `AuditingEntityListener`):
 

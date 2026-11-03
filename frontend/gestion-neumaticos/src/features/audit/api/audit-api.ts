@@ -15,8 +15,8 @@ export const AUDITED_ENTITIES = [
 export type AuditedEntity = (typeof AUDITED_ENTITIES)[number]
 
 /**
- * `GET /api/v1/<recurso>/auditoria` de cada módulo. Centros de almacenamiento
- * todavía no tiene backend: queda sin ruta y su pestaña no consulta.
+ * `GET /api/v1/<recurso>/auditoria` de cada módulo. Una entidad sin ruta (`null`)
+ * queda sin consulta y su pestaña muestra el estado "no disponible".
  */
 const AUDIT_ENDPOINTS: Record<AuditedEntity, string | null> = {
   users: "/api/v1/usuarios/auditoria",
@@ -25,7 +25,7 @@ const AUDIT_ENDPOINTS: Record<AuditedEntity, string | null> = {
   suppliers: "/api/v1/proveedores/auditoria",
   tires: "/api/v1/neumaticos/auditoria",
   drivers: "/api/v1/conductores/auditoria",
-  "storage-centers": null,
+  "storage-centers": "/api/v1/centros-almacenamiento/auditoria",
 }
 
 export function isAuditAvailable(entity: AuditedEntity) {

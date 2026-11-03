@@ -2,10 +2,16 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.cont
 
 import java.net.URI;
 
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +21,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service.CentroAlmacenamientoService;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.OpenApiConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ExceptionInfo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -67,6 +75,29 @@ public class CentroAlmacenamientoController {
                 .buildAndExpand(creado.publicId())
                 .toUri();
         return ResponseEntity.created(ubicacion).body(creado);
+    }
+
+    @GetMapping("/auditoria")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Operation(
+            summary = "Consultar la auditoría de centros de almacenamiento",
+            description = "Lista, paginada, la ficha de auditoría de cada registro: quién y cuándo lo creó, lo "
+                    + "modificó por última vez y lo dio de baja (HU-43). Solo lectura y solo para administradores. "
+                    + "Se puede ordenar por `createdAt`, `updatedAt` o `deletedAt`.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página de fichas de auditoría"),
+            @ApiResponse(responseCode = "400", description = "Filtro u orden inválido",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "403", description = "El usuario no es administrador",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<Page<RegistroAuditoriaDTO>> listarAuditoria(
+            @ParameterObject FiltroAuditoria filtro,
+            @ParameterObject @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(centroAlmacenamientoService.listarAuditoria(filtro, pageable));
     }
 
 }
