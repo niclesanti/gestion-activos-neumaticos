@@ -108,5 +108,9 @@
     "forbidden": "No tenés permisos para registrar neumáticos",
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el neumático. Intentá de nuevo en unos minutos"
+  },
+  "empty": {
+    "title": "Todavía no hay neumáticos para mostrar",
+    "description": "Pronto vas a poder consultar, filtrar y seguir el ciclo de vida de cada neumático desde acá."
   }
 }

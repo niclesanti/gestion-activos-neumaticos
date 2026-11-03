@@ -23,5 +23,8 @@
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the center. Try again in a few minutes"
   },
-  "empty": "There is no storage center list yet."
+  "empty": {
+    "title": "There are no storage centers to show yet",
+    "description": "Soon you will be able to search, edit and deactivate storage centers from here."
+  }
 }

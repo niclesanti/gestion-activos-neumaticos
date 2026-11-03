@@ -9,8 +9,10 @@ import type dev from "@/lib/i18n/locales/es/dev.json"
 import type drivers from "@/lib/i18n/locales/es/drivers.json"
 import type home from "@/lib/i18n/locales/es/home.json"
 import type repairServices from "@/lib/i18n/locales/es/repair-services.json"
+import type repairs from "@/lib/i18n/locales/es/repairs.json"
 import type settings from "@/lib/i18n/locales/es/settings.json"
 import type storageCenters from "@/lib/i18n/locales/es/storage-centers.json"
+import type storage from "@/lib/i18n/locales/es/storage.json"
 import type suppliers from "@/lib/i18n/locales/es/suppliers.json"
 import type tires from "@/lib/i18n/locales/es/tires.json"
 import type transportUnits from "@/lib/i18n/locales/es/transport-units.json"
@@ -32,6 +34,8 @@ declare module "i18next" {
       address: typeof address
       "transport-units": typeof transportUnits
       "storage-centers": typeof storageCenters
+      repairs: typeof repairs
+      storage: typeof storage
     }
   }
 }

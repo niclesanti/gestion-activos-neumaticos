@@ -1,5 +1,7 @@
+import { WarehouseIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { EmptyState } from "@/components/common/empty-state"
 import { CreateStorageCenterDialog } from "@/features/storage-centers/components/create-storage-center-dialog"
 import { canPerform, useAccessLevel } from "@/lib/access"
 
@@ -26,7 +28,11 @@ export function StorageCentersCatalog() {
         ) : null}
       </header>
       {/* TODO: listado de centros de almacenamiento. */}
-      <p className="text-sm text-muted-foreground">{t("empty")}</p>
+      <EmptyState
+        icon={WarehouseIcon}
+        title={t("empty.title")}
+        description={t("empty.description")}
+      />
     </div>
   )
 }

@@ -9,5 +9,8 @@
     "repairServices": "Servicios de reparación",
     "storageCenters": "Centros de almacenamiento"
   },
-  "empty": "Todavía no hay contenido para este catálogo."
+  "empty": {
+    "title": "Todavía no hay contenido para mostrar",
+    "description": "Pronto vas a poder administrar {{catalog}} desde acá."
+  }
 }

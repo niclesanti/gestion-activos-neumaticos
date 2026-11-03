@@ -1,5 +1,7 @@
+import { StoreIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { EmptyState } from "@/components/common/empty-state"
 import { CreateSupplierDialog } from "@/features/suppliers/components/create-supplier-dialog"
 import { canPerform, useAccessLevel } from "@/lib/access"
 
@@ -23,7 +25,11 @@ export function SuppliersCatalog() {
         ) : null}
       </header>
       {/* TODO: listado de proveedores. */}
-      <p className="text-sm text-muted-foreground">{t("empty")}</p>
+      <EmptyState
+        icon={StoreIcon}
+        title={t("empty.title")}
+        description={t("empty.description")}
+      />
     </div>
   )
 }

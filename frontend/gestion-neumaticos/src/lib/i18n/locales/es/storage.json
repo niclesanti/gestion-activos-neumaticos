@@ -1,0 +1,8 @@
+{
+  "title": "Almacenamiento",
+  "subtitle": "Controlá el stock de neumáticos de cada centro de almacenamiento.",
+  "empty": {
+    "title": "Todavía no hay stock para mostrar",
+    "description": "Pronto vas a poder consultar el stock por centro y registrar ingresos y egresos de neumáticos."
+  }
+}

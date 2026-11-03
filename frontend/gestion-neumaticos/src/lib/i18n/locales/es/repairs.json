@@ -1,0 +1,8 @@
+{
+  "title": "Reparaciones",
+  "subtitle": "Enviá neumáticos a servicios de reparación y registrá su reingreso.",
+  "empty": {
+    "title": "Todavía no hay reparaciones para mostrar",
+    "description": "Pronto vas a poder gestionar acá el envío y el reingreso de neumáticos a los servicios de reparación."
+  }
+}

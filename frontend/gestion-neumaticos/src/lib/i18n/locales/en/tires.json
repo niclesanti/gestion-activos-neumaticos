@@ -108,5 +108,9 @@
     "forbidden": "You don't have permission to register tires",
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the tire. Try again in a few minutes"
+  },
+  "empty": {
+    "title": "There are no tires to show yet",
+    "description": "Soon you will be able to browse, filter and follow the lifecycle of each tire from here."
   }
 }

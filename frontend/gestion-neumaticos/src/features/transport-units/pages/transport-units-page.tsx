@@ -1,5 +1,7 @@
+import { TruckIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { CreateTransportUnitDialog } from "@/features/transport-units/components/create-transport-unit-dialog"
 import { canPerform, useAccessLevel } from "@/lib/access"
@@ -21,8 +23,13 @@ export function TransportUnitsPage() {
           ) : null
         }
       />
-      {/* TODO: listado de unidades de transporte. */}
-      <p className="text-sm text-muted-foreground">{t("empty")}</p>
+      {/* TODO: listado de unidades de transporte. Al implementarlo, quitar el
+          placeholder y `empty` en i18n. */}
+      <EmptyState
+        icon={TruckIcon}
+        title={t("empty.title")}
+        description={t("empty.description")}
+      />
     </div>
   )
 }

@@ -55,5 +55,8 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar la unidad. Intentá de nuevo en unos minutos"
   },
-  "empty": "Todavía no hay listado de unidades de transporte."
+  "empty": {
+    "title": "Todavía no hay unidades de transporte para mostrar",
+    "description": "Pronto vas a ver acá el listado de unidades, sus posiciones y los neumáticos montados."
+  }
 }

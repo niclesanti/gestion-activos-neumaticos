@@ -33,5 +33,8 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el proveedor. Intentá de nuevo en unos minutos"
   },
-  "empty": "Todavía no hay listado de proveedores."
+  "empty": {
+    "title": "Todavía no hay proveedores para mostrar",
+    "description": "Pronto vas a poder buscar, editar y dar de baja proveedores desde acá."
+  }
 }
