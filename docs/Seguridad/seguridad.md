@@ -166,6 +166,7 @@ Endpoints de negocio anotados hasta ahora:
 | `POST /api/v1/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/proveedores` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/servicios-reparacion` (alta de servicio de reparación, HU-18) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `POST /api/v1/centros-almacenamiento` (alta de centro de almacenamiento) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/provincias` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
@@ -272,6 +273,8 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 - `AutorizacionBaseDatosTests` cubre los permisos de las cuatro tablas y `RegistroProveedorIntegrationTests` que el lector no inserta ni llamando directo al servicio.
 
 **`reparacion.servicios_reparacion`** (`V17`, HU-18): mismo esquema de permisos que proveedores (los tres roles `SELECT`; administrador y editor `INSERT` y `UPDATE` de columnas, sin `id` ni `public_id`; nadie `DELETE`; RLS con la política restrictiva de autenticación). El domicilio se guarda por referencia (`domicilio_id UNIQUE`, sin FK entre módulos) y se crea por `common.api.DomicilioApi` en la misma transacción. El nombre es único sin distinguir mayúsculas y `cantidad_neumaticos_en_reparacion` tiene un `CHECK (>= 0)`: la entidad la incrementa (`enviarNeumaticoReparacion`) y decrementa (`reingresarNeumatico`, que rechaza bajar de 0); por eso esa columna es actualizable por administrador y editor. Cubierto por `AutorizacionBaseDatosTests` y `RegistroServicioReparacionIntegrationTests`.
+
+**`almacenamiento.centros_almacenamiento`** (`V18`): mismo esquema de permisos que servicios de reparación (los tres roles `SELECT`; administrador y editor `INSERT` y `UPDATE` de columnas, sin `id` ni `public_id`; nadie `DELETE`; RLS con la política restrictiva de autenticación). El domicilio es obligatorio: `domicilio_id NOT NULL UNIQUE`, por referencia y sin FK entre módulos, creado por `common.api.DomicilioApi` en la misma transacción. El nombre no es único. `cantidad_neumaticos_en_stock` arranca en 0 y tiene un `CHECK (>= 0)`: la entidad la incrementa (`agregarNeumaticoStock`) y decrementa (`removerNeumaticoStock`, que rechaza bajar de 0). Cubierto por `AutorizacionBaseDatosTests` y `RegistroCentroAlmacenamientoIntegrationTests`.
 
 **`unidades_transporte.configuraciones_unidad`, `unidades_transporte.ejes_configuracion`** (`V16`, catálogo):
 

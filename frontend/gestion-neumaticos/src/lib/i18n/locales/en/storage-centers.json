@@ -1,0 +1,27 @@
+{
+  "title": "Storage centers",
+  "description": "Warehouses where the company keeps the tires that aren't mounted.",
+  "actions": { "register": "Register center" },
+  "dialog": {
+    "createTitle": "Register storage center",
+    "createDescription": "Fill in the center's name and address. It starts with no tires in stock.",
+    "cancel": "Cancel",
+    "submit": "Register",
+    "submitting": "Registering…"
+  },
+  "form": {
+    "name": { "label": "Name", "placeholder": "E.g.: Central Warehouse" }
+  },
+  "validation": {
+    "required": "This field is required",
+    "maxLength150": "It can't be longer than 150 characters"
+  },
+  "feedback": {
+    "created": "Storage center registered",
+    "createdDescription": "You can now add tires to its stock.",
+    "forbidden": "You don't have permission to register storage centers",
+    "invalid": "Check the form data",
+    "unexpected": "We couldn't register the center. Try again in a few minutes"
+  },
+  "empty": "There is no storage center list yet."
+}

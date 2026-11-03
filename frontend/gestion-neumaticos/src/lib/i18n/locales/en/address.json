@@ -1,6 +1,7 @@
 {
   "legend": "Address",
   "description": "Optional. If you enter one, fill in street, number, province and city.",
+  "descriptionRequired": "Fill in street, number, province and city.",
   "street": { "label": "Street", "placeholder": "E.g.: San Martín" },
   "number": { "label": "Number", "placeholder": "E.g.: 2550" },
   "floor": { "label": "Floor", "placeholder": "E.g.: 3" },
@@ -23,6 +24,7 @@
   },
   "validation": {
     "addressRequired": "Fill in this field or leave the address empty",
+    "required": "This field is required",
     "maxLength10": "It can't be longer than 10 characters",
     "maxLength100": "It can't be longer than 100 characters",
     "postalCodeFormat": "It must have 4 digits or the CPA format (e.g.: S3000ABC)"

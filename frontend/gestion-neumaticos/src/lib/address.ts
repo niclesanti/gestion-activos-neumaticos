@@ -41,7 +41,7 @@ export const ADDRESS_FIELDS = [
   "codigoPostal",
 ] as const
 
-/** Obligatorios del domicilio, solo cuando se está cargando uno. */
+/** Obligatorios del domicilio: siempre, o solo cuando se está cargando uno si es opcional. */
 const REQUIRED_ADDRESS_FIELDS = [
   "calle",
   "altura",
@@ -89,9 +89,34 @@ export function validateAddress(
   }
 }
 
+/**
+ * Para los features donde el domicilio es obligatorio (ej. centros de
+ * almacenamiento): sus datos principales se piden siempre. Se usa dentro del
+ * `superRefine` del formulario.
+ */
+export function validateRequiredAddress(
+  address: AddressFormInput,
+  ctx: z.RefinementCtx
+) {
+  for (const field of REQUIRED_ADDRESS_FIELDS) {
+    if (address[field].trim() === "") {
+      ctx.addIssue({
+        code: "custom",
+        path: [field],
+        message: "validation.required" satisfies AddressMessageKey,
+      })
+    }
+  }
+}
+
 /** Cuerpo `domicilio` que espera la API, o `null` si no se cargó ninguno. */
 export function toAddressRequest(address: AddressFormInput) {
   if (!hasAddress(address)) return null
+  return toRequiredAddressRequest(address)
+}
+
+/** Cuerpo `domicilio` que espera la API, cuando el domicilio es obligatorio. */
+export function toRequiredAddressRequest(address: AddressFormInput) {
   return {
     calle: address.calle.trim(),
     altura: address.altura.trim(),

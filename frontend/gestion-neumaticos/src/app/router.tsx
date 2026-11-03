@@ -13,6 +13,7 @@ import { RepairServicesCatalog } from "@/features/repair-services/components/rep
 import { RepairsPage } from "@/features/repairs/pages/repairs-page"
 import { SettingsPage } from "@/features/settings/pages/settings-page"
 import { StoragePage } from "@/features/storage/pages/storage-page"
+import { StorageCentersCatalog } from "@/features/storage-centers/components/storage-centers-catalog"
 import { SuppliersCatalog } from "@/features/suppliers/components/suppliers-catalog"
 import { TiresPage } from "@/features/tires/pages/tires-page"
 import { TransportUnitsPage } from "@/features/transport-units/pages/transport-units-page"
@@ -48,6 +49,7 @@ export function AppRouter() {
                       drivers: <DriversCatalog />,
                       suppliers: <SuppliersCatalog />,
                       "repair-services": <RepairServicesCatalog />,
+                      "storage-centers": <StorageCentersCatalog />,
                     }}
                   />
                 }

@@ -1,0 +1,27 @@
+{
+  "title": "Centros de almacenamiento",
+  "description": "Depósitos donde la empresa guarda los neumáticos que no están montados.",
+  "actions": { "register": "Registrar centro" },
+  "dialog": {
+    "createTitle": "Registrar centro de almacenamiento",
+    "createDescription": "Completá el nombre y el domicilio del centro. Empieza sin neumáticos en stock.",
+    "cancel": "Cancelar",
+    "submit": "Registrar",
+    "submitting": "Registrando…"
+  },
+  "form": {
+    "name": { "label": "Nombre", "placeholder": "Ej.: Depósito Central" }
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "maxLength150": "No puede superar los 150 caracteres"
+  },
+  "feedback": {
+    "created": "Centro de almacenamiento registrado",
+    "createdDescription": "Ya podés ingresarle neumáticos al stock.",
+    "forbidden": "No tenés permisos para registrar centros de almacenamiento",
+    "invalid": "Revisá los datos del formulario",
+    "unexpected": "No pudimos registrar el centro. Intentá de nuevo en unos minutos"
+  },
+  "empty": "Todavía no hay listado de centros de almacenamiento."
+}
