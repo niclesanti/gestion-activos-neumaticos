@@ -19,6 +19,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.AuditorDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EstadoRegistro;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
@@ -403,6 +406,36 @@ public final class TestDataFactory {
 			DomicilioResponseDTO domicilio) {
 		return new ServicioReparacionResponseDTO(servicio.getPublicId(), servicio.getNombre(), servicio.getEmail(),
 				servicio.getTelefono(), servicio.getCantidadNeumaticosEnReparacion(), domicilio);
+	}
+
+	// Centros de almacenamiento
+
+	public static final UUID CENTRO_ALMACENAMIENTO_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-000000000003");
+
+	/** Alta válida de un centro de almacenamiento con su domicilio (obligatorio). */
+	public static CentroAlmacenamientoRequestDTO centroAlmacenamientoRequest() {
+		return new CentroAlmacenamientoRequestDTO("Depósito Central", domicilioRequest());
+	}
+
+	public static CentroAlmacenamientoRequestDTO centroAlmacenamientoRequest(String nombre,
+			DomicilioRequestDTO domicilio) {
+		return new CentroAlmacenamientoRequestDTO(nombre, domicilio);
+	}
+
+	/** Centro persistido (con ids y sin stock) a partir de un alta; el domicilio, como id de referencia. */
+	public static CentroAlmacenamiento centroAlmacenamiento(CentroAlmacenamientoRequestDTO request) {
+		return CentroAlmacenamiento.builder()
+				.id(1L)
+				.publicId(CENTRO_ALMACENAMIENTO_PUBLIC_ID)
+				.nombre(request.nombre())
+				.domicilioId(200L)
+				.build();
+	}
+
+	public static CentroAlmacenamientoResponseDTO centroAlmacenamientoResponse(CentroAlmacenamiento centro,
+			DomicilioResponseDTO domicilio) {
+		return new CentroAlmacenamientoResponseDTO(centro.getPublicId(), centro.getNombre(),
+				centro.getCantidadNeumaticosEnStock(), domicilio);
 	}
 
 	// Unidades de transporte

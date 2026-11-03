@@ -19,15 +19,24 @@ import { ariaFor } from "@/lib/aria"
 type AddressFieldsetProps = {
   /** Prefijo de los ids de los campos (normalmente, el id del `<form>`). */
   idPrefix: string
+  /**
+   * Domicilio obligatorio: los datos principales se marcan siempre como
+   * requeridos (validarlos con `validateRequiredAddress`). Por defecto es
+   * opcional (`validateAddress`).
+   */
+  required?: boolean
 }
 
 /**
- * Sección "Domicilio" (opcional) de un formulario: calle, altura, piso,
- * departamento, provincia, localidad y código postal. Debe renderizarse dentro
- * de un `FormProvider` cuyo formulario incluya `addressShape`. Los datos
- * principales pasan a ser obligatorios apenas se empieza a cargar uno.
+ * Sección "Domicilio" de un formulario: calle, altura, piso, departamento,
+ * provincia, localidad y código postal. Debe renderizarse dentro de un
+ * `FormProvider` cuyo formulario incluya `addressShape`. Si es opcional, los
+ * datos principales pasan a ser obligatorios apenas se empieza a cargar uno.
  */
-export function AddressFieldset({ idPrefix }: AddressFieldsetProps) {
+export function AddressFieldset({
+  idPrefix,
+  required: alwaysRequired = false,
+}: AddressFieldsetProps) {
   const { t } = useTranslation("address")
   const provinces = useProvinces()
   const {
@@ -36,7 +45,8 @@ export function AddressFieldset({ idPrefix }: AddressFieldsetProps) {
     formState: { errors },
   } = useFormContext<AddressFormInput>()
 
-  const required = hasAddress(useWatch({ control }))
+  const started = hasAddress(useWatch({ control }))
+  const required = alwaysRequired || started
 
   const provinceOptions: SelectOption[] = (provinces.data ?? []).map(
     (province) => ({ value: String(province.id), label: province.nombre })
@@ -51,7 +61,7 @@ export function AddressFieldset({ idPrefix }: AddressFieldsetProps) {
     <FieldSet className="gap-0">
       <FieldLegend>{t("legend")}</FieldLegend>
       <FieldDescription className="-mt-2 mb-4">
-        {t("description")}
+        {alwaysRequired ? t("descriptionRequired") : t("description")}
       </FieldDescription>
       <div className="grid gap-x-4 gap-y-5 sm:grid-cols-6">
         <TextField

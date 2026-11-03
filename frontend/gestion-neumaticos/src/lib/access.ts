@@ -78,6 +78,7 @@ export const ACTION_ACCESS = {
   "suppliers.create": ADMIN_AND_EDITOR,
   "repairServices.create": ADMIN_AND_EDITOR,
   "transportUnits.create": ADMIN_AND_EDITOR,
+  "storageCenters.create": ADMIN_AND_EDITOR,
 } as const satisfies Record<string, readonly AccessLevel[]>
 
 export type AppAction = keyof typeof ACTION_ACCESS

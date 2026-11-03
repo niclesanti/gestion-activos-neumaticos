@@ -733,6 +733,90 @@ class AutorizacionBaseDatosTests {
 	}
 
 	@Nested
+	@DisplayName("almacenamiento.centros_almacenamiento")
+	class CentrosAlmacenamiento {
+
+		private static final String INSERTAR = """
+				INSERT INTO almacenamiento.centros_almacenamiento (id, public_id, nombre, domicilio_id)
+				VALUES (nextval('almacenamiento.centros_almacenamiento_id_seq'), ?, ?, ?)""";
+
+		/** Sin FK entre módulos: basta un id distinto por centro (es UNIQUE). */
+		private long domicilioId = 1;
+
+		@BeforeEach
+		void limpiar() {
+			owner.update("DELETE FROM almacenamiento.centros_almacenamiento");
+		}
+
+		@Test
+		@DisplayName("sin sesión no se lee ni se inserta")
+		void sinSesion() {
+			permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM almacenamiento.centros_almacenamiento",
+					Integer.class));
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "C1", domicilioId++));
+		}
+
+		@Test
+		@DisplayName("el lector solo lee")
+		void lectorSoloLee() {
+			owner.update(INSERTAR, UUID.randomUUID(), "C1", domicilioId++);
+			autenticar(lector, NivelAcceso.ROLE_LECTOR);
+
+			assertThat(app.queryForObject("SELECT count(*) FROM almacenamiento.centros_almacenamiento",
+					Integer.class)).isOne();
+			permisoDenegado(() -> app.update(INSERTAR, UUID.randomUUID(), "C2", domicilioId++));
+			permisoDenegado(() -> app.update(
+					"UPDATE almacenamiento.centros_almacenamiento SET cantidad_neumaticos_en_stock = 1"));
+			permisoDenegado(() -> app.update("DELETE FROM almacenamiento.centros_almacenamiento"));
+		}
+
+		@Test
+		@DisplayName("editor y administrador insertan, leen y modifican, pero no borran ni cambian ids")
+		void editorYAdministradorEscriben() {
+			for (UUID usuario : List.of(editor, admin)) {
+				autenticar(usuario, nivelDe(usuario));
+				String nombre = "C-" + usuario;
+
+				assertThat(app.update(INSERTAR, UUID.randomUUID(), nombre, domicilioId++)).isOne();
+				assertThat(app.update("""
+						UPDATE almacenamiento.centros_almacenamiento
+						SET cantidad_neumaticos_en_stock = 1 WHERE nombre = ?""", nombre)).isOne();
+				permisoDenegado(() -> app.update("DELETE FROM almacenamiento.centros_almacenamiento"));
+				permisoDenegado(() -> app.update("UPDATE almacenamiento.centros_almacenamiento SET public_id = ?",
+						UUID.randomUUID()));
+				permisoDenegado(() -> app.update("UPDATE almacenamiento.centros_almacenamiento SET id = 1"));
+			}
+			assertThat(owner.queryForObject("""
+					SELECT count(*) FROM almacenamiento.centros_almacenamiento
+					WHERE cantidad_neumaticos_en_stock = 1""", Integer.class))
+					.isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("el domicilio es obligatorio y no se comparte, el nombre puede repetirse y el stock no es negativo")
+		void restricciones() {
+			owner.update(INSERTAR, UUID.randomUUID(), "Depósito Norte", 500L);
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			assertThat(app.update(INSERTAR, UUID.randomUUID(), "Depósito Norte", 501L)).isOne();
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "Otro", null))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("domicilio_id");
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), "Otro", 500L))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_centros_almacenamiento_domicilio");
+			assertThatThrownBy(() -> app.update(INSERTAR, UUID.randomUUID(), " Otro", 502L))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_centros_almacenamiento_nombre_formato");
+			assertThatThrownBy(() -> app.update("""
+					UPDATE almacenamiento.centros_almacenamiento SET cantidad_neumaticos_en_stock = -1"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_centros_almacenamiento_cantidad");
+		}
+
+	}
+
+	@Nested
 	@DisplayName("unidades_transporte.configuraciones_unidad y ejes_configuracion")
 	class ConfiguracionesUnidad {
 

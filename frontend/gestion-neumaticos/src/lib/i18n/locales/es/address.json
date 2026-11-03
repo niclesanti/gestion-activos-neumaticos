@@ -1,6 +1,7 @@
 {
   "legend": "Domicilio",
   "description": "Opcional. Si lo cargás, completá calle, altura, provincia y localidad.",
+  "descriptionRequired": "Completá calle, altura, provincia y localidad.",
   "street": { "label": "Calle", "placeholder": "Ej.: San Martín" },
   "number": { "label": "Altura", "placeholder": "Ej.: 2550" },
   "floor": { "label": "Piso", "placeholder": "Ej.: 3" },
@@ -23,6 +24,7 @@
   },
   "validation": {
     "addressRequired": "Completá este dato o dejá el domicilio vacío",
+    "required": "Este campo es obligatorio",
     "maxLength10": "No puede superar los 10 caracteres",
     "maxLength100": "No puede superar los 100 caracteres",
     "postalCodeFormat": "Debe tener 4 dígitos o el formato CPA (ej.: S3000ABC)"
