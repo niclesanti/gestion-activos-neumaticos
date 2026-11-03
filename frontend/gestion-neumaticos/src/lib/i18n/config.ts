@@ -22,6 +22,7 @@ export const NAMESPACES = [
   "repair-services",
   "address",
   "transport-units",
+  "storage-centers",
 ] as const
 
 export const DEFAULT_NAMESPACE = "common"
