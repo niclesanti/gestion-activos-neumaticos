@@ -67,12 +67,12 @@ public record NeumaticoRequestDTO(
     UUID proveedorId
 ) {
 
-    public static final int MAX_NUMERO_SERIE = 100;
+    private static final int MAX_NUMERO_SERIE = 100;
     // Vacío o en blanco = sin número de serie; los espacios de los extremos se recortan al guardar.
-    public static final String PATRON_NUMERO_SERIE = "^\\s*([A-Za-z0-9][A-Za-z0-9 ./-]*)?\\s*$";
-    public static final String MAX_KILOMETRAJE = "9999999";
-    public static final int MAX_RECAPADOS = 20;
-    public static final int MAX_COMENTARIO = 512;
+    private static final String PATRON_NUMERO_SERIE = "^\\s*([A-Za-z0-9][A-Za-z0-9 ./-]*)?\\s*$";
+    private static final String MAX_KILOMETRAJE = "9999999";
+    private static final int MAX_RECAPADOS = 20;
+    private static final int MAX_COMENTARIO = 512;
 
     private static final Set<EstadoNeumatico> ESTADOS_RECAPADOS = EnumSet.of(
             EstadoNeumatico.RECAPADO, EstadoNeumatico.RECAPADO_USADO, EstadoNeumatico.RECAPADO_SIN_GARANTIA);

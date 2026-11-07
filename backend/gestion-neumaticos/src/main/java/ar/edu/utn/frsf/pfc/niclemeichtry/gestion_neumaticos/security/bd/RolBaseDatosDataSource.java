@@ -43,9 +43,6 @@ class RolBaseDatosDataSource extends DelegatingDataSource {
 			"ROLE_EDITOR", "gn_editor",
 			"ROLE_LECTOR", "gn_lector");
 
-	/** {@code SET ROLE NONE}: vuelve al rol de la conexión. */
-	private static final String SIN_ROL = "none";
-
 	private static final String FIJAR_SESION =
 			"SELECT set_config('role', ?, false), set_config('app.usuario_id', ?, false)";
 
@@ -101,7 +98,8 @@ class RolBaseDatosDataSource extends DelegatingDataSource {
 
 	private record SesionBaseDatos(String rol, String usuarioId) {
 
-		static final SesionBaseDatos ANONIMA = new SesionBaseDatos(SIN_ROL, "");
+		// Rol "none" (SET ROLE NONE): vuelve al rol de la conexión.
+		static final SesionBaseDatos ANONIMA = new SesionBaseDatos("none", "");
 
 	}
 

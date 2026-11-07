@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ConductorServiceImpl implements ConductorService {
 
-    static final String MENSAJE_DNI_DUPLICADO = "Ya existe un conductor con el DNI %s";
+    private static final String MENSAJE_DNI_DUPLICADO = "Ya existe un conductor con el DNI %s";
 
     private final EnsambladorAuditoria ensamblador;
     private final ConductorRepository conductorRepository;

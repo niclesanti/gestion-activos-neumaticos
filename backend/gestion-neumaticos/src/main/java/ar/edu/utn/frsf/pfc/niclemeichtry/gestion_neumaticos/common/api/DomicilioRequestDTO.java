@@ -37,13 +37,13 @@ public record DomicilioRequestDTO(
     String codigoPostal
 ) {
 
-    public static final int MAX_CALLE = 100;
-    public static final int MAX_ALTURA = 10;
-    public static final int MAX_PISO = 10;
-    public static final int MAX_DEPARTAMENTO = 10;
-    public static final int MAX_LOCALIDAD = 100;
+    private static final int MAX_CALLE = 100;
+    private static final int MAX_ALTURA = 10;
+    private static final int MAX_PISO = 10;
+    private static final int MAX_DEPARTAMENTO = 10;
+    private static final int MAX_LOCALIDAD = 100;
     // 4 dígitos o CPA; sin distinguir mayúsculas (se guarda en mayúsculas) y
     // con los extremos recortados al guardar.
-    public static final String PATRON_CODIGO_POSTAL = "^\\s*([0-9]{4}|[A-Za-z][0-9]{4}[A-Za-z]{3})?\\s*$";
+    private static final String PATRON_CODIGO_POSTAL = "^\\s*([0-9]{4}|[A-Za-z][0-9]{4}[A-Za-z]{3})?\\s*$";
 
 }

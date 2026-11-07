@@ -31,7 +31,6 @@ import jakarta.persistence.EntityNotFoundException;
 public class ControllerAdvisor {
 
     static final String MENSAJE_SOLICITUD_INVALIDA = "La solicitud es inválida";
-    static final String MENSAJE_CUERPO_INVALIDO = "El cuerpo de la petición es inválido o está mal formado";
     static final String MENSAJE_NO_ENCONTRADO = "El recurso solicitado no existe";
     static final String MENSAJE_ERROR_INTERNO = "Error interno del servidor";
 
@@ -149,7 +148,7 @@ public class ControllerAdvisor {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ExceptionInfo> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex,
             WebRequest request) {
-        return respuesta(HttpStatus.BAD_REQUEST, MENSAJE_CUERPO_INVALIDO, request);
+        return respuesta(HttpStatus.BAD_REQUEST, "El cuerpo de la petición es inválido o está mal formado", request);
     }
 
     /** Mensaje propio para el status de un error de Spring MVC (nunca el de la excepción). */

@@ -22,6 +22,6 @@ public record CentroAlmacenamientoRequestDTO(
     DomicilioRequestDTO domicilio
 ) {
 
-    public static final int MAX_NOMBRE = 150;
+    private static final int MAX_NOMBRE = 150;
 
 }

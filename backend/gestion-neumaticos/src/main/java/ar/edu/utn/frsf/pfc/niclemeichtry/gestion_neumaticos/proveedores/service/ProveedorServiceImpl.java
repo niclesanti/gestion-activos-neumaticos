@@ -31,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProveedorServiceImpl implements ProveedorService {
 
-    static final String MENSAJE_NOMBRE_DUPLICADO = "Ya existe un proveedor con el nombre %s";
+    private static final String MENSAJE_NOMBRE_DUPLICADO = "Ya existe un proveedor con el nombre %s";
 
     private final EnsambladorAuditoria ensamblador;
     private final ProveedorRepository proveedorRepository;

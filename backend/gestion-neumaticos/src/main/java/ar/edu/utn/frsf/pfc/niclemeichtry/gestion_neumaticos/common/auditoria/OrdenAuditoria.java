@@ -10,7 +10,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroI
 /** Lista blanca de campos por los que se puede ordenar la consulta de auditoría. */
 public final class OrdenAuditoria {
 
-    static final Set<String> CAMPOS_PERMITIDOS = Set.of("createdAt", "updatedAt", "deletedAt");
+    private static final Set<String> CAMPOS_PERMITIDOS = Set.of("createdAt", "updatedAt", "deletedAt");
 
     private OrdenAuditoria() {
     }

@@ -23,8 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DomicilioApiImpl implements DomicilioApi {
 
-    static final String MENSAJE_PROVINCIA_INEXISTENTE = "La provincia indicada no existe";
-
     private final DomicilioRepository domicilioRepository;
     private final LocalidadRepository localidadRepository;
     private final ProvinciaRepository provinciaRepository;
@@ -38,7 +36,7 @@ public class DomicilioApiImpl implements DomicilioApi {
         log.debug("Registrando domicilio: usuario={}, provinciaId={}, localidad={}", usuario, provinciaId, localidad);
         if (!provinciaRepository.existsById(provinciaId)) {
             log.warn("Alta de domicilio rechazada: la provincia {} no existe (usuario {})", provinciaId, usuario);
-            throw new EntidadNoEncontradaException(MENSAJE_PROVINCIA_INEXISTENTE);
+            throw new EntidadNoEncontradaException("La provincia indicada no existe");
         }
         Long localidadId = localidadRepository.buscarOCrear(provinciaId, localidad,
                 NormalizacionTexto.mayusculas(domicilioRequestDTO.codigoPostal()));

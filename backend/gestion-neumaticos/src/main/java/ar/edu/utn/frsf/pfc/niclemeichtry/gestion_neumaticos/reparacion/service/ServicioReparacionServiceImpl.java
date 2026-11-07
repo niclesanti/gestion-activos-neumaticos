@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ServicioReparacionServiceImpl implements ServicioReparacionService {
 
-    static final String MENSAJE_NOMBRE_DUPLICADO = "Ya existe un servicio de reparación con el nombre %s";
+    private static final String MENSAJE_NOMBRE_DUPLICADO = "Ya existe un servicio de reparación con el nombre %s";
 
     private final EnsambladorAuditoria ensamblador;
     private final ServicioReparacionRepository servicioReparacionRepository;

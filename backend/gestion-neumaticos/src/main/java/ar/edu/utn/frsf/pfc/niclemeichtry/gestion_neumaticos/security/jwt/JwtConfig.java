@@ -28,7 +28,7 @@ public class JwtConfig {
 	/** HS256 exige una clave de al menos 256 bits. */
 	static final int LONGITUD_MINIMA_SECRETO = 32;
 
-	static final String ERROR_SECRETO = "app.security.jwt.secret (JWT_SECRET) debe ser base64 de al menos "
+	private static final String ERROR_SECRETO = "app.security.jwt.secret (JWT_SECRET) debe ser base64 de al menos "
 			+ LONGITUD_MINIMA_SECRETO + " bytes aleatorios (generarlo con: openssl rand -base64 32)";
 
 	/**

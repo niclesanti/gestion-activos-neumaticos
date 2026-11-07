@@ -29,10 +29,10 @@ public record ServicioReparacionRequestDTO(
     DomicilioRequestDTO domicilio
 ) {
 
-    public static final int MAX_NOMBRE = 150;
-    public static final int MAX_EMAIL = 254;
+    private static final int MAX_NOMBRE = 150;
+    private static final int MAX_EMAIL = 254;
     // Los espacios de los extremos se recortan al guardar.
-    public static final String PATRON_EMAIL = "^\\s*([^@\\s]+@[^@\\s]+\\.[^@\\s]+)?\\s*$";
-    public static final String PATRON_TELEFONO = "^\\s*(\\+?[0-9(][0-9 ()-]{4,27}[0-9])?\\s*$";
+    private static final String PATRON_EMAIL = "^\\s*([^@\\s]+@[^@\\s]+\\.[^@\\s]+)?\\s*$";
+    private static final String PATRON_TELEFONO = "^\\s*(\\+?[0-9(][0-9 ()-]{4,27}[0-9])?\\s*$";
 
 }

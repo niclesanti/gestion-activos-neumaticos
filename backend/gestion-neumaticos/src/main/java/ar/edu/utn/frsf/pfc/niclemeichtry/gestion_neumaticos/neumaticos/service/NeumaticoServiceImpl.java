@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class NeumaticoServiceImpl implements NeumaticoService {
 
-    static final String MENSAJE_SERIE_DUPLICADA = "Ya existe un neumático con el número de serie %s";
+    private static final String MENSAJE_SERIE_DUPLICADA = "Ya existe un neumático con el número de serie %s";
     static final String MENSAJE_MARCA_INEXISTENTE = "La marca de neumático indicada no existe";
     static final String MENSAJE_PROVEEDOR_INEXISTENTE = "El proveedor indicado no existe";
 
