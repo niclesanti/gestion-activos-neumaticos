@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.TipoEjeUnidadTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.Neumatico;
@@ -50,6 +52,21 @@ class NeumaticoMapperTest {
     @Test
     void toMarcaDTO() {
         assertThat(mapper.toMarcaDTO(marca())).isEqualTo(new MarcaNeumaticoResponseDTO(1L, "Fate"));
+    }
+
+    @Test
+    void toEntityNormalizaElNumeroDeSerie() {
+        assertThat(mapper.toEntity(requestConSerie("  ab-123/x ")).getNumeroSerie()).isEqualTo("AB-123/X");
+    }
+
+    @Test
+    void toEntityUnNumeroDeSerieEnBlancoQuedaNulo() {
+        assertThat(mapper.toEntity(requestConSerie("   ")).getNumeroSerie()).isNull();
+    }
+
+    private static NeumaticoRequestDTO requestConSerie(String numeroSerie) {
+        return new NeumaticoRequestDTO(numeroSerie, EstadoNeumatico.HOMBROS, null, null,
+                TipoEjeUnidadTransporte.DIRECCION, TipoEjeUnidadTransporte.DIRECCION, null, null, 1L, null);
     }
 
     @Test

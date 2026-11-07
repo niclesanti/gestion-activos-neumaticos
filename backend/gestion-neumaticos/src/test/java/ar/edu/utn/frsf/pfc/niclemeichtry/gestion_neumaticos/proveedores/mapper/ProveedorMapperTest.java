@@ -58,6 +58,24 @@ class ProveedorMapperTest {
     }
 
     @Test
+    void toEntityNormalizaLosTextos() {
+        ProveedorNeumaticos proveedor = mapper.toEntity(
+                new ProveedorRequestDTO("  Prov Test  ", "  ABC@Mail.COM ", " 3424 555123 ", null));
+
+        assertThat(proveedor.getNombre()).isEqualTo("Prov Test");
+        assertThat(proveedor.getEmail()).isEqualTo("abc@mail.com");
+        assertThat(proveedor.getTelefono()).isEqualTo("3424 555123");
+    }
+
+    @Test
+    void toEntityLosOpcionalesEnBlancoQuedanNulos() {
+        ProveedorNeumaticos proveedor = mapper.toEntity(new ProveedorRequestDTO("Prov", "  ", "   ", null));
+
+        assertThat(proveedor.getEmail()).isNull();
+        assertThat(proveedor.getTelefono()).isNull();
+    }
+
+    @Test
     void unOrigenNuloDaNulo() {
         assertThat(mapper.toEntity(null)).isNull();
         assertThat(mapper.toResponseDTO(null, null)).isNull();

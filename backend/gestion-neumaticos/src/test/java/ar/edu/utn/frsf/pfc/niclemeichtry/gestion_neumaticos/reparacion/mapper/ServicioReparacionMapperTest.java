@@ -49,6 +49,24 @@ class ServicioReparacionMapperTest {
     }
 
     @Test
+    void toEntityNormalizaLosTextos() {
+        ServicioReparacion servicio = mapper.toEntity(
+                new ServicioReparacionRequestDTO("  Serv Test  ", "  XYZ@Mail.COM ", " 3424 555123 ", null));
+
+        assertThat(servicio.getNombre()).isEqualTo("Serv Test");
+        assertThat(servicio.getEmail()).isEqualTo("xyz@mail.com");
+        assertThat(servicio.getTelefono()).isEqualTo("3424 555123");
+    }
+
+    @Test
+    void toEntityLosOpcionalesEnBlancoQuedanNulos() {
+        ServicioReparacion servicio = mapper.toEntity(new ServicioReparacionRequestDTO("Serv", "  ", "   ", null));
+
+        assertThat(servicio.getEmail()).isNull();
+        assertThat(servicio.getTelefono()).isNull();
+    }
+
+    @Test
     void unOrigenNuloDaNulo() {
         assertThat(mapper.toEntity(null)).isNull();
         assertThat(mapper.toResponseDTO(null, null)).isNull();

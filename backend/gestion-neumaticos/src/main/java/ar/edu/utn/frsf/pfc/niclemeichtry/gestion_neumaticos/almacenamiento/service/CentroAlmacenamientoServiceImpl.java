@@ -35,13 +35,10 @@ public class CentroAlmacenamientoServiceImpl implements CentroAlmacenamientoServ
     @Transactional
     public CentroAlmacenamientoResponseDTO registrarCentroAlmacenamiento(CentroAlmacenamientoRequestDTO request,
             String usuario) {
-        String nombre = request.nombre().trim();
-        log.debug("Registrando centro de almacenamiento: usuario={}, nombre={}", usuario, nombre);
-
+        // El mapper ya recorta el nombre; el stock no viene en el request y la entidad arranca en 0.
         CentroAlmacenamiento centro = centroAlmacenamientoMapper.toEntity(request);
-        centro.setNombre(nombre);
-        // Un centro nuevo arranca sin stock, sin importar lo que traiga el request.
-        centro.setCantidadNeumaticosEnStock(0);
+        log.debug("Registrando centro de almacenamiento: usuario={}, nombre={}", usuario, centro.getNombre());
+
         // Misma transacción: si el alta del centro falla, el domicilio se revierte con ella.
         centro.setDomicilioId(domicilioApi.registrarDomicilio(request.domicilio(), usuario));
 

@@ -1,7 +1,6 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.service;
 
 import java.util.List;
-import java.util.Locale;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -42,7 +41,9 @@ public class ProveedorServiceImpl implements ProveedorService {
     @Override
     @Transactional
     public ProveedorResponseDTO registrarProveedor(ProveedorRequestDTO proveedorRequestDTO, String usuario) {
-        String nombre = proveedorRequestDTO.nombre().trim();
+        // El mapper ya normaliza los textos (recortes, email en minúsculas, opcionales vacíos = null).
+        ProveedorNeumaticos proveedor = proveedorMapper.toEntity(proveedorRequestDTO);
+        String nombre = proveedor.getNombre();
         log.debug("Registrando proveedor: usuario={}, nombre={}, conDomicilio={}", usuario, nombre,
                 proveedorRequestDTO.domicilio() != null);
         if (proveedorRepository.existsByNombreIgnoreCase(nombre)) {
@@ -50,10 +51,6 @@ public class ProveedorServiceImpl implements ProveedorService {
             throw new EntidadDuplicadaException(MENSAJE_NOMBRE_DUPLICADO.formatted(nombre));
         }
 
-        ProveedorNeumaticos proveedor = proveedorMapper.toEntity(proveedorRequestDTO);
-        proveedor.setNombre(nombre);
-        proveedor.setEmail(normalizarEmail(proveedorRequestDTO.email()));
-        proveedor.setTelefono(opcional(proveedorRequestDTO.telefono()));
         // Misma transacción: si el alta del proveedor falla, el domicilio se revierte con ella.
         if (proveedorRequestDTO.domicilio() != null) {
             proveedor.setDomicilioId(domicilioApi.registrarDomicilio(proveedorRequestDTO.domicilio(), usuario));
@@ -83,28 +80,6 @@ public class ProveedorServiceImpl implements ProveedorService {
                 .toList();
         log.debug("Proveedores listados: {}", proveedores.size());
         return proveedores;
-    }
-
-    /*
-    * -----------------
-    * MÉTODOS PRIVADOS
-    * -----------------
-    * Implementación de métodos privados para la lógica interna del servicio,
-    * código auxiliar, validaciones, código repetitivo.
-    */
-
-    /** Recorta los extremos; un texto opcional vacío equivale a no tenerlo. */
-    private static String opcional(String texto) {
-        if (texto == null || texto.isBlank()) {
-            return null;
-        }
-        return texto.trim();
-    }
-
-    /** Recorta y pasa a minúsculas; vacío equivale a no tenerlo. */
-    private static String normalizarEmail(String email) {
-        String recortado = opcional(email);
-        return recortado == null ? null : recortado.toLowerCase(Locale.ROOT);
     }
 
     @Override

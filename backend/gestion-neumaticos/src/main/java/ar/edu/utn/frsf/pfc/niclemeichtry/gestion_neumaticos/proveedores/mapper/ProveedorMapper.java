@@ -5,19 +5,23 @@ import org.mapstruct.Mapping;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.MapstructConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.NormalizacionTexto;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.api.ProveedorResumenDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.dto.ProveedorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.proveedores.domain.entity.ProveedorNeumaticos;
 
-@Mapper(config = MapstructConfig.class)
+@Mapper(config = MapstructConfig.class, uses = NormalizacionTexto.class)
 public interface ProveedorMapper {
 
-    /** Copia los datos del alta; los ids los genera la base/Hibernate y el domicilio lo registra common. */
+    /** Copia los datos del alta, normalizados; los ids los genera la base/Hibernate y el domicilio lo registra common. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "domicilioId", ignore = true)
+    @Mapping(target = "nombre", qualifiedByName = "recortar")
+    @Mapping(target = "email", qualifiedByName = "email")
+    @Mapping(target = "telefono", qualifiedByName = "opcional")
     ProveedorNeumaticos toEntity(ProveedorRequestDTO proveedorRequestDTO);
 
     /** El domicilio llega aparte, desde la fachada de common. */

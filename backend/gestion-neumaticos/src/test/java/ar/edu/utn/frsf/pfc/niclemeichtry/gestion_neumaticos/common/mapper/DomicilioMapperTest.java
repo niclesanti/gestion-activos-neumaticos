@@ -47,6 +47,25 @@ class DomicilioMapperTest {
     }
 
     @Test
+    void toEntityNormalizaLosTextos() {
+        Domicilio domicilio = mapper.toEntity(
+                new DomicilioRequestDTO("  San Martín  ", " 123 ", " 2 ", " B ", 1L, "Santa Fe", null));
+
+        assertThat(domicilio.getCalle()).isEqualTo("San Martín");
+        assertThat(domicilio.getAltura()).isEqualTo("123");
+        assertThat(domicilio.getPiso()).isEqualTo("2");
+        assertThat(domicilio.getDepartamento()).isEqualTo("B");
+    }
+
+    @Test
+    void toEntityPisoYDepartamentoEnBlancoQuedanNulos() {
+        Domicilio domicilio = mapper.toEntity(new DomicilioRequestDTO("Calle", "1", "  ", "   ", 1L, "Santa Fe", null));
+
+        assertThat(domicilio.getPiso()).isNull();
+        assertThat(domicilio.getDepartamento()).isNull();
+    }
+
+    @Test
     void unOrigenNuloDaNulo() {
         assertThat(mapper.toEntity(null)).isNull();
         assertThat(mapper.toResponseDTO(null)).isNull();

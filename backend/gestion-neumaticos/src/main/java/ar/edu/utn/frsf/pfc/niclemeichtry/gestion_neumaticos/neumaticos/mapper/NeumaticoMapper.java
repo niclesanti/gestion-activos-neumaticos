@@ -4,19 +4,22 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.MapstructConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.NormalizacionTexto;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.Neumatico;
 
-@Mapper(config = MapstructConfig.class)
+@Mapper(config = MapstructConfig.class, uses = NormalizacionTexto.class)
 public interface NeumaticoMapper {
 
     /**
-     * Copia los datos del alta. El estado operativo inicial y la marca los
+     * Copia los datos del alta; el número de serie se normaliza (recortado y en
+     * mayúsculas, vacío = sin serie). El estado operativo inicial y la marca los
      * asigna el servicio; los ids los genera la base/Hibernate.
      */
+    @Mapping(target = "numeroSerie", qualifiedByName = "mayusculas")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "enEspera", ignore = true)
