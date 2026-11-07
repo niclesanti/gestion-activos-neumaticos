@@ -8,15 +8,20 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domai
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.DomicilioResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.MapstructConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.NormalizacionTexto;
 
-@Mapper(config = MapstructConfig.class)
+@Mapper(config = MapstructConfig.class, uses = NormalizacionTexto.class)
 public interface CentroAlmacenamientoMapper {
 
-    /** Copia los datos del alta; los ids los genera la base/Hibernate y el domicilio lo registra common. */
+    /**
+     * Copia los datos del alta, normalizados; los ids los genera la base/Hibernate y el domicilio lo registra
+     * common. El stock no viene en el request: arranca en el valor por defecto de la entidad (0).
+     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "publicId", ignore = true)
     @Mapping(target = "domicilioId", ignore = true)
     @Mapping(target = "cantidadNeumaticosEnStock", ignore = true)
+    @Mapping(target = "nombre", qualifiedByName = "recortar")
     CentroAlmacenamiento toEntity(CentroAlmacenamientoRequestDTO centroAlmacenamientoRequestDTO);
 
     /** El domicilio llega aparte, desde la fachada de common. */

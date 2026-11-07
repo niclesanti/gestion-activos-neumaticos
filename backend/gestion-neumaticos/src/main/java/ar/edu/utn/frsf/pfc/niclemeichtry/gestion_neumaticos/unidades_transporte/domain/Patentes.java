@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 public final class Patentes {
 
     /** Formato anterior (ABC123) o Mercosur (AB123CD), ya normalizada. */
-    public static final String PATRON = "^([A-Z]{3}[0-9]{3}|[A-Z]{2}[0-9]{3}[A-Z]{2})$";
+    private static final String PATRON = "^([A-Z]{3}[0-9]{3}|[A-Z]{2}[0-9]{3}[A-Z]{2})$";
 
     private static final Pattern FORMATO = Pattern.compile(PATRON);
     private static final Pattern SEPARADORES = Pattern.compile("[\\s-]");

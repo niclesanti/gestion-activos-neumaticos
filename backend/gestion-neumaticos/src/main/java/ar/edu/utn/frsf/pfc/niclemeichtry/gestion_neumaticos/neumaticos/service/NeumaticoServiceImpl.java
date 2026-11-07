@@ -2,7 +2,6 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -41,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class NeumaticoServiceImpl implements NeumaticoService {
 
-    static final String MENSAJE_SERIE_DUPLICADA = "Ya existe un neumático con el número de serie %s";
+    private static final String MENSAJE_SERIE_DUPLICADA = "Ya existe un neumático con el número de serie %s";
     static final String MENSAJE_MARCA_INEXISTENTE = "La marca de neumático indicada no existe";
     static final String MENSAJE_PROVEEDOR_INEXISTENTE = "El proveedor indicado no existe";
 
@@ -55,7 +54,9 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     @Override
     @Transactional
     public NeumaticoResponseDTO registrarNeumatico(NeumaticoRequestDTO neumaticoRequestDTO, String usuario) {
-        String numeroSerie = normalizarNumeroSerie(neumaticoRequestDTO.numeroSerie());
+        // El mapper ya normaliza el número de serie (recortado y en mayúsculas; vacío = null).
+        Neumatico neumatico = neumaticoMapper.toEntity(neumaticoRequestDTO);
+        String numeroSerie = neumatico.getNumeroSerie();
         log.debug("Registrando neumático: usuario={}, estado={}, numeroSerie={}, marcaId={}, proveedorId={}", usuario,
                 neumaticoRequestDTO.estadoActual(), numeroSerie, neumaticoRequestDTO.marcaId(),
                 neumaticoRequestDTO.proveedorId());
@@ -74,8 +75,6 @@ public class NeumaticoServiceImpl implements NeumaticoService {
                 ? buscarProveedor(neumaticoRequestDTO.proveedorId())
                 : null;
 
-        Neumatico neumatico = neumaticoMapper.toEntity(neumaticoRequestDTO);
-        neumatico.setNumeroSerie(numeroSerie);
         neumatico.setMarca(marca);
         neumatico.setEnEspera(true);
         neumatico.setSituacionOperativaVigente(SituacionOperativa.EN_ESPERA);
@@ -114,14 +113,6 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     * Implementación de métodos privados para la lógica interna del servicio,
     * código auxiliar, validaciones, código repetitivo.
     */
-
-    /** Recorta y pasa a mayúsculas; un número de serie vacío equivale a no tenerlo. */
-    private static String normalizarNumeroSerie(String numeroSerie) {
-        if (numeroSerie == null || numeroSerie.isBlank()) {
-            return null;
-        }
-        return numeroSerie.trim().toUpperCase(Locale.ROOT);
-    }
 
     /** El proveedor es opcional: null si no se indicó, error si se indicó uno inexistente. */
     private ProveedorResumenDTO buscarProveedor(UUID proveedorId) {

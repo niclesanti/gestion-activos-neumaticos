@@ -8,9 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -63,7 +61,7 @@ class CentroAlmacenamientoServiceImplTest {
     @Mock private DomicilioApi domicilioApi;
 
     /** Mapper real (generado por MapStruct): el servicio depende de cómo copia los datos. */
-    private final CentroAlmacenamientoMapper centroAlmacenamientoMapper = spy(new CentroAlmacenamientoMapperImpl());
+    private final CentroAlmacenamientoMapper centroAlmacenamientoMapper = new CentroAlmacenamientoMapperImpl();
 
     private CentroAlmacenamientoServiceImpl servicio;
 
@@ -107,21 +105,6 @@ class CentroAlmacenamientoServiceImplTest {
         assertThat(guardado.getCantidadNeumaticosEnStock()).isZero();
         assertThat(respuesta).isEqualTo(new CentroAlmacenamientoResponseDTO(guardado.getPublicId(), NOMBRE, 0,
                 domicilio));
-    }
-
-    @Test
-    @DisplayName("el stock queda en 0 aunque el centro mapeado traiga otra cantidad")
-    void stockSiempreEnCero() {
-        CentroAlmacenamientoRequestDTO request = centroAlmacenamientoRequest();
-        doReturn(CentroAlmacenamiento.builder().nombre(NOMBRE).cantidadNeumaticosEnStock(25).build())
-                .when(centroAlmacenamientoMapper).toEntity(request);
-        when(domicilioApi.registrarDomicilio(request.domicilio(), USUARIO)).thenReturn(DOMICILIO_ID);
-        guardarAsignandoIds();
-
-        CentroAlmacenamientoResponseDTO respuesta = servicio.registrarCentroAlmacenamiento(request, USUARIO);
-
-        assertThat(centroGuardado().getCantidadNeumaticosEnStock()).isZero();
-        assertThat(respuesta.cantidadNeumaticosEnStock()).isZero();
     }
 
     @Test

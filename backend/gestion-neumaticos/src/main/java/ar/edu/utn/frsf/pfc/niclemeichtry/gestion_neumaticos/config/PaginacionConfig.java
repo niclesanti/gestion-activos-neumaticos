@@ -18,10 +18,9 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerial
 @EnableSpringDataWebSupport(pageSerializationMode = PageSerializationMode.VIA_DTO)
 public class PaginacionConfig {
 
-    static final int TAMANIO_MAXIMO_PAGINA = 100;
-
     @Bean
     PageableHandlerMethodArgumentResolverCustomizer tamanioMaximoDePagina() {
-        return resolver -> resolver.setMaxPageSize(TAMANIO_MAXIMO_PAGINA);
+        final int tamanioMaximoPagina = 100;
+        return resolver -> resolver.setMaxPageSize(tamanioMaximoPagina);
     }
 }

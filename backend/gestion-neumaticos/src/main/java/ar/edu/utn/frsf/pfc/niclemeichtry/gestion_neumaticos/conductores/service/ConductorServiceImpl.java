@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ConductorServiceImpl implements ConductorService {
 
-    static final String MENSAJE_DNI_DUPLICADO = "Ya existe un conductor con el DNI %s";
+    private static final String MENSAJE_DNI_DUPLICADO = "Ya existe un conductor con el DNI %s";
 
     private final EnsambladorAuditoria ensamblador;
     private final ConductorRepository conductorRepository;
@@ -35,17 +35,14 @@ public class ConductorServiceImpl implements ConductorService {
     @Override
     @Transactional
     public ConductorResponseDTO registrarConductor(ConductorRequestDTO conductorRequestDTO, String usuario) {
-        String dni = normalizarDni(conductorRequestDTO.dni());
+        // El mapper ya normaliza los textos (recortes; un DNI vacío = null).
+        Conductor conductor = conductorMapper.toEntity(conductorRequestDTO);
+        String dni = conductor.getDni();
         log.debug("Registrando conductor: usuario={}, dni={}", usuario, dni);
         if (dni != null && conductorRepository.existsByDni(dni)) {
             log.warn("Alta rechazada: DNI {} duplicado (usuario {})", dni, usuario);
             throw new EntidadDuplicadaException(MENSAJE_DNI_DUPLICADO.formatted(dni));
         }
-
-        Conductor conductor = conductorMapper.toEntity(conductorRequestDTO);
-        conductor.setDni(dni);
-        conductor.setNombre(conductorRequestDTO.nombre().trim());
-        conductor.setApellido(conductorRequestDTO.apellido().trim());
 
         try {
             conductor = conductorRepository.saveAndFlush(conductor);
@@ -57,22 +54,6 @@ public class ConductorServiceImpl implements ConductorService {
         }
         log.info("Conductor {} registrado por {}", conductor.getPublicId(), usuario);
         return conductorMapper.toResponseDTO(conductor);
-    }
-
-    /*
-    * -----------------
-    * MÉTODOS PRIVADOS
-    * -----------------
-    * Implementación de métodos privados para la lógica interna del servicio,
-    * código auxiliar, validaciones, código repetitivo.
-    */
-
-    /** Recorta los extremos; un DNI vacío equivale a no tenerlo. */
-    private static String normalizarDni(String dni) {
-        if (dni == null || dni.isBlank()) {
-            return null;
-        }
-        return dni.trim();
     }
 
     @Override

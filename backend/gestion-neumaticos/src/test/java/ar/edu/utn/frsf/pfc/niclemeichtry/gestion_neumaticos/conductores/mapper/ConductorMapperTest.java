@@ -37,6 +37,20 @@ class ConductorMapperTest {
     }
 
     @Test
+    void toEntityNormalizaLosTextos() {
+        Conductor conductor = mapper.toEntity(new ConductorRequestDTO(" 12345678 ", "  Juan ", " Pérez  "));
+
+        assertThat(conductor.getDni()).isEqualTo("12345678");
+        assertThat(conductor.getNombre()).isEqualTo("Juan");
+        assertThat(conductor.getApellido()).isEqualTo("Pérez");
+    }
+
+    @Test
+    void toEntityUnDniEnBlancoQuedaNulo() {
+        assertThat(mapper.toEntity(new ConductorRequestDTO("   ", "Juan", "Pérez")).getDni()).isNull();
+    }
+
+    @Test
     void unOrigenNuloDaNulo() {
         assertThat(mapper.toEntity(null)).isNull();
         assertThat(mapper.toResponseDTO(null)).isNull();

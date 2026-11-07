@@ -47,6 +47,12 @@ class CentroAlmacenamientoMapperTest {
     }
 
     @Test
+    void toEntityRecortaElNombre() {
+        assertThat(mapper.toEntity(new CentroAlmacenamientoRequestDTO("  Depósito Norte ", null)).getNombre())
+                .isEqualTo("Depósito Norte");
+    }
+
+    @Test
     void unOrigenNuloDaNulo() {
         assertThat(mapper.toEntity(null)).isNull();
         assertThat(mapper.toResponseDTO(null, null)).isNull();

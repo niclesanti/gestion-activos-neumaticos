@@ -23,8 +23,8 @@ public record ConductorRequestDTO(
 ) {
 
     // Los espacios de los extremos se recortan al guardar.
-    public static final String PATRON_DNI = "^\\s*([0-9]{7,8})?\\s*$";
-    public static final int MAX_NOMBRE = 100;
-    public static final int MAX_APELLIDO = 100;
+    private static final String PATRON_DNI = "^\\s*([0-9]{7,8})?\\s*$";
+    private static final int MAX_NOMBRE = 100;
+    private static final int MAX_APELLIDO = 100;
 
 }

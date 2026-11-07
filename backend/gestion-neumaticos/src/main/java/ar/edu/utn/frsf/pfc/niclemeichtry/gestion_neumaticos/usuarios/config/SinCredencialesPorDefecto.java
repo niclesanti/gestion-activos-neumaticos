@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class SinCredencialesPorDefecto implements ApplicationRunner {
 
     /** Usuarios y contraseñas de {@code db/seed/dev/R__usuarios_dev.sql}. */
-    static final Map<String, String> CREDENCIALES_SEED = Map.of(
+    private static final Map<String, String> CREDENCIALES_SEED = Map.of(
             "victoria.administrador", "Admin.1234",
             "victoria.editor", "Editor.1234",
             "victoria.lector", "Lector.1234",

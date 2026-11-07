@@ -41,7 +41,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSec
 @EnableMethodSecurity
 public class SecurityConfig {
 
-	public static final String LOGIN_PATH = "/api/v1/auth/login";
+	private static final String LOGIN_PATH = "/api/v1/auth/login";
 
 	private static final RequestMatcher LOGIN = PathPatternRequestMatcher.pathPattern(HttpMethod.POST, LOGIN_PATH);
 
@@ -51,7 +51,7 @@ public class SecurityConfig {
 	 * La API solo devuelve JSON: no carga recursos ni se puede embeber. Swagger UI
 	 * (deshabilitado en prod) necesita scripts y estilos propios, así que queda afuera.
 	 */
-	static final String CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+	private static final String CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
 	/**
 	 * ADMINISTRADOR &gt; EDITOR &gt; LECTOR: cada nivel incluye los permisos del

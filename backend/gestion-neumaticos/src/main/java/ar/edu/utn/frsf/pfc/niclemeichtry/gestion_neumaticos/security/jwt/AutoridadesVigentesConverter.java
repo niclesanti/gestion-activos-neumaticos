@@ -22,7 +22,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.NivelAcceso
 public class AutoridadesVigentesConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
 	/** Lista blanca: un valor desconocido en la base nunca llega a ser authority. */
-	static final Set<String> NIVELES = Set.of("ROLE_ADMINISTRADOR", "ROLE_EDITOR", "ROLE_LECTOR");
+	private static final Set<String> NIVELES = Set.of("ROLE_ADMINISTRADOR", "ROLE_EDITOR", "ROLE_LECTOR");
 
 	private final NivelAccesoVigente nivelAccesoVigente;
 
