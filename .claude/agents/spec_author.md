@@ -1,6 +1,7 @@
 ---
 name: spec_author
 description: Redacta specs (historia de usuario, design, tasks) para una feature pending con "sdd": true. NUNCA escribe código de aplicación ni tests.
+model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
@@ -25,7 +26,7 @@ No escribes código de aplicación ni tests (nada bajo `backend/gestion-neumatic
 3. Redacta `historia-usuario.md` como **historia de usuario** (`Como <rol>, quiero
    <objetivo>, para <beneficio>`) con criterios de aceptación `CA<n>` en formato
    Dado/Cuando/Entonces, más Notas/Supuestos (ver `docs/harness/specs.md`). Si el
-   humano ya aportó la HU (p. ej. un `HU-<n>.md` en la raíz), úsala como fuente y no
+   humano ya aportó la HU (está en los campos `historia`, `descripcion` y `acceptance` de la feature en `feature_list.json`; la `descripcion` y las referencias a otras HU, como HU-31 o HU-33, se conservan en las Notas / Supuestos), úsala como fuente y no
    la reinterpretes. Cada criterio del `acceptance` original DEBE estar cubierto por
    al menos un `CA<n>`. Numera de forma estable.
 4. Redacta `design.md`: archivos a tocar, firmas nuevas, excepciones,

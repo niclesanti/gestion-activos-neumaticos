@@ -44,6 +44,11 @@
 - [ ] `npm run lint`, `npm run typecheck`, `npm run build` y
       `npm audit --omit=dev --audit-level=high` pasan.
 
+## C4b — Prueba en el stack real
+
+- [ ] Toda feature `done` con `"sdd": true` tiene `progress/smoke_<name>.md`: `curl` si fue solo
+      backend, Claude in Chrome si tocó el frontend.
+
 ## C5 — La sesión se cerró bien
 
 - [ ] No hay archivos sin trackear sospechosos (`*.tmp`, `target/`, `dist/`,

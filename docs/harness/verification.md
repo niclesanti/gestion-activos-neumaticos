@@ -38,18 +38,60 @@ El frontend **no tiene runner de tests**: estas cuatro verificaciones son el
 mínimo, y se completan con una comprobación manual concreta del comportamiento
 (que el implementer documenta). No agregues Vitest/Jest dentro de otra feature.
 
-### Nivel 3 — Smoke test manual (opcional pero recomendado)
+### Nivel 3 — Prueba en el stack real (obligatorio; el método depende de qué se tocó)
 
-Antes de cerrar la sesión, un flujo end-to-end con el stack local:
+Los tests y el CI no alcanzan: antes de pedir el review hay que ver la funcionalidad
+andando contra el stack real. El método depende del alcance de la feature:
+
+| Alcance de la feature | Cómo se prueba |
+|-----------------------|----------------|
+| **Solo backend**      | API con `curl` (o similar) contra el backend levantado |
+| **Solo frontend**     | Navegador con la extensión **Claude in Chrome** |
+| **Frontend + backend**| Navegador con Claude in Chrome (recorre el flujo completo, que ejercita la API) y, además, `curl` para los casos que la UI no permite (403 por rol, 400, 409) |
+
+**Levantar el stack** (desde la raíz; reconstruye las imágenes con tu código):
 
 ```bash
-docker compose up -d postgres migraciones      # base + migraciones (seed dev)
-# backend: perfil dev con las variables de .env exportadas
-# frontend: npm run dev  → http://localhost:5173 (o el puerto de Vite)
+docker compose up -d --build     # postgres + migraciones (con seed dev) + backend + frontend
+# API: http://localhost:8080   Frontend: http://localhost:3000   Swagger: /swagger-ui.html
+docker compose logs -f backend   # si algo falla
 ```
 
-Ingresar con un usuario de seed (`victoria.editor` / `Editor.1234`) y recorrer la
-funcionalidad nueva. Dejá el entorno como estaba (`docker compose down` si lo levantaste).
+Requiere el `.env` de la raíz (ver `.env.example`) con `SPRING_PROFILES_ACTIVE=dev`.
+Si ya está levantado, `--build` solo recrea lo que cambió. Al terminar,
+`docker compose down` (sin `-v`, para no perder el volumen del usuario).
+
+**Backend con curl.** Usuarios de seed: `victoria.administrador|editor|lector`
+con `Admin.1234` / `Editor.1234` / `Lector.1234` (el campo del login es `identifier`):
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login   -H "Content-Type: application/json"   -d '{"identifier":"victoria.editor","password":"Editor.1234"}' | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).token")
+
+curl -i -X GET  http://localhost:8080/api/v1/<recurso> -H "Authorization: Bearer $TOKEN"
+curl -i -X POST http://localhost:8080/api/v1/<recurso> -H "Authorization: Bearer $TOKEN"   -H "Content-Type: application/json" -d '{...}'
+```
+
+Probá como mínimo, por cada endpoint nuevo o modificado: el camino feliz (status y
+`Location` correctos), un error de validación o de negocio (400/404/409), **sin token (401)**
+y **con un rol insuficiente (403)**. Nunca imprimas ni guardes tokens en `progress/`.
+
+**Frontend con Claude in Chrome.** Cargá las herramientas `mcp__claude-in-chrome__*`
+(skill `claude-in-chrome`), abrí una pestaña nueva en `http://localhost:3000`, iniciá sesión
+con el usuario de seed del rol que corresponda y recorré el flujo de cada `CA<n>` de UI:
+captura de pantalla del resultado, y revisá la consola (`read_console_messages`) y las
+requests (`read_network_requests`) buscando errores. Probá también el rol que **no** debe
+ver la acción. Esta prueba la ejecuta el `leader` (sesión principal, que tiene las herramientas
+del navegador) cuando el implementer termina y **antes** de lanzar al reviewer; el
+implementer deja en `progress/impl_<name>.md` la lista de pasos a recorrer. La prueba con
+`curl` de una feature solo-backend la hace el propio implementer.
+
+**Si no se puede probar** (Docker caído, extensión no conectada, falta el `.env`): no lo
+saltees en silencio. Anotá en `progress/impl_<name>.md` qué no se pudo probar y por qué, y
+avisale al humano; él decide si se cierra igual.
+
+El resultado (qué se probó, qué respondió, qué se vio) se escribe en
+`progress/smoke_<name>.md`: el reviewer lo exige antes de aprobar y el `CA<n>` cubierto por esta
+prueba se cita en la trazabilidad.
 
 ### Nivel 4 — Trazabilidad de criterios de aceptación (obligatorio para features con `"sdd": true`)
 

@@ -1,6 +1,7 @@
 ---
 name: implementer
 description: Trabajador. Implementa UNA feature según su spec aprobado. Escribe código, escribe tests y se autoverifica.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
@@ -31,6 +32,11 @@ Eres un implementador. Tu trabajo es ejecutar **una sola** feature de
    b. Si la task incluye un test, escríbelo (backend: JUnit con `TestDataFactory`; el frontend no tiene runner de tests).
    c. Marca `[x] T<n>` en `tasks.md`.
 5. **Verifica** ejecutando `./init.sh` (backend `./mvnw verify` + frontend lint/typecheck/build/audit). Si falla → vuelve al paso 4. Mientras iterás podés usar `./mvnw test -Dtest=Clase` o `npm run typecheck`, pero el cierre exige `./init.sh` completo.
+5b. **Prueba en el stack real** (`docs/harness/verification.md`, Nivel 3). Si la feature es
+   solo backend: levanta el stack (`docker compose up -d --build`), prueba cada endpoint con
+   `curl` (feliz, error, 401, 403) y escribe el resultado en `progress/smoke_<name>.md`. Si toca
+   el frontend: deja en `progress/impl_<name>.md` los pasos que el leader debe recorrer en el
+   navegador. Nunca escribas tokens en los archivos.
 6. **Trazabilidad**: confirma que cada `CA<n>` está cubierto por al menos
    un test concreto. Anótalo en `progress/impl_<name>.md`
    (mapa `CA<n> → test`).

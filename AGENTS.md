@@ -71,7 +71,9 @@ pending → [spec_author] → spec_ready → ⏸ HUMANO → in_progress → [imp
 3. **Pausa.** El humano lee el spec en `specs/<name>/` y aprueba (o pide cambios).
 4. Una vez aprobado, el leader cambia el status a `in_progress` y lanza `implementer`.
 5. El implementer ejecuta `tasks.md` una a una, marcándolas `[x]`.
-6. El reviewer verifica trazabilidad `CA<n>` ↔ test y tasks completas;
+5b. Prueba en el stack real: `curl` si fue solo backend; Claude in Chrome (la hace el leader) si
+   tocó el frontend. Resultado en `progress/smoke_<name>.md`.
+6. El reviewer verifica trazabilidad `CA<n>` ↔ test, tasks completas y el smoke test;
    aprueba o rechaza.
 7. Si aprueba, el implementer marca `done` y mueve el resumen a
    `progress/history.md`.

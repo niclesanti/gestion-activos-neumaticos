@@ -60,7 +60,8 @@ con el mismo formato que usa el equipo (ver `HU-43.md` en la raíz como modelo):
 
 Reglas duras:
 
-- Si el humano ya escribió la HU, el `spec_author` la **transcribe tal cual** y solo
+- La fuente de las historias es `feature_list.json` (`historia`, `descripcion` y `acceptance`, con el
+  texto completo y literal). Si el humano ya escribió la HU, el `spec_author` la **transcribe tal cual** y solo
   agrega la numeración `CA<n>`; no cambia su intención ni agrega criterios inventados.
 - Cada criterio de aceptación tiene un id estable: `CA1`, `CA2`, ...
 - Cada `CA<n>` tiene que ser verificable por al menos un test concreto.
@@ -172,5 +173,7 @@ El `implementer` documenta el mapa en `progress/impl_<name>.md`:
 
 ## Cuándo NO aplica SDD
 
-Las features con `"sdd": false` o sin el campo `sdd` (las ya implementadas antes
-del arnés, ids 1–7) NO tienen spec. SDD solo se aplica hacia adelante.
+En este proyecto **todas** las historias del sprint llevan `"sdd": true`. Solo quedaría sin spec
+una tarea técnica menor que el humano agregue explícitamente con `"sdd": false`. Las funcionalidades
+implementadas antes del arnés (login, altas, auditoría) no figuran en `feature_list.json`; su estado
+está en la sección "Current state" de `CLAUDE.md`.
