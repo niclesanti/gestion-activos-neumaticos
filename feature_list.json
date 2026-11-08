@@ -1,0 +1,111 @@
+{
+  "project": "gestion-activos-neumaticos",
+  "description": "Aplicación web para gestionar el ciclo de vida de los neumáticos de una empresa de logística (backend Spring Boot 4 / Java 21 + frontend React 19 / TypeScript). Proyecto final UTN FRSF.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "require_approved_spec_to_implement": true,
+    "valid_status": [
+      "pending",
+      "spec_ready",
+      "in_progress",
+      "done",
+      "blocked"
+    ],
+    "sdd_required_when": "feature has \"sdd\": true",
+    "source_of_truth": "Cada feature es una historia de usuario del sprint. Este archivo es la fuente: `historia`, `descripcion` y `acceptance` contienen el texto completo y literal de la historia."
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "buscar_unidades_transporte_por_patente",
+      "title": "HU-27 - Buscar unidades de transporte por patente",
+      "hu": "HU-27",
+      "historia": "Como usuario del sistema (cualquier nivel de acceso), quiero buscar unidades tractoras y semirremolques ingresando total o parcialmente su patente, para localizar rápidamente una unidad de transporte específica sin recorrer el listado completo.",
+      "acceptance": [
+        "Dado que un usuario ingresa una cadena parcial de caracteres en el campo de búsqueda \"patente\", entonces el sistema debe retornar todas las unidades de transporte activas cuya patente contenga dicha cadena, sin distinguir mayúsculas de minúsculas.",
+        "Dado que el campo de búsqueda se deja vacío, cuando se ejecuta la búsqueda, entonces el sistema debe retornar el listado completo de unidades de transporte activas.",
+        "Dado que ninguna unidad coincide con el criterio ingresado, entonces el sistema debe informar que no se encontraron resultados.",
+        "La lista de resultados debe soportar paginación."
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "name": "buscar_neumaticos",
+      "title": "HU-28 - Buscar neumáticos por número de serie o atributos técnicos",
+      "hu": "HU-28",
+      "historia": "Como usuario del sistema (cualquier nivel de acceso), quiero buscar neumáticos por su número de serie o por atributos técnicos secundarios (marca, estado), de forma combinada y con campos opcionales, para localizar rápidamente un neumático específico o un conjunto de neumáticos que cumplan ciertas características.",
+      "acceptance": [
+        "Dado que un usuario ingresa una coincidencia parcial del número de serie, entonces el sistema debe retornar todos los neumáticos activos cuyo número de serie contenga dicha cadena.",
+        "Dado que un usuario combina el filtro de número de serie con otros atributos técnicos opcionales (por ejemplo, marca y estado), cuando ejecuta la búsqueda, entonces el sistema debe retornar únicamente los neumáticos que cumplan simultáneamente con todos los criterios indicados.",
+        "Dado que un usuario activa la casilla \"Solo en espera\", cuando ejecuta la búsqueda, entonces el sistema debe retornar únicamente los neumáticos activos que están en el buffer de espera, pudiendo combinarse con los demás filtros (número de serie, marca, estado técnico).",
+        "Dado que un usuario no completa ninguno de los campos de búsqueda, cuando ejecuta la búsqueda, entonces el sistema debe retornar el listado completo de neumáticos activos.",
+        "La lista de resultados debe soportar paginación."
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "name": "ficha_unidad_transporte",
+      "title": "HU-10 - Consultar la ficha detalle de una unidad de transporte",
+      "hu": "HU-10",
+      "historia": "Como usuario del sistema (cualquier nivel de acceso), quiero visualizar la ficha detalle de una unidad de transporte, incluyendo una representación gráfica de su chasis y los neumáticos actualmente montados en cada posición, para conocer de un vistazo el estado físico completo del vehículo.",
+      "descripcion": "Esta historia cubre solo la visualización; la asignación de neumáticos se detalla en HU-31.",
+      "acceptance": [
+        "Dado que un usuario selecciona una unidad de transporte del listado, cuando accede a su ficha detalle, entonces el sistema debe mostrar una representación gráfica esquemática del chasis con sus posiciones de eje (dirección, tracción, arrastre, auxilio), indicando en cada una el neumático actualmente montado (o su ausencia).",
+        "Dado que un usuario hace clic o selecciona una posición ocupada dentro de la representación gráfica, entonces el sistema debe mostrar los datos principales del neumático montado en dicha posición (número de serie, marca, estado, kilometraje)."
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "name": "ficha_neumatico",
+      "title": "HU-14 - Consultar la ficha detalle de un neumático",
+      "hu": "HU-14",
+      "historia": "Como usuario del sistema (cualquier nivel de acceso), quiero visualizar la ficha detalle de un neumático con sus datos técnicos, estado actual y ubicación operativa vigente, para tener una vista consolidada de su situación sin recurrir a distintas pantallas.",
+      "descripcion": "Actúa como pantalla principal de acceso al neumático, desde la cual se navega hacia su historial de trazabilidad (HU-33) y su ubicación operativa (HU-34). Debe consolidar: número de serie, marca, estado técnico actual, kilometraje, tipo de eje de origen, cantidad de recapados, comentarios y situación operativa vigente (en stock, montado en unidad/posición, en reparación, en espera, o de baja).",
+      "acceptance": [
+        "Dado que un usuario selecciona un neumático desde un listado o buscador, cuando accede a su ficha detalle, entonces el sistema debe mostrar sus datos técnicos completos junto con su situación operativa actual.",
+        "Dado que un neumático se encuentra \"en espera\", cuando un usuario visualiza su ficha, entonces el sistema debe indicarlo explícitamente, sin mostrar unidad, centro o servicio asociado.",
+        "Dado que un usuario accede a la ficha de un neumático, entonces debe poder navegar desde allí hacia su historial de trazabilidad (HU-33) y, si corresponde, hacia el detalle de su ubicación."
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "name": "asignar_neumatico_a_posicion",
+      "title": "HU-31 - Asignar un neumático a una posición de una unidad de transporte",
+      "hu": "HU-31",
+      "historia": "Como Editor o Administrador, quiero asignar un neumático disponible en stock a una posición específica (slot) de una unidad de transporte, interactuando directamente mediante un clic sobre la representación gráfica del vehículo, para agilizar la operación de montaje y reducir el error humano de transcripción manual.",
+      "acceptance": [
+        "Dado que un Editor o Administrador visualiza la ficha detalle de una unidad de transporte con al menos una posición libre, cuando hace clic sobre dicha posición, entonces el sistema debe desplegar un buscador de neumáticos disponibles para asignar, incluyendo tanto los que se encuentran en stock de cualquier centro de almacenamiento como los que se encuentran en el buffer de “en espera”. Además de seleccionar el neumático, se puede seleccionar opcionalmente el conductor de esa unidad de transporte para asignarlo al evento.",
+        "Dado que se selecciona un neumático disponible y confirma la asignación a la posición elegida, cuando la operación se ejecuta, entonces el sistema debe montar el neumático en dicha posición, retirarlo del stock del centro de almacenamiento en el que se encontraba, actualizar la representación gráfica del vehículo y registrar un nuevo evento de asignación en el historial del neumático (indicando unidad, posición, conductor asociado si corresponde, fecha y usuario responsable).",
+        "Dado que se intenta asignar a una posición que ya posee un neumático montado, entonces el sistema debe lanzar una advertencia, que de ser aceptada se produce la acción de desasignar el neumático montado y finalmente se coloca el neumático en la posición elegida.",
+        "Dado que se intenta asignar un neumático que no se encuentra actualmente en stock ni en espera (que ya está montado en otra unidad, en reparación o dado de baja), entonces el sistema debe impedir la operación.",
+        "Dado que un usuario con nivel de acceso Lector intenta acceder a esta funcionalidad, entonces el sistema debe denegar el acceso a dicha pantalla o funcionalidad."
+      ],
+      "sdd": true,
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "name": "desasignar_neumatico_de_posicion",
+      "title": "HU-32 - Desasignar un neumático de una posición de una unidad de transporte",
+      "hu": "HU-32",
+      "historia": "Como Editor o Administrador, quiero desasignar (desmontar) un neumático que se encuentra actualmente montado en una posición de una unidad de transporte, para liberar dicha posición y disponer del neumático (reasignarlo, enviarlo a un centro de almacenamiento, enviarlo a reparación, o darlo de baja) sin necesidad de reemplazarlo inmediatamente por otro.",
+      "descripcion": "Al ejecutarse, el neumático queda en estado \"en espera\", sin unidad ni posición asociada, disponible para cualquier operación posterior. Habilita también la rotación de neumáticos entre posiciones (desmontar + volver a asignar en otra posición de una misma unidad).",
+      "acceptance": [
+        "Dado que un Editor o Administrador visualiza la ficha detalle de una unidad de transporte con al menos una posición ocupada, cuando hace clic sobre dicha posición y selecciona \"Desmontar\", entonces el sistema debe solicitar confirmación antes de ejecutar la acción. Dado que la desasignación es confirmada, cuando la operación se ejecuta, entonces el sistema debe liberar el slot de la unidad, marcar el neumático como \"en espera\", actualizar la representación gráfica del vehículo, y registrar un nuevo evento de desasignación en el historial del neumático (unidad, posición, fecha y usuario responsable).",
+        "Dado que se intenta desmontar una posición que ya se encuentra libre, entonces el sistema debe impedir la operación.",
+        "Dado que un usuario con nivel de acceso Lector intenta acceder a esta funcionalidad, entonces el sistema debe denegar el acceso a dicha pantalla o funcionalidad."
+      ],
+      "sdd": true,
+      "status": "pending"
+    }
+  ]
+}
