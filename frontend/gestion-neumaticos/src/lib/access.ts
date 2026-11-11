@@ -27,13 +27,13 @@ const ADMIN_AND_EDITOR: readonly AccessLevel[] = [
  *
  * - Administrador: todo.
  * - Editor: todo menos Auditoría.
- * - Lector: Inicio y Configuración (todas las pestañas menos Usuarios, en
- *   solo lectura); el resto de sus permisos de lectura está pendiente.
+ * - Lector: Inicio, Unidades de transporte (solo lectura) y Configuración
+ *   (todas las pestañas menos Usuarios, en solo lectura); el resto de sus
+ *   permisos de lectura está pendiente.
  *
  * Es autorización de interfaz: la barrera real es el backend.
  */
 export const ROUTE_ACCESS: Partial<Record<AppRoute, readonly AccessLevel[]>> = {
-  [ROUTES.transportUnits]: ADMIN_AND_EDITOR,
   [ROUTES.tires]: ADMIN_AND_EDITOR,
   [ROUTES.repairs]: ADMIN_AND_EDITOR,
   [ROUTES.storage]: ADMIN_AND_EDITOR,

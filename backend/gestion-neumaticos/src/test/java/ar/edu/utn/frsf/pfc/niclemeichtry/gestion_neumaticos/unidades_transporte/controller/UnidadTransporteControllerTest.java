@@ -10,6 +10,9 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
@@ -20,6 +23,8 @@ import static org.springframework.restdocs.operation.preprocess.Preprocessors.pr
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.restdocs.payload.PayloadDocumentation.requestFields;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,6 +39,14 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restdocs.test.autoconfigure.AutoConfigureRestDocs;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -47,11 +60,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.NivelAccesoVigente;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.SecurityConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSecurityErrorHandler;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.UnidadTransporte;
@@ -62,7 +78,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(UnidadTransporteController.class)
-@Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class })
+@Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class, PaginacionConfig.class })
 @AutoConfigureRestDocs
 class UnidadTransporteControllerTest {
 
@@ -235,6 +251,127 @@ class UnidadTransporteControllerTest {
                             "Ya existe una unidad de transporte con la patente AB123CD"));
         }
 
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/unidades-transporte")
+    class Buscar {
+
+        private Page<UnidadTransporteListadoDTO> paginaConUnaUnidad() {
+            UnidadTransporte unidad = new UnidadTransporteFactoryImpl().crearUnidad(PATENTE, tractorComun());
+            unidad.setPublicId(UNIDAD_PUBLIC_ID);
+            return new PageImpl<>(List.of(mapper.toListadoDTO(unidad)), PageRequest.of(0, 10), 1);
+        }
+
+        @Test
+        @DisplayName("200 con el listado resumido, sin slots ni ids internos")
+        void buscaConLector() throws Exception {
+            when(unidadTransporteService.buscar(eq("b12"), any(Pageable.class))).thenReturn(paginaConUnaUnidad());
+
+            mockMvc.perform(get(UNIDADES).with(usuario("ROLE_LECTOR"))
+                            .param("patente", "b12").param("page", "0").param("size", "5").param("sort", "patente,asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].publicId").value(UNIDAD_PUBLIC_ID.toString()))
+                    .andExpect(jsonPath("$.content[0].patente").value(PATENTE))
+                    .andExpect(jsonPath("$.content[0].configuracion.nombre").value("Tractor común"))
+                    .andExpect(jsonPath("$.content[0].configuracion.tipoUnidad").value("TRACTOR"))
+                    .andExpect(jsonPath("$.content[0].slots").doesNotExist())
+                    .andExpect(jsonPath("$.content[0].configuracion.id").doesNotExist())
+                    .andExpect(jsonPath("$.page.totalElements").value(1))
+                    .andDo(document("unidad-transporte-buscar",
+                            preprocessRequest(prettyPrint()),
+                            preprocessResponse(prettyPrint()),
+                            queryParameters(
+                                    parameterWithName("patente").description("Patente completa o parcial (opcional)"),
+                                    parameterWithName("page").description("Página, desde 0"),
+                                    parameterWithName("size").description("Tamaño de página (10 por defecto, máximo 20)"),
+                                    parameterWithName("sort").description("Solo `patente,asc|desc`")),
+                            responseFields(
+                                    fieldWithPath("content[].publicId").description("Identificador público"),
+                                    fieldWithPath("content[].patente").description("Patente normalizada"),
+                                    fieldWithPath("content[].configuracion.nombre")
+                                            .description("Nombre de la configuración"),
+                                    fieldWithPath("content[].configuracion.tipoUnidad")
+                                            .description("TRACTOR o SEMIRREMOLQUE"),
+                                    fieldWithPath("page.size").description("Tamaño de página"),
+                                    fieldWithPath("page.number").description("Número de página, desde 0"),
+                                    fieldWithPath("page.totalElements").description("Total de unidades"),
+                                    fieldWithPath("page.totalPages").description("Total de páginas"))));
+
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(unidadTransporteService).buscar(eq("b12"), pageable.capture());
+            assertThat(pageable.getValue().getPageNumber()).isZero();
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(5);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "ROLE_EDITOR", "ROLE_ADMINISTRADOR" })
+        @DisplayName("200 también para editor y administrador")
+        void buscaConEditorYAdministrador(String nivel) throws Exception {
+            when(unidadTransporteService.buscar(any(), any(Pageable.class))).thenReturn(paginaConUnaUnidad());
+
+            mockMvc.perform(get(UNIDADES).with(usuario(nivel))).andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("sin parámetros: sin patente, 10 por página, ordenadas por patente ascendente")
+        void sinPatente_usaOrdenPorPatenteYTamanioPorDefecto() throws Exception {
+            when(unidadTransporteService.buscar(any(), any(Pageable.class))).thenReturn(paginaConUnaUnidad());
+
+            mockMvc.perform(get(UNIDADES).with(usuario("ROLE_LECTOR"))).andExpect(status().isOk());
+
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(unidadTransporteService).buscar(isNull(), pageable.capture());
+            assertThat(pageable.getValue().getPageNumber()).isZero();
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO);
+            assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by(Sort.Order.asc("patente")));
+        }
+
+        @Test
+        @DisplayName("200 con página vacía si no hay coincidencias")
+        void sinResultados_devuelvePaginaVacia() throws Exception {
+            when(unidadTransporteService.buscar(any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+            mockMvc.perform(get(UNIDADES).with(usuario("ROLE_LECTOR")).param("patente", "QQQ"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isEmpty())
+                    .andExpect(jsonPath("$.page.totalElements").value(0));
+        }
+
+        @Test
+        @DisplayName("un tamaño mayor al máximo se acota a 20")
+        void tamanioMayorAlMaximo_seAcota() throws Exception {
+            when(unidadTransporteService.buscar(any(), any(Pageable.class))).thenReturn(paginaConUnaUnidad());
+
+            mockMvc.perform(get(UNIDADES).with(usuario("ROLE_LECTOR")).param("size", "500"))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(unidadTransporteService).buscar(any(), pageable.capture());
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(PaginacionConfig.TAMANIO_PAGINA_MAXIMO);
+        }
+
+        @Test
+        @DisplayName("400 si se ordena por un campo no permitido")
+        void ordenNoPermitido() throws Exception {
+            when(unidadTransporteService.buscar(any(), any(Pageable.class)))
+                    .thenThrow(new ParametroInvalidoException("Solo se puede ordenar por patente"));
+
+            mockMvc.perform(get(UNIDADES).with(usuario("ROLE_LECTOR")).param("sort", "id,asc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Solo se puede ordenar por patente"));
+        }
+
+        @Test
+        @DisplayName("401 sin token")
+        void sinToken() throws Exception {
+            mockMvc.perform(get(UNIDADES))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401));
+
+            verifyNoInteractions(unidadTransporteService);
+        }
     }
 
     @Nested

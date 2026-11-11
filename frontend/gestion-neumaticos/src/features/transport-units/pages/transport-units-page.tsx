@@ -1,9 +1,8 @@
-import { TruckIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { CreateTransportUnitDialog } from "@/features/transport-units/components/create-transport-unit-dialog"
+import { TransportUnitsTable } from "@/features/transport-units/components/transport-units-table"
 import { canPerform, useAccessLevel } from "@/lib/access"
 
 export function TransportUnitsPage() {
@@ -15,21 +14,15 @@ export function TransportUnitsPage() {
       <PageHeader
         title={t("title")}
         description={t("subtitle")}
-        // Hoy solo administrador y editor llegan a esta ruta (ROUTE_ACCESS);
-        // el chequeo deja el botón oculto si el lector gana acceso de lectura.
+        // El lector también llega a esta ruta (solo lectura): el botón de alta
+        // queda oculto para él.
         actions={
           canPerform(accessLevel, "transportUnits.create") ? (
             <CreateTransportUnitDialog />
           ) : null
         }
       />
-      {/* TODO: listado de unidades de transporte. Al implementarlo, quitar el
-          placeholder y `empty` en i18n. */}
-      <EmptyState
-        icon={TruckIcon}
-        title={t("empty.title")}
-        description={t("empty.description")}
-      />
+      <TransportUnitsTable />
     </div>
   )
 }

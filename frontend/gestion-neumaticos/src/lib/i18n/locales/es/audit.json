@@ -55,9 +55,7 @@
   },
   "pagination": {
     "summary_one": "{{count}} registro · página {{page}} de {{pages}}",
-    "summary_other": "{{count}} registros · página {{page}} de {{pages}}",
-    "previous": "Anterior",
-    "next": "Siguiente"
+    "summary_other": "{{count}} registros · página {{page}} de {{pages}}"
   },
   "detail": {
     "description": "Historial de este registro. Es de solo lectura.",

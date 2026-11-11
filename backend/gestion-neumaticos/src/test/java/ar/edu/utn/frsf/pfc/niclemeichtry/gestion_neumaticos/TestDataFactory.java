@@ -513,7 +513,7 @@ public final class TestDataFactory {
 	}
 
 	public static Page<RegistroAuditoriaDTO> paginaAuditoria() {
-		return new PageImpl<>(List.of(registroAuditoria()), PageRequest.of(0, 20), 1);
+		return new PageImpl<>(List.of(registroAuditoria()), PageRequest.of(0, 10), 1);
 	}
 
 	// Límite de intentos de login

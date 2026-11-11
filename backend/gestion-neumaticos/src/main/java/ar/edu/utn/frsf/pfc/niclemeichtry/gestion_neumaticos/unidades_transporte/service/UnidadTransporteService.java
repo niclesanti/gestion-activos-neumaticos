@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 
@@ -28,6 +29,16 @@ public interface UnidadTransporteService {
      */
     UnidadTransporteResponseDTO registrarUnidadTransporte(UnidadTransporteRequestDTO unidadTransporteRequestDTO,
             String usuario);
+
+    /**
+     * Busca las unidades activas cuya patente contiene el término (sin distinguir mayúsculas, espacios ni
+     * guiones). Sin término devuelve todas las activas. Paginada; solo se ordena por patente.
+     *
+     * @param patente  término de búsqueda, opcional.
+     * @param pageable página pedida.
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException si se ordena por otro campo.
+     */
+    Page<UnidadTransporteListadoDTO> buscar(String patente, Pageable pageable);
 
     /** Las configuraciones precargadas, con sus ejes en orden. */
     List<ConfiguracionUnidadDTO> listarConfiguraciones();

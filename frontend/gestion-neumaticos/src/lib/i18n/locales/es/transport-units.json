@@ -1,7 +1,9 @@
 {
   "title": "Unidades de transporte",
   "subtitle": "Tractores y semirremolques de la flota, con las posiciones de sus neumáticos.",
-  "actions": { "register": "Registrar unidad" },
+  "actions": {
+    "register": "Registrar unidad"
+  },
   "dialog": {
     "createTitle": "Registrar unidad de transporte",
     "createDescription": "Ingresá la patente y elegí la configuración de ejes. Las posiciones de los neumáticos se generan solas, sin neumáticos asignados.",
@@ -55,8 +57,36 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar la unidad. Intentá de nuevo en unos minutos"
   },
-  "empty": {
-    "title": "Todavía no hay unidades de transporte para mostrar",
-    "description": "Pronto vas a ver acá el listado de unidades, sus posiciones y los neumáticos montados."
+  "list": {
+    "search": {
+      "label": "Patente",
+      "placeholder": "Buscá por patente. Ej.: AB123"
+    },
+    "columns": {
+      "plate": "Patente",
+      "configuration": "Configuración",
+      "type": "Tipo"
+    },
+    "noResults": {
+      "title": "No se encontraron unidades de transporte",
+      "description": "Revisá la patente o probá con menos caracteres."
+    },
+    "empty": {
+      "title": "Todavía no hay unidades de transporte registradas",
+      "description": "Cuando se registren, las vas a ver acá."
+    },
+    "error": {
+      "title": "No se pudo cargar el listado",
+      "description": "Revisá tu conexión e intentá de nuevo.",
+      "retry": "Reintentar"
+    },
+    "pagination": {
+      "summary_one": "{{count}} unidad · página {{page}} de {{pages}}",
+      "summary_other": "{{count}} unidades · página {{page}} de {{pages}}"
+    }
+  },
+  "unitTypes": {
+    "TRACTOR": "Tractor",
+    "SEMIRREMOLQUE": "Semirremolque"
   }
 }

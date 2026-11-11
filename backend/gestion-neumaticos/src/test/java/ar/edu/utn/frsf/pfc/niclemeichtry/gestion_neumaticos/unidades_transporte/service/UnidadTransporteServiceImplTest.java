@@ -23,6 +23,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +33,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.UnidadTransporte;
@@ -173,6 +177,63 @@ class UnidadTransporteServiceImplTest {
         assertThat(configuraciones.get(0).ejes()).hasSize(2);
     }
 
+
+    @Nested
+    @DisplayName("buscar")
+    class Buscar {
+
+        @Test
+        @DisplayName("consulta con el pageable recibido")
+        void buscaConElPageableRecibido() {
+            Pageable pageable = PageRequest.of(0, 10, Sort.by("patente"));
+            when(unidadTransporteRepository.findAll(ArgumentMatchers.<Specification<UnidadTransporte>>any(), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            servicio.buscar(" ab-1 ", pageable);
+
+            verify(unidadTransporteRepository).findAll(ArgumentMatchers.<Specification<UnidadTransporte>>any(), eq(pageable));
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = { "  ", "-" })
+        @DisplayName("un término en blanco no filtra por patente")
+        void terminoEnBlanco_noFiltraPorPatente(String termino) {
+            Pageable pageable = PageRequest.of(0, 10, Sort.by("patente"));
+            when(unidadTransporteRepository.findAll(ArgumentMatchers.<Specification<UnidadTransporte>>any(), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            assertThat(servicio.buscar(termino, pageable).getContent()).isEmpty();
+
+            verify(unidadTransporteRepository).findAll(ArgumentMatchers.<Specification<UnidadTransporte>>any(), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("rechaza ordenar por otro campo sin consultar")
+        void ordenNoPermitido_lanzaParametroInvalido() {
+            Pageable ordenInvalido = PageRequest.of(0, 10, Sort.by("id"));
+
+            assertThatThrownBy(() -> servicio.buscar("AB", ordenInvalido))
+                    .isInstanceOf(ParametroInvalidoException.class);
+            verifyNoInteractions(unidadTransporteRepository);
+        }
+
+        @Test
+        @DisplayName("mapea la página al DTO de listado conservando los metadatos")
+        void mapeaLaPaginaConToListadoDTO() {
+            UnidadTransporte unidad = new UnidadTransporteFactoryImpl().crearUnidad(PATENTE, tractorComun());
+            Pageable pageable = PageRequest.of(1, 5, Sort.by("patente"));
+            when(unidadTransporteRepository.findAll(ArgumentMatchers.<Specification<UnidadTransporte>>any(), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(unidad), pageable, 11));
+
+            Page<UnidadTransporteListadoDTO> resultado = servicio.buscar(null, pageable);
+
+            assertThat(resultado.getContent()).containsExactly(unidadTransporteMapper.toListadoDTO(unidad));
+            assertThat(resultado.getTotalElements()).isEqualTo(11);
+            assertThat(resultado.getNumber()).isEqualTo(1);
+            assertThat(resultado.getSize()).isEqualTo(5);
+        }
+    }
 
     @Nested
     @DisplayName("listarAuditoria")

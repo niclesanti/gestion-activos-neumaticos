@@ -5,8 +5,10 @@ import org.mapstruct.Mapping;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.MapstructConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.EjeConfiguracionDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.SlotUnidadTransporteDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.EjeConfiguracion;
@@ -18,6 +20,11 @@ public interface UnidadTransporteMapper {
 
     /** La configuración va resumida; los slots, con su código derivado. */
     UnidadTransporteResponseDTO toResponseDTO(UnidadTransporte unidadTransporte);
+
+    /** Fila del listado: solo patente y configuración resumida, sin slots. */
+    UnidadTransporteListadoDTO toListadoDTO(UnidadTransporte unidadTransporte);
+
+    ConfiguracionUnidadListadoDTO toConfiguracionListadoDTO(ConfiguracionUnidad configuracion);
 
     @Mapping(target = "ocupado", expression = "java(slot.estaOcupado())")
     SlotUnidadTransporteDTO toSlotDTO(SlotUnidadTransporte slot);

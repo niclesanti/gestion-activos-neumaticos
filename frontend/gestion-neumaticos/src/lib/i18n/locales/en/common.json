@@ -54,5 +54,9 @@
   },
   "toast": {
     "close": "Close notification"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next"
   }
 }

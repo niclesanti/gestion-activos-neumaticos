@@ -1,5 +1,6 @@
 import type { TransportUnitFormValues } from "@/features/transport-units/schemas/transport-unit-schema"
 import { apiClient } from "@/lib/api/client"
+import { DEFAULT_PAGE_SIZE, type Page } from "@/lib/api/page"
 
 export type UnitType = "TRACTOR" | "SEMIRREMOLQUE"
 export type AxleType = "DIRECCION" | "TRACCION" | "ARRASTRE"
@@ -58,6 +59,43 @@ export async function registerTransportUnit(values: TransportUnitFormValues) {
 export async function getUnitConfigurations() {
   const { data } = await apiClient.get<UnitConfiguration[]>(
     "/api/v1/unidades-transporte/configuraciones"
+  )
+  return data
+}
+
+/** Fila del listado (`UnidadTransporteListadoDTO` del backend): sin slots. */
+export type TransportUnitListItem = {
+  publicId: string
+  patente: string
+  configuracion: { nombre: string; tipoUnidad: UnitType }
+}
+
+export type TransportUnitsQuery = {
+  /** Texto de búsqueda; vacío = todas las unidades activas. */
+  patente: string
+  page: number
+  size: number
+  direction: "asc" | "desc"
+}
+
+export const DEFAULT_TRANSPORT_UNITS_QUERY: TransportUnitsQuery = {
+  patente: "",
+  page: 0,
+  size: DEFAULT_PAGE_SIZE,
+  direction: "asc",
+}
+
+export async function searchTransportUnits(query: TransportUnitsQuery) {
+  const { data } = await apiClient.get<Page<TransportUnitListItem>>(
+    "/api/v1/unidades-transporte",
+    {
+      params: {
+        patente: query.patente || undefined,
+        page: query.page,
+        size: query.size,
+        sort: `patente,${query.direction}`,
+      },
+    }
   )
   return data
 }
