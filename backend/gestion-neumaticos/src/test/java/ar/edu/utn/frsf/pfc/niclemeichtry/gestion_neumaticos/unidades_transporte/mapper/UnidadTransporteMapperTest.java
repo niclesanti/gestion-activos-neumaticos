@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadResumenDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.EjeConfiguracionDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.SlotUnidadTransporteDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.Lado;
@@ -85,4 +87,34 @@ class UnidadTransporteMapperTest {
         assertThat(configuracion.totalSlots()).isZero();
     }
 
+
+    @Test
+    void toListadoDTO_mapeaPatenteYConfiguracionResumida() {
+        UnidadTransporte unidad = new UnidadTransporteFactoryImpl().crearUnidad(PATENTE, tractorComun());
+        unidad.setPublicId(UNIDAD_PUBLIC_ID);
+
+        UnidadTransporteListadoDTO dto = mapper.toListadoDTO(unidad);
+
+        assertThat(dto.publicId()).isEqualTo(UNIDAD_PUBLIC_ID);
+        assertThat(dto.patente()).isEqualTo(PATENTE);
+        assertThat(dto.configuracion()).isEqualTo(new ConfiguracionUnidadListadoDTO("Tractor común", TipoUnidad.TRACTOR));
+    }
+
+    @Test
+    void toListadoDTO_conFuenteNula_devuelveNull() {
+        assertThat(mapper.toListadoDTO(null)).isNull();
+    }
+
+    @Test
+    void toListadoDTO_sinConfiguracion_dejaConfiguracionNula() {
+        UnidadTransporte unidad = new UnidadTransporte();
+        unidad.setPatente(PATENTE);
+
+        assertThat(mapper.toListadoDTO(unidad).configuracion()).isNull();
+    }
+
+    @Test
+    void toConfiguracionListadoDTO_conFuenteNula_devuelveNull() {
+        assertThat(mapper.toConfiguracionListadoDTO(null)).isNull();
+    }
 }

@@ -171,6 +171,7 @@ Endpoints de negocio anotados hasta ahora:
 | `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/unidades-transporte/configuraciones` | `hasRole('LECTOR')` | Los tres roles |
+| `GET /api/v1/unidades-transporte` (búsqueda paginada por patente, HU-27) | `hasRole('LECTOR')` | Los tres roles |
 | `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion`, `unidades-transporte` y `centros-almacenamiento` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
 
 ### 2.10.1 Cabeceras HTTP de la API
@@ -350,7 +351,7 @@ Toda raíz de agregado de negocio (`Usuario`, `Neumatico`, `Conductor`, `Proveed
 
 **Consulta (solo administrador).** `GET /api/v1/<recurso>/auditoria?q=&estado=ACTIVOS|BAJAS|TODOS&desde=&hasta=&page=&size=&sort=updatedAt,desc` en cada módulo, con `@PreAuthorize("hasRole('ADMINISTRADOR')")`. Devuelve `RegistroAuditoriaDTO` (descripción del registro, fechas y usuarios de alta, última modificación y baja, y estado):
 
-- El orden se limita a `createdAt`, `updatedAt` y `deletedAt` (lista blanca, `OrdenAuditoria`; otro campo responde 400) y el tamaño de página tiene tope 100 (`PaginacionConfig`).
+- El orden se limita a `createdAt`, `updatedAt` y `deletedAt` (lista blanca, `OrdenAuditoria`; otro campo responde 400) y el tamaño de página es 10 por defecto y tiene tope 20 (`PaginacionConfig`; un `size` mayor se acota, sin 400).
 - Los nombres de los usuarios se resuelven en una sola consulta por página con el puerto `common.auditoria.AuditoresResolver`, que implementa `usuarios` (sin N+1). La RLS de `usuarios` ya deja al administrador leer todas las filas, así que no hace falta ninguna función `SECURITY DEFINER`. Un usuario que ya no existe se muestra solo por su id.
 - La búsqueda de texto escapa los comodines de `LIKE`.
 
@@ -395,11 +396,12 @@ Toda raíz de agregado de negocio (`Usuario`, `Neumatico`, `Conductor`, `Proveed
 | Sección | Administrador | Editor | Lector |
 |---|:-:|:-:|:-:|
 | Inicio | ✔ | ✔ | ✔ |
-| Unidades de transporte, Neumáticos, Reparaciones, Almacenamiento | ✔ | ✔ | ✘ |
+| Unidades de transporte | ✔ | ✔ | ✔ (solo lectura: sin botón de alta) |
+| Neumáticos, Reparaciones, Almacenamiento | ✔ | ✔ | ✘ |
 | Configuración (`/settings`) | ✔ | ✔ (sin Usuarios) | ✔ (sin Usuarios, solo lectura) |
 | Auditoría (`/audit`) | ✔ | ✘ | ✘ |
 
-El administrador es el "superusuario" del negocio: hace el CRUD de todo. El editor puede hacer todo menos Auditoría y la gestión de usuarios. El lector es de solo lectura: entra a Inicio y a Configuración, donde puede buscar y filtrar pero no dar de alta, modificar ni eliminar; el resto de sus permisos de lectura todavía no está definido.
+El administrador es el "superusuario" del negocio: hace el CRUD de todo. El editor puede hacer todo menos Auditoría y la gestión de usuarios. El lector es de solo lectura: entra a Inicio, a Unidades de transporte (lista y busca por patente) y a Configuración, donde puede buscar y filtrar pero no dar de alta, modificar ni eliminar; el resto de sus permisos de lectura todavía no está definido.
 
 Dentro de Configuración, `SETTINGS_TAB_ACCESS` decide qué pestañas ve cada nivel, y `ACTION_ACCESS` (`canPerform`) qué acciones de negocio se muestran:
 
@@ -501,7 +503,7 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 ### Al construir los módulos de negocio
 
 1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores, de proveedores (HU-24), de unidades de transporte (HU-07) y de servicios de reparación (HU-18); falta en los endpoints que vengan. El montaje de neumáticos en unidades tendrá que agregar `UPDATE (neumatico_actual_id)` sobre `unidades_transporte.slots_unidad_transporte` para administrador y editor.
-2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas, conductores, proveedores, unidades de transporte (con sus slots y configuraciones) y las tablas de `common`. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
+2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio, a Unidades de transporte (ya definido en las tres capas: `ROUTE_ACCESS`, `GET /api/v1/unidades-transporte` con `hasRole('LECTOR')` y `SELECT` en la base; HU-27) y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas, conductores, proveedores, unidades de transporte (con sus slots y configuraciones) y las tablas de `common`. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 
 ### Con la gestión de usuarios (alta, edición, baja)

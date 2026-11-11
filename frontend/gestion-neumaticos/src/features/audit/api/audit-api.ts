@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client"
-import type { Page } from "@/lib/api/page"
+import { DEFAULT_PAGE_SIZE, type Page } from "@/lib/api/page"
 
 /** Entidades con ficha de auditoría, una pestaña de la página por cada una. */
 export const AUDITED_ENTITIES = [
@@ -74,7 +74,7 @@ export const DEFAULT_AUDIT_QUERY: AuditQuery = {
   desde: "",
   hasta: "",
   page: 0,
-  size: 20,
+  size: DEFAULT_PAGE_SIZE,
   sort: "updatedAt",
   direction: "desc",
 }

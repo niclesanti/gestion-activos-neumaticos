@@ -16,8 +16,12 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Ord
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.EspecificacionesUnidadTransporte;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.OrdenUnidadesTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.Patentes;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
@@ -82,6 +86,26 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
                 .toList();
         log.debug("Configuraciones de unidad listadas: {}", configuraciones.size());
         return configuraciones;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UnidadTransporteListadoDTO> buscar(String patente, Pageable pageable) {
+        log.debug("Buscando unidades de transporte: patente={}, pageable={}", patente, pageable);
+        if (!OrdenUnidadesTransporte.esValido(pageable)) {
+            log.warn("Búsqueda de unidades rechazada: orden no permitido {}", pageable.getSort());
+            throw new ParametroInvalidoException("Solo se puede ordenar por patente");
+        }
+        String termino = Patentes.normalizar(patente);
+        if (termino != null && termino.isBlank()) {
+            termino = null;
+        }
+        Specification<UnidadTransporte> especificacion = EspecificacionesUnidadTransporte.activas()
+                .and(EspecificacionesUnidadTransporte.patenteContiene(termino));
+        Page<UnidadTransporteListadoDTO> pagina = unidadTransporteRepository.findAll(especificacion, pageable)
+                .map(unidadTransporteMapper::toListadoDTO);
+        log.debug("Unidades de transporte encontradas: {}", pagina.getTotalElements());
+        return pagina;
     }
 
     @Override

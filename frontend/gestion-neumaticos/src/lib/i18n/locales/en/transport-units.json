@@ -1,7 +1,9 @@
 {
   "title": "Transport units",
   "subtitle": "Fleet tractors and semi-trailers, with the positions of their tires.",
-  "actions": { "register": "Register unit" },
+  "actions": {
+    "register": "Register unit"
+  },
   "dialog": {
     "createTitle": "Register transport unit",
     "createDescription": "Enter the license plate and choose the axle configuration. Tire positions are generated automatically, with no tires assigned.",
@@ -55,8 +57,36 @@
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the unit. Try again in a few minutes"
   },
-  "empty": {
-    "title": "There are no transport units to show yet",
-    "description": "Soon you will see the list of units, their positions and the mounted tires here."
+  "list": {
+    "search": {
+      "label": "License plate",
+      "placeholder": "Search by plate. E.g.: AB123"
+    },
+    "columns": {
+      "plate": "License plate",
+      "configuration": "Configuration",
+      "type": "Type"
+    },
+    "noResults": {
+      "title": "No transport units found",
+      "description": "Check the license plate or try fewer characters."
+    },
+    "empty": {
+      "title": "There are no transport units registered yet",
+      "description": "Once registered, you will see them here."
+    },
+    "error": {
+      "title": "Couldn't load the list",
+      "description": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "pagination": {
+      "summary_one": "{{count}} unit · page {{page}} of {{pages}}",
+      "summary_other": "{{count}} units · page {{page}} of {{pages}}"
+    }
+  },
+  "unitTypes": {
+    "TRACTOR": "Tractor",
+    "SEMIRREMOLQUE": "Semi-trailer"
   }
 }

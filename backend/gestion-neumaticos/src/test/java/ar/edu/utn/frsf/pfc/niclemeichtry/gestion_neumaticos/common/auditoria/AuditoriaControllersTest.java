@@ -139,7 +139,7 @@ class AuditoriaControllersTest {
                     .andExpect(jsonPath("$.content[0].dadoDeBajaPor").doesNotExist())
                     .andExpect(jsonPath("$.content[0].estado").value("ACTIVO"))
                     .andExpect(jsonPath("$.page.totalElements").value(1))
-                    .andExpect(jsonPath("$.page.size").value(20))
+                    .andExpect(jsonPath("$.page.size").value(PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO))
                     .andDo(document(recurso + "-auditoria",
                             preprocessRequest(prettyPrint()),
                             preprocessResponse(prettyPrint())));
@@ -192,7 +192,7 @@ class AuditoriaControllersTest {
                             .param("desde", "2026-01-01")
                             .param("hasta", "2026-03-31")
                             .param("page", "2")
-                            .param("size", "50")
+                            .param("size", "15")
                             .param("sort", "createdAt,asc"))
                     .andExpect(status().isOk());
 
@@ -202,12 +202,12 @@ class AuditoriaControllersTest {
             assertThat(filtro.getValue()).isEqualTo(new FiltroAuditoria("litoral",
                     FiltroAuditoria.EstadoFiltro.BAJAS, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31)));
             assertThat(pageable.getValue().getPageNumber()).isEqualTo(2);
-            assertThat(pageable.getValue().getPageSize()).isEqualTo(50);
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(15);
             assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by(Sort.Order.asc("createdAt")));
         }
 
         @Test
-        @DisplayName("sin parámetros: todos los estados, 20 por página, última modificación primero")
+        @DisplayName("sin parámetros: todos los estados, 10 por página, última modificación primero")
         void usaLosValoresPorDefecto() throws Exception {
             servicios_devuelven_una_pagina();
 
@@ -219,12 +219,12 @@ class AuditoriaControllersTest {
             verify(conductorService).listarAuditoria(filtro.capture(), pageable.capture());
             assertThat(filtro.getValue()).isEqualTo(new FiltroAuditoria(null, null, null, null));
             assertThat(filtro.getValue().estado()).isEqualTo(FiltroAuditoria.EstadoFiltro.TODOS);
-            assertThat(pageable.getValue().getPageSize()).isEqualTo(20);
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO);
             assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by(Sort.Order.desc("updatedAt")));
         }
 
         @Test
-        @DisplayName("el tamaño de página se acota a 100")
+        @DisplayName("el tamaño de página se acota a 20")
         void acotaElTamanioDePagina() throws Exception {
             servicios_devuelven_una_pagina();
 
@@ -233,7 +233,7 @@ class AuditoriaControllersTest {
 
             ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
             verify(usuarioService).listarAuditoria(any(), pageable.capture());
-            assertThat(pageable.getValue().getPageSize()).isEqualTo(100);
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(PaginacionConfig.TAMANIO_PAGINA_MAXIMO);
         }
 
         @Test

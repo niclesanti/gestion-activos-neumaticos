@@ -29,7 +29,7 @@
         "La lista de resultados debe soportar paginación."
       ],
       "sdd": true,
-      "status": "spec_ready"
+      "status": "done"
     },
     {
       "id": 2,

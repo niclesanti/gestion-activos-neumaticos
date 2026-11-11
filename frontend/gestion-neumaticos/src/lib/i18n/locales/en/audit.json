@@ -55,9 +55,7 @@
   },
   "pagination": {
     "summary_one": "{{count}} record · page {{page}} of {{pages}}",
-    "summary_other": "{{count}} records · page {{page}} of {{pages}}",
-    "previous": "Previous",
-    "next": "Next"
+    "summary_other": "{{count}} records · page {{page}} of {{pages}}"
   },
   "detail": {
     "description": "History of this record. Read only.",

@@ -1,15 +1,10 @@
 import * as React from "react"
 
-import {
-  ArrowDownIcon,
-  ArrowUpDownIcon,
-  ArrowUpIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ScrollTextIcon,
-} from "lucide-react"
+import { ScrollTextIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { SortableTableHead } from "@/components/common/sortable-table-head"
+import { TablePagination } from "@/components/common/table-pagination"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -48,8 +43,6 @@ import {
 } from "@/features/audit/lib/audit-filters"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { cn } from "@/lib/utils"
-
-const SKELETON_ROWS = 5
 
 /**
  * Historial de auditoría de una entidad: quién y cuándo creó, modificó y dio de
@@ -170,16 +163,18 @@ export function AuditRecordsTable({
             <TableHeader>
               <TableRow>
                 <TableHead>{t("columns.record")}</TableHead>
-                <SortableHead
+                <SortableTableHead
                   field="createdAt"
                   label={t("columns.created")}
-                  sort={sort}
+                  activeField={sort.sort}
+                  direction={sort.direction}
                   onToggle={toggleSort}
                 />
-                <SortableHead
+                <SortableTableHead
                   field="updatedAt"
                   label={t("columns.modified")}
-                  sort={sort}
+                  activeField={sort.sort}
+                  direction={sort.direction}
                   onToggle={toggleSort}
                 />
                 <TableHead>{t("columns.status")}</TableHead>
@@ -187,7 +182,7 @@ export function AuditRecordsTable({
             </TableHeader>
             <TableBody>
               {isPending
-                ? Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                ? Array.from({ length: 5 }, (_, index) => (
                     <TableRow key={index}>
                       {Array.from({ length: 4 }, (_, cell) => (
                         <TableCell key={cell}>
@@ -239,38 +234,18 @@ export function AuditRecordsTable({
         </div>
       )}
 
-      {pageInfo && pageInfo.totalElements > 0 ? (
-        <div className="flex flex-col gap-2 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {t("pagination.summary", {
-              count: pageInfo.totalElements,
-              page: pageInfo.number + 1,
-              pages: pageInfo.totalPages,
-            })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pageInfo.number === 0}
-              onClick={() => goToPage(pageInfo.number - 1)}
-            >
-              <ChevronLeftIcon data-icon="inline-start" />
-              {t("pagination.previous")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pageInfo.number + 1 >= pageInfo.totalPages}
-              onClick={() => goToPage(pageInfo.number + 1)}
-            >
-              {t("pagination.next")}
-              <ChevronRightIcon data-icon="inline-end" />
-            </Button>
-          </div>
-        </div>
+      {pageInfo ? (
+        <TablePagination
+          page={pageInfo.number}
+          totalPages={pageInfo.totalPages}
+          totalElements={pageInfo.totalElements}
+          summary={t("pagination.summary", {
+            count: pageInfo.totalElements,
+            page: pageInfo.number + 1,
+            pages: pageInfo.totalPages,
+          })}
+          onPageChange={goToPage}
+        />
       ) : null}
 
       <AuditRecordSheet record={selected} onClose={() => setSelected(null)} />
@@ -293,43 +268,5 @@ function WhenAndWho({
         <AuditorLabel auditor={by} />
       </div>
     </div>
-  )
-}
-
-function SortableHead({
-  field,
-  label,
-  sort,
-  onToggle,
-}: {
-  field: AuditSortField
-  label: string
-  sort: Pick<AuditQuery, "sort" | "direction">
-  onToggle: (field: AuditSortField) => void
-}) {
-  const active = sort.sort === field
-  const Icon = !active
-    ? ArrowUpDownIcon
-    : sort.direction === "asc"
-      ? ArrowUpIcon
-      : ArrowDownIcon
-
-  return (
-    <TableHead
-      aria-sort={
-        active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
-      }
-    >
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="-ml-2.5"
-        onClick={() => onToggle(field)}
-      >
-        {label}
-        <Icon data-icon="inline-end" />
-      </Button>
-    </TableHead>
   )
 }
