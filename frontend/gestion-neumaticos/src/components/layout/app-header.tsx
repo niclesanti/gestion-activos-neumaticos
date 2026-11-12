@@ -1,8 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { LanguageToggle } from "@/components/language-toggle"
 import { NavBreadcrumb } from "@/components/layout/nav-breadcrumb"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
@@ -14,10 +12,6 @@ export function AppHeader() {
       <SidebarTrigger aria-label={t("sidebar.toggle")} className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 h-4" />
       <NavBreadcrumb />
-      <div className="ml-auto flex items-center gap-1">
-        <LanguageToggle />
-        <ThemeToggle />
-      </div>
     </header>
   )
 }

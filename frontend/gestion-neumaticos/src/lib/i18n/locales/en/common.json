@@ -5,12 +5,14 @@
   },
   "theme": {
     "toggle": "Change theme",
+    "label": "Theme",
     "light": "Light",
     "dark": "Dark",
     "system": "System"
   },
   "language": {
-    "toggle": "Change language"
+    "toggle": "Change language",
+    "label": "Language"
   },
   "nav": {
     "group": {
