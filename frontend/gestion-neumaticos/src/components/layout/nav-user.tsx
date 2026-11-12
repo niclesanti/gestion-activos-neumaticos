@@ -1,8 +1,16 @@
 import * as React from "react"
 
-import { ChevronsUpDownIcon, Loader2Icon, LogOutIcon } from "lucide-react"
+import {
+  ChevronsUpDownIcon,
+  LanguagesIcon,
+  Loader2Icon,
+  LogOutIcon,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { LanguageRadioGroup } from "@/components/language-toggle"
+import { useActiveThemeOption } from "@/components/theme-options"
+import { ThemeRadioGroup } from "@/components/theme-toggle"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +29,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -31,12 +42,16 @@ import {
 } from "@/components/ui/sidebar"
 import { useCurrentUser } from "@/features/auth/hooks/use-current-user"
 import { useLogout } from "@/features/auth/hooks/use-logout"
+import { useActiveLanguageShort } from "@/hooks/use-active-language-short"
 
 export function NavUser() {
   const { t } = useTranslation()
   const { isMobile } = useSidebar()
   const user = useCurrentUser()
   const logout = useLogout()
+  const activeTheme = useActiveThemeOption()
+  const ActiveThemeIcon = activeTheme.icon
+  const activeLanguageShort = useActiveLanguageShort()
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   if (!user) {
@@ -93,6 +108,33 @@ export function NavUser() {
                   </div>
                 </div>
               </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ActiveThemeIcon />
+                  {t("theme.label")}
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {t(activeTheme.labelKey)}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <ThemeRadioGroup />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <LanguagesIcon />
+                  {t("language.label")}
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {activeLanguageShort}
+                  </span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <LanguageRadioGroup />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

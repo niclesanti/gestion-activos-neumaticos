@@ -12,8 +12,29 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n/config"
 
+export function LanguageRadioGroup() {
+  const { i18n } = useTranslation()
+
+  return (
+    <DropdownMenuRadioGroup
+      value={i18n.resolvedLanguage}
+      onValueChange={(value) => {
+        void i18n.changeLanguage(value as Language)
+      }}
+    >
+      {SUPPORTED_LANGUAGES.map(({ value, label, short }) => (
+        <DropdownMenuRadioItem key={value} value={value}>
+          <LanguagesIcon />
+          {label}
+          <span className="ml-auto text-xs text-muted-foreground">{short}</span>
+        </DropdownMenuRadioItem>
+      ))}
+    </DropdownMenuRadioGroup>
+  )
+}
+
 export function LanguageToggle() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   return (
     <DropdownMenu>
@@ -30,22 +51,7 @@ export function LanguageToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
-          <DropdownMenuRadioGroup
-            value={i18n.resolvedLanguage}
-            onValueChange={(value) => {
-              void i18n.changeLanguage(value as Language)
-            }}
-          >
-            {SUPPORTED_LANGUAGES.map(({ value, label, short }) => (
-              <DropdownMenuRadioItem key={value} value={value}>
-                <LanguagesIcon />
-                {label}
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {short}
-                </span>
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
+          <LanguageRadioGroup />
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

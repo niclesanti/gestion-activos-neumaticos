@@ -1,6 +1,6 @@
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { themeOptions, useActiveThemeOption } from "@/components/theme-options"
 import { useTheme, type Theme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,21 +12,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const themeOptions = [
-  { value: "light", labelKey: "theme.light", icon: SunIcon },
-  { value: "dark", labelKey: "theme.dark", icon: MoonIcon },
-  { value: "system", labelKey: "theme.system", icon: MonitorIcon },
-] satisfies {
-  value: Theme
-  labelKey: "theme.light" | "theme.dark" | "theme.system"
-  icon: typeof SunIcon
-}[]
+export function ThemeRadioGroup() {
+  const { t } = useTranslation()
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <DropdownMenuRadioGroup
+      value={theme}
+      onValueChange={(value) => setTheme(value as Theme)}
+    >
+      {themeOptions.map(({ value, labelKey, icon: Icon }) => (
+        <DropdownMenuRadioItem key={value} value={value}>
+          <Icon />
+          {t(labelKey)}
+        </DropdownMenuRadioItem>
+      ))}
+    </DropdownMenuRadioGroup>
+  )
+}
 
 export function ThemeToggle() {
   const { t } = useTranslation()
-  const { theme, setTheme } = useTheme()
-  const activeOption = themeOptions.find((option) => option.value === theme)
-  const ActiveIcon = activeOption?.icon ?? MonitorIcon
+  const { icon: ActiveIcon } = useActiveThemeOption()
 
   return (
     <DropdownMenu>
@@ -39,17 +46,7 @@ export function ThemeToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
-          <DropdownMenuRadioGroup
-            value={theme}
-            onValueChange={(value) => setTheme(value as Theme)}
-          >
-            {themeOptions.map(({ value, labelKey, icon: Icon }) => (
-              <DropdownMenuRadioItem key={value} value={value}>
-                <Icon />
-                {t(labelKey)}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
+          <ThemeRadioGroup />
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

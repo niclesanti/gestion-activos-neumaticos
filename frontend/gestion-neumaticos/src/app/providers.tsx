@@ -34,7 +34,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         </LanguageProvider>
       </ThemeProvider>
       {import.meta.env.DEV ? (
-        <ReactQueryDevtools buttonPosition="bottom-left" />
+        <ReactQueryDevtools buttonPosition="bottom-right" />
       ) : null}
     </QueryClientProvider>
   )
