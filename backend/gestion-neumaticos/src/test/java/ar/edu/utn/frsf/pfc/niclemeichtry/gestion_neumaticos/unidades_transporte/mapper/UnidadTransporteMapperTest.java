@@ -1,9 +1,14 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.mapper;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.NEUMATICO_MONTADO_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.PATENTE;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoMontado;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.unidadConNeumaticoMontado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.UNIDAD_PUBLIC_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.tractorComun;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -11,7 +16,9 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadResumenDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.EjeConfiguracionDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.SlotDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.SlotUnidadTransporteDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
@@ -111,6 +118,50 @@ class UnidadTransporteMapperTest {
         unidad.setPatente(PATENTE);
 
         assertThat(mapper.toListadoDTO(unidad).configuracion()).isNull();
+    }
+
+    @Test
+    void toDetalleDTO_incluyeConfiguracionCompletaYElNeumaticoDeCadaSlotOcupado() {
+        UnidadTransporte unidad = unidadConNeumaticoMontado();
+
+        UnidadTransporteDetalleDTO dto = mapper.toDetalleDTO(unidad, Map.of(NEUMATICO_MONTADO_ID, neumaticoMontado()));
+
+        assertThat(dto.publicId()).isEqualTo(UNIDAD_PUBLIC_ID);
+        assertThat(dto.patente()).isEqualTo(PATENTE);
+        assertThat(dto.configuracion().totalSlots()).isEqualTo(7);
+        assertThat(dto.configuracion().ejes()).hasSize(2);
+        assertThat(dto.slots().get(0).codigo()).isEqualTo("E1-IZQ");
+        assertThat(dto.slots().get(0).ocupado()).isTrue();
+        assertThat(dto.slots().get(0).neumatico()).isEqualTo(neumaticoMontado());
+        assertThat(dto.slots().get(6).codigo()).isEqualTo("AUX-1");
+        assertThat(dto.slots().get(6).ocupado()).isFalse();
+        assertThat(dto.slots().get(6).neumatico()).isNull();
+    }
+
+    @Test
+    void toDetalleDTO_conNeumaticoNoResuelto_dejaElSlotOcupadoSinDatos() {
+        UnidadTransporte unidad = unidadConNeumaticoMontado();
+
+        UnidadTransporteDetalleDTO dto = mapper.toDetalleDTO(unidad, Map.of());
+
+        assertThat(dto.slots().get(0).ocupado()).isTrue();
+        assertThat(dto.slots().get(0).neumatico()).isNull();
+    }
+
+    @Test
+    void toDetalleDTO_ySlotDetalle_conFuentesNulas_devuelvenNull() {
+        assertThat(mapper.toDetalleDTO(null, null)).isNull();
+        assertThat(mapper.toSlotDetalleDTO(null, null)).isNull();
+    }
+
+    @Test
+    void toSlotDetalleDTO_sinNeumatico_dejaElCampoNulo() {
+        UnidadTransporte unidad = unidadConNeumaticoMontado();
+
+        SlotDetalleDTO dto = mapper.toSlotDetalleDTO(unidad.getSlots().get(1), null);
+
+        assertThat(dto.codigo()).isEqualTo("E1-DER");
+        assertThat(dto.neumatico()).isNull();
     }
 
     @Test

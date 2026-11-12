@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -84,6 +85,13 @@ public class ControllerAdvisor {
     @ExceptionHandler(OperacionNoPermitidaException.class)
     public ResponseEntity<ExceptionInfo> handleOperacionNoPermitidaException(OperacionNoPermitidaException ex, WebRequest request) {
         return respuesta(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ExceptionInfo> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex, WebRequest request) {
+        log.warn("Parámetro '{}' con tipo inválido - Request: {}", ex.getName(), request.getDescription(false));
+        return respuesta(HttpStatus.BAD_REQUEST, MENSAJE_SOLICITUD_INVALIDA, request);
     }
 
     @ExceptionHandler(ParametroInvalidoException.class)

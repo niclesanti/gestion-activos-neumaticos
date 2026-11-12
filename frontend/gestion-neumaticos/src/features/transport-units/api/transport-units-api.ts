@@ -99,3 +99,32 @@ export async function searchTransportUnits(query: TransportUnitsQuery) {
   )
   return data
 }
+
+/** Neumático montado en una posición (`NeumaticoMontadoDTO` del backend). */
+export type MountedTire = {
+  publicId: string
+  numeroSerie: string | null
+  marca: string
+  estado: string
+  kilometrajeTotal: number | null
+}
+
+/** Posición de la ficha (`SlotDetalleDTO`): `neumatico` es null si está vacía. */
+export type UnitSlotDetail = UnitSlot & {
+  neumatico: MountedTire | null
+}
+
+/** Ficha de una unidad (`UnidadTransporteDetalleDTO` del backend). */
+export type TransportUnitDetail = {
+  publicId: string
+  patente: string
+  configuracion: UnitConfiguration
+  slots: UnitSlotDetail[]
+}
+
+export async function getTransportUnit(publicId: string) {
+  const { data } = await apiClient.get<TransportUnitDetail>(
+    `/api/v1/unidades-transporte/${publicId}`
+  )
+  return data
+}

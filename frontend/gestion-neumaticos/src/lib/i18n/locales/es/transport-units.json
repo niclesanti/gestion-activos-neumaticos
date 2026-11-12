@@ -83,10 +83,54 @@
     "pagination": {
       "summary_one": "{{count}} unidad · página {{page}} de {{pages}}",
       "summary_other": "{{count}} unidades · página {{page}} de {{pages}}"
-    }
+    },
+    "openDetail": "Ver la ficha de la unidad {{plate}}"
   },
   "unitTypes": {
     "TRACTOR": "Tractor",
     "SEMIRREMOLQUE": "Semirremolque"
+  },
+  "legend": {
+    "occupied": "Ocupada",
+    "empty": "Vacía"
+  },
+  "detail": {
+    "description": "Chasis de la unidad y neumático montado en cada posición.",
+    "data": {
+      "title": "Datos de la unidad",
+      "configuration": "Configuración",
+      "type": "Tipo",
+      "axles": "Ejes",
+      "occupied": "Posiciones ocupadas",
+      "occupiedValue": "{{occupied}} de {{total}}"
+    },
+    "notFound": {
+      "title": "La unidad ya no existe",
+      "description": "Pudo haber sido dada de baja. Actualizá el listado."
+    },
+    "error": {
+      "title": "No se pudo cargar la ficha",
+      "description": "Revisá tu conexión e intentá de nuevo.",
+      "retry": "Reintentar"
+    }
+  },
+  "slot": {
+    "serial": "N.º de serie",
+    "brand": "Marca",
+    "state": "Estado",
+    "mileage": "Kilometraje",
+    "mileageValue": "{{value}} km",
+    "notRegistered": "No registrado",
+    "axleType": "Eje de {{type}}",
+    "noTire": "Sin neumático"
+  },
+  "tireStates": {
+    "NUEVO": "Nuevo",
+    "NUEVO_USADO": "Nuevo usado",
+    "HOMBROS": "Hombros",
+    "RECAPADO": "Recapado",
+    "RECAPADO_USADO": "Recapado usado",
+    "RECAPADO_SIN_GARANTIA": "Recapado sin garantía",
+    "DE_BAJA": "De baja"
   }
 }

@@ -28,6 +28,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -176,6 +177,16 @@ class ControllerAdvisorTest {
             assertThat(info.status()).isEqualTo(status.value());
             assertThat(info.message()).isEqualTo(mensaje);
         });
+    }
+
+    @Test
+    @DisplayName("un parámetro de ruta con tipo inválido responde 400 sin exponer el mensaje de Spring")
+    void parametroConTipoInvalido() {
+        MethodArgumentTypeMismatchException ex = new MethodArgumentTypeMismatchException("x", java.util.UUID.class,
+                "publicId", null, new IllegalArgumentException("Invalid UUID string: x"));
+
+        assertRespuesta(advisor.handleMethodArgumentTypeMismatchException(ex, request), HttpStatus.BAD_REQUEST,
+                ControllerAdvisor.MENSAJE_SOLICITUD_INVALIDA);
     }
 
     @Test

@@ -28,6 +28,7 @@ import {
   DEFAULT_TRANSPORT_UNITS_QUERY,
   type TransportUnitsQuery,
 } from "@/features/transport-units/api/transport-units-api"
+import { TransportUnitDetailDialog } from "@/features/transport-units/components/transport-unit-detail-dialog"
 import { useTransportUnits } from "@/features/transport-units/hooks/use-transport-units"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { cn } from "@/lib/utils"
@@ -45,6 +46,10 @@ export function TransportUnitsTable() {
     page: DEFAULT_TRANSPORT_UNITS_QUERY.page,
     direction: DEFAULT_TRANSPORT_UNITS_QUERY.direction,
   })
+  const [selected, setSelected] = React.useState<{
+    publicId: string
+    plate: string
+  } | null>(null)
   const debouncedSearch = useDebouncedValue(search)
 
   const query: TransportUnitsQuery = {
@@ -158,9 +163,28 @@ export function TransportUnitsTable() {
                     </TableRow>
                   ))
                 : units.map((unit) => (
-                    <TableRow key={unit.publicId}>
+                    <TableRow
+                      key={unit.publicId}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setSelected({
+                          publicId: unit.publicId,
+                          plate: unit.patente,
+                        })
+                      }
+                    >
                       <TableCell className="font-medium">
-                        {unit.patente}
+                        {/* El clic llega a la fila; el botón da el foco y el
+                            rol a teclado y lectores de pantalla. */}
+                        <button
+                          type="button"
+                          className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                          aria-label={t("list.openDetail", {
+                            plate: unit.patente,
+                          })}
+                        >
+                          {unit.patente}
+                        </button>
                       </TableCell>
                       <TableCell>{unit.configuracion.nombre}</TableCell>
                       <TableCell>
@@ -174,6 +198,12 @@ export function TransportUnitsTable() {
           </Table>
         </div>
       )}
+
+      <TransportUnitDetailDialog
+        publicId={selected?.publicId ?? null}
+        plate={selected?.plate ?? ""}
+        onClose={() => setSelected(null)}
+      />
 
       {pageInfo ? (
         <TablePagination

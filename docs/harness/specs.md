@@ -1,49 +1,29 @@
 # Spec Driven Development (SDD)
 
-> Este proyecto sigue un flujo Kiro-style adaptado a historias de usuario (Scrumban): historia → design → tasks → code.
-> El código no se escribe hasta que el spec está aprobado por un humano.
-
-## Estructura
-
-Cada feature nueva (`"sdd": true` en `feature_list.json`) tiene una carpeta
-dedicada en cuanto deja `pending`:
+> Flujo adaptado a historias de usuario (Scrumban): historia → design → tasks → código.
+> No se escribe código hasta que un humano aprueba el spec. El spec es para **revisarse**:
+> si no se puede leer a fondo en pocos minutos, es demasiado largo.
 
 ```
-specs/<feature-name>/
-├── historia-usuario.md   # QUÉ se necesita (historia de usuario + criterios de aceptación)
-├── design.md         # CÓMO se construirá (decisiones técnicas)
-└── tasks.md          # PASOS concretos a implementar
+specs/<name>/                  # <name> = campo `name` de feature_list.json
+├── historia-usuario.md        # QUÉ   (≤ 4 KB)
+├── design.md                  # CÓMO  (≤ 6 KB)
+└── tasks.md                   # PASOS (≤ 3 KB)
 ```
 
-El `feature-name` coincide con el campo `name` de `feature_list.json`.
+Los topes son máximos, no objetivos: una HU chica ocupa mucho menos.
 
-## Estados de una feature
+## Estados (`feature_list.json` es el tablero Kanban, WIP = 1)
 
-| Estado         | Significado                                                    |
-|----------------|----------------------------------------------------------------|
-| `pending`      | Sin spec. El `spec_author` es el primero en actuar.            |
-| `spec_ready`   | Spec redactado. Esperando aprobación humana. NO se toca código.  |
-| `in_progress`  | Spec aprobado. `implementer` trabajando.                       |
-| `done`         | Verificaciones verdes, `reviewer` aprobó, sesión cerrada.      |
-| `blocked`      | Atascado. Razón en `progress/current.md`.                      |
+| Estado        | Significado                                          |
+|---------------|------------------------------------------------------|
+| `pending`     | Sin spec. Actúa el `spec_author`.                    |
+| `spec_ready`  | Spec redactado, esperando aprobación humana.         |
+| `in_progress` | Spec aprobado, `implementer` trabajando.            |
+| `done`        | `verify.sh` verde, reviewer aprobó, leader cerró.    |
+| `blocked`     | Atascado; razón en `progress/impl_<name>.md`.        |
 
-## La puerta de aprobación humana
-
-El flujo automático se detiene **una vez**: cuando el `spec_author` termina
-sus tres archivos, marca la feature como `spec_ready` y para. El humano
-lee `specs/<feature>/` y dice "aprobado" (o pide cambios).
-
-Solo entonces el `leader` transiciona `spec_ready → in_progress` y lanza
-el `implementer`.
-
-```
-pending → [spec_author] → spec_ready → ⏸ HUMANO → in_progress → [implementer → reviewer] → done
-```
-
-## historia-usuario.md — la historia y sus criterios de aceptación
-
-Trabajamos con **historias de usuario** (Scrumban). El archivo reproduce la HU
-con el mismo formato que usa el equipo (ver `HU-43.md` en la raíz como modelo):
+## `historia-usuario.md` — el qué
 
 ```markdown
 # HU-<n> - <título>
@@ -51,129 +31,43 @@ con el mismo formato que usa el equipo (ver `HU-43.md` en la raíz como modelo):
 **Historia**: Como <rol>, quiero <objetivo>, para <beneficio>.
 
 **Criterios de Aceptación**:
+- CA1: Dado <contexto>, cuando <acción>, entonces <resultado observable>.
 
-- CA1: Dado <contexto>, cuando <acción o evento>, entonces <resultado observable>.
-- CA2: Dado ..., cuando ..., entonces ...
-
-**Notas / Supuestos**: <aclaraciones, dependencias, fuera de alcance>.
+**Notas / Supuestos**: <aclaraciones de negocio, dependencias, fuera de alcance>.
 ```
 
-Reglas duras:
+- La fuente es `feature_list.json` (`historia`, `descripcion`, `acceptance`): se **transcribe** y solo se agrega la numeración `CA<n>`. No se cambia la intención ni se inventan criterios.
+- Un `CA` = un comportamiento observable y verificable por un test concreto. Si mezcla varios resultados, se parte.
+- Sin lenguaje ambiguo ("rápido", "correctamente"): status HTTP, campo, mensaje, estado persistido.
+- Backend: contrato HTTP (método, ruta, rol, status, cuerpo) o regla de dominio. Frontend: comportamiento observable.
+- **Las Notas no llevan decisiones técnicas** (nombres de clases, serialización, escapes, etc.): van en `design.md`.
+- **Lo que no pertenece a la HU no se mete como `CA`.** Si surge un cambio relacionado (p. ej. unificar un comportamiento de otro módulo), se propone como entrada aparte en `feature_list.json` o se marca "fuera de alcance — decide el humano".
+- Una HU demasiado grande se parte en varias entradas antes de especificarla.
 
-- La fuente de las historias es `feature_list.json` (`historia`, `descripcion` y `acceptance`, con el
-  texto completo y literal). Si el humano ya escribió la HU, el `spec_author` la **transcribe tal cual** y solo
-  agrega la numeración `CA<n>`; no cambia su intención ni agrega criterios inventados.
-- Cada criterio de aceptación tiene un id estable: `CA1`, `CA2`, ...
-- Cada `CA<n>` tiene que ser verificable por al menos un test concreto.
-- Un criterio = un solo comportamiento observable. Si un criterio mezcla varios
-  resultados ("entonces A y además B"), se parte en dos.
-- Evitá lenguaje ambiguo ("rápido", "amigable", "correctamente"): expresá el
-  resultado concreto (status HTTP, mensaje, campo, estado persistido).
-- Los criterios de backend se expresan en términos de contrato HTTP
-  (método, ruta, rol, status, cuerpo) o de reglas de dominio observables.
-- Los criterios de frontend se expresan en términos de comportamiento
-  observable (qué muestra, qué request dispara, qué valida el esquema zod).
-- Una HU demasiado grande para entrar en una sola feature se parte en varias
-  historias antes de especificarla (cada una con su entrada en `feature_list.json`).
+## `design.md` — el cómo (solo lo que hay que decidir o revisar)
 
-Ejemplo:
+Secciones fijas:
+
+1. **Contrato**: endpoint(s), DTO (campos), errores, rol requerido. Frontend: pantalla/comportamiento.
+2. **Archivos**: una línea por archivo a crear/modificar, con ruta y propósito.
+3. **Migración**: número, tablas, RLS, privilegios, auditoría (si hay).
+4. **Decisiones que se apartan de las convenciones** de `CLAUDE.md` / `conventions.md` (y dependencias nuevas con justificación).
+5. **Alternativas descartadas**: 1 a 3, una línea de motivo cada una.
+
+**No incluye**: código, contenido de métodos, mensajes de log, nombres de constantes, descripción del código actual, ni lo que ya dicen las convenciones: eso lo resuelve el implementer.
+
+## `tasks.md` — checklist ejecutable
+
+Una línea por task, en el orden natural del stack (migración → entidad/repo → mapper/DTO → servicio → controlador → tests backend → frontend → i18n → docs):
 
 ```markdown
-# HU-30 - Listar centros de almacenamiento
-
-**Historia**: Como usuario Lector, quiero ver el listado de centros de almacenamiento,
-para consultar su ubicación y cantidad de neumáticos en stock.
-
-**Criterios de Aceptación**:
-
-- CA1: Dado un usuario con nivel Lector o superior, cuando solicita
-  `GET /api/v1/centros-almacenamiento`, entonces el sistema responde 200 con una
-  página de centros (publicId, nombre, domicilio, cantidad en stock).
-- CA2: Dado un usuario sin sesión, cuando solicita el listado, entonces el sistema
-  responde 401 con un cuerpo `ExceptionInfo`.
-
-**Notas / Supuestos**: el alta ya existe; no incluye filtros.
+- [ ] T1 — Crear migración `V20` con RLS y privilegios. Archivos: `db/migration/V20__...sql`. Cubre: CA2.
 ```
 
-## Scrumban y el tablero
+- No repite `design.md` (firmas, rutas largas, lógica) ni nombra cada test: los nombres de test los decide el implementer.
+- **No lleva matriz de trazabilidad**: se arma una sola vez, en `progress/impl_<name>.md`.
+- El implementer marca `[x]`; el reviewer rechaza si queda alguna `[ ]` sin justificación.
 
-El `feature_list.json` es el tablero Kanban del repo y cada feature es una historia:
-
-| Columna del tablero | Estado en `feature_list.json` |
-|---------------------|--------------------------------|
-| Backlog / Por hacer | `pending`                      |
-| Especificación lista (esperando OK) | `spec_ready`   |
-| En curso            | `in_progress`                  |
-| Hecho               | `done`                         |
-| Bloqueada           | `blocked`                      |
-
-El límite de trabajo en curso (WIP) es **1**: una sola historia en `in_progress`
-(`init.sh` lo verifica). Se tira de la siguiente historia solo cuando la anterior
-llega a `done`; no hay sprints dentro del arnés, el flujo es continuo.
-La definición de "hecho" es: criterios de aceptación cubiertos, tasks completas,
-reviewer APPROVED y `./init.sh` verde.
-
-## design.md — decisiones técnicas
-
-Captura **antes** de tocar código:
-
-- Qué archivos se crean / modifican (backend y frontend, con ruta completa).
-- Qué módulo Modulith es dueño del cambio y qué API pública cruza módulos.
-- Qué migración Flyway se agrega (número, tablas, RLS, privilegios, auditoría).
-- Qué firmas nuevas aparecen (endpoints, servicios, DTOs, hooks, componentes).
-- Qué excepciones se reutilizan o se añaden; qué rol exige cada endpoint.
-- Qué strings de i18n y qué entradas de `ROUTES` / `NAV_GROUPS` / `access.ts` cambian.
-- Qué alternativa se descartó y por qué (mínimo una).
-
-NO es ingeniería desde primeros principios — apóyate en
-`docs/harness/architecture.md`, `docs/harness/conventions.md` y `CLAUDE.md`.
-El `design.md` documenta los puntos donde tu feature roza la frontera de esas reglas.
-
-## tasks.md — checklist ejecutable
-
-Pasos discretos en orden, cada uno con checkbox. Cada task referencia al
-menos un `CA<n>` que cubre. Las tasks respetan el orden natural del stack:
-migración → entidad/repositorio → mapper/DTO → servicio → controlador →
-tests del backend → función de API / esquema / hook / componente del frontend →
-i18n → documentación (`CLAUDE.md`, `docs/Seguridad/seguridad.md`).
-
-Ejemplo:
-
-```markdown
-- [ ] T1 — Crear `V20__...sql` con RLS y privilegios mínimos. Cubre: CA2.
-- [ ] T2 — Añadir `listar` en `CentroAlmacenamientoController` con `@PreAuthorize("hasRole('LECTOR')")`. Cubre: CA1, CA2.
-- [ ] T3 — Añadir `CentroAlmacenamientoControllerTest.listar_devuelve200` (`@WebMvcTest`). Cubre: CA1.
-- [ ] T4 — Añadir `CentroAlmacenamientoControllerTest.listar_comoSinRol_devuelve401`. Cubre: CA2.
-```
-
-El `implementer` marca `[x]` cada task al completarla. El `reviewer`
-rechaza si queda alguna `[ ]` sin justificación documentada.
-
-## Trazabilidad (regla dura)
-
-- Cada test nuevo debe poder mapearse a un `CA<n>` de su spec.
-- Cada `CA<n>` debe tener al menos un test concreto.
-- El `reviewer` comprueba esta correspondencia explícitamente y rechaza
-  si falta.
-- El frontend no tiene runner de tests: un `CA<n>` de UI se cubre con la
-  verificación que documenta el implementer (lint, typecheck, build y la
-  comprobación manual concreta que hizo), y el `spec_author` debe preferir
-  criterios de frontend verificables por esos medios. Si esto resulta
-  insuficiente para una feature, se propone agregar un runner de tests como
-  feature aparte (no se instala dentro de otra feature).
-
-El `implementer` documenta el mapa en `progress/impl_<name>.md`:
-
-```markdown
 ## Trazabilidad
-- CA1 → `CentroAlmacenamientoControllerTest.listar_devuelve200`
-- CA2 → `CentroAlmacenamientoControllerTest.listar_comoSinRol_devuelve401`
-- CA3 → (frontend) `npm run typecheck` + verificación manual: la tabla se refresca tras el alta
-```
 
-## Cuándo NO aplica SDD
-
-En este proyecto **todas** las historias del sprint llevan `"sdd": true`. Solo quedaría sin spec
-una tarea técnica menor que el humano agregue explícitamente con `"sdd": false`. Las funcionalidades
-implementadas antes del arnés (login, altas, auditoría) no figuran en `feature_list.json`; su estado
-está en la sección "Current state" de `CLAUDE.md`.
+Cada `CA<n>` tiene al menos un test concreto (JUnit) o, en UI sin runner de tests, la verificación documentada en `impl_<name>.md` (lint + typecheck + comprobación en navegador). El `spec_author` prefiere criterios de frontend verificables por esos medios. Si resulta insuficiente, se propone un runner de tests como feature aparte.

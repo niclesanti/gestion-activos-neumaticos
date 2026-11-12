@@ -59,7 +59,7 @@
         "Dado que un usuario hace clic o selecciona una posición ocupada dentro de la representación gráfica, entonces el sistema debe mostrar los datos principales del neumático montado en dicha posición (número de serie, marca, estado, kilometraje)."
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 4,

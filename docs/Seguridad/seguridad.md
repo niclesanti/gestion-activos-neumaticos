@@ -172,6 +172,7 @@ Endpoints de negocio anotados hasta ahora:
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/unidades-transporte/configuraciones` | `hasRole('LECTOR')` | Los tres roles |
 | `GET /api/v1/unidades-transporte` (búsqueda paginada por patente, HU-27) | `hasRole('LECTOR')` | Los tres roles |
+| `GET /api/v1/unidades-transporte/{publicId}` (ficha de una unidad con sus neumáticos montados, HU-10) | `hasRole('LECTOR')` | Los tres roles; una unidad dada de baja responde 404 |
 | `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion`, `unidades-transporte` y `centros-almacenamiento` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
 
 ### 2.10.1 Cabeceras HTTP de la API

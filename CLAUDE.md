@@ -2,57 +2,16 @@
 
 > Este archivo se carga automáticamente al inicio de cada sesión.
 
-## Rol obligatorio: leader
+## Rol de la sesión principal: leader
 
-En este repositorio actúas **siempre** como el subagente `leader` definido en
-`.claude/agents/leader.md`. Tu trabajo es **descomponer y coordinar**, nunca
-implementar.
+> **Solo para la sesión principal.** Los subagentes (`spec_author`, `implementer`, `reviewer`) siguen su propio `.claude/agents/*.md` e ignoran esta sección.
 
-### Reglas duras
+La sesión principal **coordina, no implementa**. El flujo completo (SDD, puerta de aprobación, verificación, cierre) está en `docs/harness/flujo.md`: léelo al recibir una tarea sobre `feature_list.json` (p. ej. "implementar HU-XX").
 
-- ❌ **No edites** código de aplicación ni tests directamente (ni con Edit, ni
-  con Write, ni con Bash): `backend/gestion-neumaticos/src/**` (incluye
-  `src/main/resources`, o sea las migraciones Flyway, y `src/test/**`) y
-  `frontend/gestion-neumaticos/src/**`.
-- ❌ **No marques** features como `done` en `feature_list.json`.
-- ❌ **No saltes la fase de spec.** Toda feature con `"sdd": true` debe
-  pasar por `spec_author` antes de cualquier implementación.
-- ❌ **No saltes la puerta de aprobación humana** entre `spec_ready` e
-  `in_progress`. Cuando una feature llega a `spec_ready`, paras y le
-  pides al humano que apruebe o pida cambios.
-- ✅ Para cualquier tarea de código, lanza el subagente apropiado vía la
-  herramienta `Agent`:
-  - `subagent_type: "spec_author"` → redacta
-    `specs/<name>/{historia-usuario,design,tasks}.md` para una feature `pending`
-    con `"sdd": true`.
-  - `subagent_type: "implementer"` → escribe código y tests de **una**
-    feature ya con spec aprobado (`in_progress`).
-  - `subagent_type: "reviewer"` → valida trazabilidad y tasks antes de cerrar.
-  - Si la tarea requiere investigación previa, lanza 2-3 subagentes en paralelo
-    (Explore o general-purpose) con preguntas acotadas.
-
-### Protocolo de arranque (al recibir la primera tarea)
-
-1. Lee `AGENTS.md` para orientarte.
-2. Lee `feature_list.json` y `progress/current.md`.
-3. Ejecuta `./init.sh` (replica el CI: backend `./mvnw verify` + frontend lint,
-   typecheck, build y audit; necesita Docker). Si falla, paras y reportas.
-4. Aplica la tabla de escalado y el flujo SDD de `.claude/agents/leader.md`.
-
-### Regla anti-teléfono-descompuesto
-
-Cuando lances subagentes, instrúyeles para **escribir resultados en archivos**
-(p. ej. `specs/<feature>/historia-usuario.md`, `progress/impl_<feature>.md`) y
-devolverte solo la referencia, no el contenido. Ver `.claude/agents/leader.md`
-para el patrón completo.
-
-### Cuándo NO aplica este rol
-
-- Preguntas conceptuales o de exploración del repo (lectura pura) → responde
-  tú directamente, sin lanzar subagentes.
-- Cambios fuera de `backend/gestion-neumaticos/src/` y `frontend/gestion-neumaticos/src/`
-  (docs, configuración, CI, `compose.yaml`, `progress/`, `CLAUDE.md`, `AGENTS.md`)
-  → puedes editar tú mismo.
+- ❌ No edites `backend/gestion-neumaticos/src/**` ni `frontend/gestion-neumaticos/src/**` (incluye migraciones y tests): lanza al `implementer` con la herramienta `Agent`.
+- ❌ No saltes la fase de spec ni la aprobación humana entre `spec_ready` e `in_progress`.
+- ✅ Pide a los subagentes que escriban sus resultados en archivos y devuelvan solo la referencia.
+- Preguntas conceptuales, exploración y cambios fuera de `src/` (docs, CI, `compose.yaml`, `progress/`, `feature_list.json`, `CLAUDE.md`) los resuelves tú directamente.
 
 ---
 
@@ -73,7 +32,7 @@ This is two independent projects living in one repo root, not a single build:
 - `docs/Entidades del dominio/` — PlantUML (`.puml`) entity diagrams, one per intended Modulith module (`dominio-neumaticos-svc.puml`, `dominio-conductores-svc.puml`, `dominio-usuarios-svc.puml`, `dominio-proveedores-svc.puml`, `dominio-servicios-reparacion-svc.puml`, `dominio-trazabilidad-svc.puml`, `dominio-unidades-transporte-svc.puml`, `dominio-centros-almacenamiento-svc.puml`). These are the design source of truth for entities/fields before code exists for a module — check the matching diagram before modeling a module's JPA entities.
 - `infra/` — infrastructure files: `infra/postgres/initdb/01-crear-owner.sh` (runs once on a fresh Postgres volume and creates the non-superuser database owner).
 - `docs/` — besides the entity diagrams: `seguridad.md` (security design + Pendiente list — keep it updated when touching auth), `pruebas-seguridad.md` (OWASP audit and re-test) and `despliegue-seguro.md` (manual production setup: Cloudflare TLS/WAF/rate limiting, Tunnel, secrets, backups).
-- `.github/` — `dependabot.yml` (maven, npm, docker, compose, actions) and `workflows/ci.yml` (backend `./mvnw verify`; frontend lint, typecheck, build with `VITE_API_URL`, `npm audit --omit=dev --audit-level=high`).
+- `.github/` — `dependabot.yml` (maven, npm, docker, compose, actions) and `workflows/ci.yml` (replicado en local por `./verify.sh`; backend `./mvnw verify`; frontend lint, typecheck, build with `VITE_API_URL`, `npm audit --omit=dev --audit-level=high`).
 - `.agents/skills/` — vendored agent skills (`shadcn`, `tailwind-v4-shadcn`, `java-springboot`, `vercel-react-best-practices`, `find-skills`) pinned by `skills-lock.json`. The root `package.json` exists only to hold the `shadcn` CLI devDependency — it is not a workspace root.
 
 Root `compose.yaml` wires up `postgres` (18-alpine, healthcheck-gated, mounts `infra/postgres/initdb`), `migraciones` (one-shot Flyway job built from `backend/gestion-neumaticos/Dockerfile.migraciones` on the official `flyway/flyway` image, same major as Boot's Flyway; migrates as the owner and exits), `backend` (built from `backend/gestion-neumaticos/`, starts only after `migraciones` completes successfully, runs with `SPRING_FLYWAY_ENABLED=false`, `read_only` + tmpfs `/tmp`), `frontend` (built from `frontend/gestion-neumaticos/`, `nginx-unprivileged` listening on 8080, published as 3000, `read_only`), and `pgadmin` (only with `--profile herramientas`). All ports are published on `127.0.0.1` only (8080, 3000, 5432, 5050). The root `.env` (gitignored; `.env.example` is tracked and documents every variable) supplies `DB_NAME`, `DB_USER`/`DB_PASSWORD` (Postgres image superuser — used only by the initdb script, no app service gets it), `DB_OWNER_USER`/`DB_OWNER_PASSWORD` (non-superuser owner, `CREATEROLE`, used only by the migrations job), `DB_APP_PASSWORD` (password of the `gn_app` role — the only DB credential the backend receives), `FLYWAY_LOCATIONS` (dev adds `filesystem:/flyway/sql/seed-dev`; prod only `filesystem:/flyway/sql/migraciones`), `PGADMIN_EMAIL`, `PGADMIN_PASSWORD`, `SPRING_PROFILES_ACTIVE`, `FRONTEND_URL` (for CORS), `VITE_API_URL` (frontend build arg, also goes into its CSP), and `JWT_SECRET` (**base64** of ≥ 32 random bytes: `openssl rand -base64 32`). Changing the owner setup requires recreating the volume (`docker compose down -v`), since initdb scripts only run on an empty volume. `README.Docker.md` is the unmodified Spring Boot Docker Compose scaffolding doc. This is the only compose file. To run the backend from the IDE, start only the database with `docker compose up -d postgres` and run the app with the `dev` profile and the `.env` variables exported (in that case the app runs Flyway itself as `DB_OWNER_USER`; the `application-dev.properties` defaults do not match `.env`).
@@ -191,46 +150,8 @@ Deployment: the frontend `Dockerfile` is a two-stage node:22-alpine build → `n
 
 ## Current state
 
-Branch `feature/login` implements HU-01 (log in) and HU-02 (log out) end to end: JWT login/logout/me in the backend (`usuarios` + `security`) and, in the frontend, the real login form, protected routes, and role-based authorization on three layers: the UI access matrix (`ROUTE_ACCESS`), Spring method security ready for endpoints (`@PreAuthorize` + `RoleHierarchy`), and PostgreSQL least-privilege roles + RLS. It was then hardened against the OWASP Top 10:2025 audit in `docs/pruebas-seguridad.md` (login rate limiting and bulkhead, roles read from the DB per request, CSP/security headers, non-superuser owner + separate migrations job, idle timeout, etc.; re-test at the end of that doc). Branch `feature/alta-neumaticos` implements HU-11 (register a tire):
-- **`neumaticos` module:**
-  - `POST /api/v1/neumaticos` (201 + `Location`), `@PreAuthorize("hasRole('EDITOR')")`, and `GET /api/v1/neumaticos/marcas`, `hasRole('LECTOR')`.
-  - `NeumaticoRequestDTO` holds field and cross-field (`@AssertTrue`) rules, mirrored by `features/tires/schemas/tire-schema.ts`. `kilometrajeTotal`, `kilometrajeUltimaReparacion` and `cantidadRecapados` are optional (null = unknown, nullable columns in `V10`), except: `NUEVO` requires all three, equal to 0; the `RECAPADO*` states require `cantidadRecapados >= 1` (also a DB `CHECK`).
-  - The service normalizes the serial (trim + uppercase; blank = none, unique) and publishes `neumaticos.event.NeumaticoComprado`, a `@NamedInterface`, for `NUEVO` tires.
-  - Migration `V10`: tables `neumaticos.neumaticos` (editor/admin `SELECT`/`INSERT`/`UPDATE` without `numero_serie`; lector `SELECT`; nobody `DELETE`) and `marcas_neumaticos` (read-only, seeded with Bridgestone, Fate and Pirelli).
-- **`proveedores` (HU-24, branch `feature/alta-proveedores`):** entity `ProveedorNeumaticos` (table `proveedores.proveedores`: nombre unique case-insensitive, optional email/telefono, optional `domicilio_id`). `POST /api/v1/proveedores` (`hasRole('EDITOR')`, 409 on duplicate name, 404 on unknown province) and `GET /api/v1/proveedores` (`hasRole('LECTOR')`, `ProveedorListadoDTO` publicId + nombre). Public API for other modules in `proveedores.api` (`@NamedInterface("api")`): `ProveedorApi` (used by `neumaticos`), implemented by `ProveedorApiImpl` over the repository, returning `api.ProveedorResumenDTO`; nothing else of `proveedores` (e.g. `domain.dto`) is visible to other modules; the mock is gone.
-- **`trazabilidad`:**
-  - `EventoNeumatico` + `EventoCompra`, written by `CompraNeumaticoListener` (`@Async @TransactionalEventListener`). Inheritance is `SINGLE_TABLE`: every event subtype lives in `trazabilidad.eventos_neumatico` with `tipo` as the discriminator (a tire's whole history is one index scan on `(neumatico_id, fecha)`, no joins). A new subtype adds its nullable columns plus a `CHECK` that they're null for other `tipo`s (like `ck_eventos_neumatico_datos_compra`) in its own migration, and implements `getTipo()`.
-  - Migration `V11`: only `gn_app` can insert.
-  - **The async executor propagates the publisher's `SecurityContext`** (Modulith observability's `ContextPropagatingTaskDecorator`). Listeners that write system data must wrap the write in `security.ComoSistema.ejecutar(...)` and open the transaction inside it.
-- **`V12`:** `event_publication.serialized_event` is now `TEXT`.
-- **`common`:** JPA entities `Provincia` (24 seeded by `V14`), `Localidad` (created on demand by a native upsert on `(provincia_id, lower(nombre))`) and `Domicilio`. Other modules store only the domicilio id (no JPA association, no cross-schema FK) and create/read it exclusively through the facade `common.api.DomicilioApi` inside their own transaction. `common.api` is a `@NamedInterface("api")` holding only the facade and the DTOs that cross it (`DomicilioRequestDTO`, `DomicilioResponseDTO`); its implementation `DomicilioApiImpl` lives in the internal `common.service`. `GET /api/v1/provincias` (`hasRole('LECTOR')`) goes through the internal `ProvinciaService` (`ProvinciaResponseDTO` stays in `common.domain.dto`, not part of the API). All `common`/`proveedores` tables: admin/editor SELECT/INSERT/UPDATE, lector SELECT, nobody DELETE.
-- **Frontend suppliers:** `features/suppliers` (`SuppliersCatalog` in the Settings "Proveedores" tab → `CreateSupplierDialog` → `SupplierForm` with optional contact and address sections; address fields become required once any is filled), `suppliers` i18n namespace, `suppliers.create` action. It invalidates the `["suppliers"]` query used by the tire form select.
-- **Frontend:** `tires-page` has a `PageHeader` (with the new `actions` slot) and `CreateTireDialog` → the shared `TireForm` (create/edit mode) + an `AlertDialog` warning that the serial can't be changed. There is a `tires` i18n namespace.
-- **`unidades_transporte` (HU-07, branch `feature/alta-unidades-transporte`):**
-  - Type Object catalog `ConfiguracionUnidad` + `EjeConfiguracion` (read-only, seeded by `V16`: tractor común 7 slots, tractor para cargas pesadas 11, semirremolque 13). Aggregate `UnidadTransporte` → `SlotUnidadTransporte` (bidirectional, the slot owns `unidad_id` so it goes in the INSERT; cascade `PERSIST`; `getCodigo()` derived: `E1-IZQ`, `E2-DER-INT`, `AUX-1`). Entities with bidirectional collections use `@Getter`/`@Setter` + `@ToString(exclude…)`, not `@Data`.
-  - `UnidadTransporteFactory` is an interface (implementation `UnidadTransporteFactoryImpl`, injected into the service — mocked in its unit test) that generates the slots per axle (SIMPLE: IZQ, DER; DUAL: IZQ-EXT, IZQ-INT, DER-INT, DER-EXT) and then the spares.
-  - `POST /api/v1/unidades-transporte` (`hasRole('EDITOR')`, 201 + `Location`, 404 unknown configuration, 409 duplicate plate) and `GET /api/v1/unidades-transporte/configuraciones` (`hasRole('LECTOR')`). The plate is normalized by `domain.Patentes` (uppercase, no spaces/hyphens) and must match `ABC123` or `AB123CD` — same rule in the DTO, `features/transport-units/schemas/transport-unit-schema.ts` and the `V16` `CHECK`.
-  - `V16`: units and slots are INSERT-only for admin/editor (no UPDATE/DELETE yet; tire mounting will add `UPDATE (neumatico_actual_id)`), lector SELECT.
-  - Frontend `features/transport-units`: `CreateTransportUnitDialog` → `TransportUnitForm` with `AxleLayoutPreview` (axle diagram of the chosen configuration, like the client's paper form), `transport-units` i18n namespace, `transportUnits.create` action. HU-27 (`feature/buscar-unidades-transporte`): `GET /api/v1/unidades-transporte?patente=&page=&size=&sort=` (`hasRole('LECTOR')`, paginated `Page<UnidadTransporteListadoDTO>` with nested `ConfiguracionUnidadListadoDTO`, no slots; active units only via `EspecificacionesUnidadTransporte`, term normalized with `Patentes.normalizar`, configuration loaded in the same query with `@EntityGraph`, sort whitelist `patente` in `OrdenUnidadesTransporte`, no migration). Frontend: `TransportUnitsTable` (debounced search, sortable plate, pagination; rows not clickable yet) in the page, open to the lector; shared `components/common/table-pagination.tsx` and `sortable-table-head.tsx` (also used by `features/audit`) and `DEFAULT_PAGE_SIZE` in `lib/api/page.ts`.
+El registro de lo implementado (por módulo y branch) vive en `docs/estado-actual.md`; leelo solo si necesitás saber qué existe. El leader lo actualiza al cerrar cada HU.
 
-- **`reparacion` (HU-18, branch `feature/alta-servicios-reparacion`):**
-  - Entity `ServicioReparacion` (table `reparacion.servicios_reparacion`, same shape as `ProveedorNeumaticos`: unique case-insensitive name, optional email/phone/`domicilio_id`) plus `cantidadNeumaticosEnReparacion`; its domain methods `enviarNeumaticoReparacion()` (+1) and `reingresarNeumatico()` (−1, `OperacionNoPermitidaException` below 0) are not wired to any endpoint yet. Audit fields are left for another story.
-  - `POST /api/v1/servicios-reparacion` (`hasRole('EDITOR')`, 201 + `Location`, 404 unknown province, 409 duplicate name); no listing yet. No public `api/` package until another module needs one.
-  - `V17`: admin/editor `INSERT` and column-level `UPDATE`, all three roles `SELECT`, nobody `DELETE`, `CHECK (cantidad >= 0)`.
-  - Frontend `features/repair-services` (`RepairServicesCatalog` in the Settings "Servicios de reparación" tab → `CreateRepairServiceDialog` → `RepairServiceForm`), `repair-services` i18n namespace, `repairServices.create` action. The Repairs page stays a placeholder for other features.
-  - The address UI was extracted from suppliers into shared code, which both features use: `lib/address.ts` (zod `addressShape`, `validateAddress`, `toAddressRequest`), `lib/api/provinces.ts` (`useProvinces`), `components/common/address-fieldset.tsx` (needs a `FormProvider`), `components/common/form-fields.tsx` (`TextField`, `SelectField`), `lib/aria.ts`, `lib/strings.ts` and the `address` i18n namespace. The locality is free text (created on demand); only the province is a select.
-
-- **`almacenamiento` (branch `feature/alta-centro-de-almacenamiento`, SCRUM-105 to 121):**
-  - Entity `CentroAlmacenamiento` (table `almacenamiento.centros_almacenamiento`): `nombre` (not unique), `cantidadNeumaticosEnStock` (always 0 on creation, never received from the request; domain methods `agregarNeumaticoStock()` / `removerNeumaticoStock()`, the latter throws `OperacionNoPermitidaException` below 0, not wired yet) and a **required** `domicilio_id` (`NOT NULL UNIQUE`, no cross-schema FK, created through `DomicilioApi`). Audited root (extends `AuditableEntity`; `V19` adds the audit columns; `GET /api/v1/centros-almacenamiento/auditoria`, `hasRole('ADMINISTRADOR')`).
-  - `POST /api/v1/centros-almacenamiento` (`CentroAlmacenamientoController`, `hasRole('EDITOR')`, 201 + `Location`, 400 missing name/address, 404 unknown province); no listing yet. Classes follow the `<Entidad>Service`/`Impl`/`Controller`/`RequestDTO`/`ResponseDTO` naming. No public `api/` package.
-  - `V18`: admin/editor `INSERT` and column-level `UPDATE`, all three roles `SELECT`, nobody `DELETE`, `CHECK (cantidad >= 0)`.
-  - Frontend `features/storage-centers` (`StorageCentersCatalog` in the Settings "Centros de almacenamiento" tab → `CreateStorageCenterDialog` → `StorageCenterForm`), `storage-centers` i18n namespace, `storageCenters.create` action. The address is required there: `AddressFieldset required` + `validateRequiredAddress` / `toRequiredAddressRequest` from `lib/address.ts` (suppliers and repair services keep the optional behavior). The Storage page stays a placeholder.
-
-- **Auditoría (HU-43, branch `feature/auditoria`):** backend as in the "Auditing" note above (`V19`, seven audited roots, `GET .../auditoria` per module, `UsuarioController` created only for that endpoint). Frontend `features/audit`: `AuditPage` renders one `AuditRecordsTable` per entity tab (only the active tab queries; an entity without an endpoint in `AUDIT_ENDPOINTS` shows an "unavailable" empty state) with `AuditToolbar` (debounced search, status, from/to dates), sortable Creado/Última modificación headers, server-side pagination, and `AuditRecordSheet` (read-only timeline created → modified → deleted); strings in the `audit` namespace; generic pieces moved to `lib/api/page.ts` (`Page<T>`) and `hooks/use-debounced-value.ts`. The table is plain shadcn `Table` (server-side data, no `@tanstack/react-table`, whose installed v9 has a different API).
-
-- **Home:** `features/home` has a welcome header (`WelcomeHeader`: time-of-day greeting from the device clock via `useDayPeriod`, first name, date, and an `AccessLevelBadge` using the shadcn `Badge`; strings in `home` + `common.accessLevel`) above the placeholder dashboard. Features read the session user (`name`, `accessLevel`) through `useSessionUser()` (`src/lib/current-user.ts`, context provided by `AppLayout`), since they can't import `features/auth`.
-
-The other section pages (repairs, storage, settings, audit) are still placeholders. Pending (see `docs/seguridad.md` → Pendiente): annotating each future business endpoint with `@PreAuthorize` (and defining the lector's read permissions), and user management (create/edit/soft delete, revoking sessions on password change, password policy).
 ## Codebase memory (MCP)
 
 This repo is configured (`.mcp.json`) with the `codebase-memory-mcp` MCP server (https://github.com/DeusData/codebase-memory-mcp), a local code-intelligence graph indexer — no API keys, nothing leaves the machine. Before starting a non-trivial request (exploring unfamiliar code, tracing a call path, checking what references something, planning a change), prefer its tools over ad-hoc grepping/reading when they're available in the session:
