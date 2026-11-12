@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +28,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.OpenApiConfig
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ExceptionInfo;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
@@ -119,6 +122,27 @@ public class UnidadTransporteController {
     })
     public ResponseEntity<List<ConfiguracionUnidadDTO>> listarConfiguraciones() {
         return ResponseEntity.ok(unidadTransporteService.listarConfiguraciones());
+    }
+
+    @GetMapping("/{publicId}")
+    @PreAuthorize("hasRole('LECTOR')")
+    @Operation(
+            summary = "Consultar la ficha de una unidad de transporte",
+            description = "Devuelve la unidad con su configuración de ejes completa y sus posiciones, cada una con "
+                    + "el neumático montado (o sin él si está vacía). Una unidad dada de baja se comporta como "
+                    + "inexistente. Cualquier nivel de acceso.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ficha de la unidad"),
+            @ApiResponse(responseCode = "400", description = "El identificador no es un UUID",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "404", description = "La unidad no existe o está dada de baja",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<UnidadTransporteDetalleDTO> obtenerDetalle(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(unidadTransporteService.obtenerDetalle(publicId));
     }
 
     @GetMapping("/auditoria")

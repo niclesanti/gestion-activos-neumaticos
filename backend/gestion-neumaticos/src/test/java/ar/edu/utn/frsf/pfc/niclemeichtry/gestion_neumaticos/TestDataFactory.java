@@ -36,6 +36,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.enti
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoMontadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.Neumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.SituacionOperativa;
@@ -53,6 +54,8 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Localidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Provincia;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.UnidadTransporte;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.service.UnidadTransporteFactoryImpl;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.EjeConfiguracion;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.TipoEje;
@@ -443,6 +446,22 @@ public final class TestDataFactory {
 	public static final String PATENTE = "AB123CD";
 	public static final Long CONFIGURACION_ID = 1L;
 	public static final UUID UNIDAD_PUBLIC_ID = UUID.fromString("01928f3e-7b1a-7c2d-9e4f-5a6b7c8d9e0f");
+
+	public static final Long NEUMATICO_MONTADO_ID = 10L;
+	public static final UUID NEUMATICO_MONTADO_PUBLIC_ID = UUID.fromString("01928f3e-7b1a-7c2d-9e4f-5a6b7c8d9e10");
+
+	/** Neumático montado tal como lo entrega NeumaticoApi. */
+	public static NeumaticoMontadoDTO neumaticoMontado() {
+		return new NeumaticoMontadoDTO(NEUMATICO_MONTADO_PUBLIC_ID, NUMERO_SERIE, "Fate", "NUEVO", 1500f);
+	}
+
+	/** Tractor común (7 slots) con el primero ocupado por {@link #NEUMATICO_MONTADO_ID}. */
+	public static UnidadTransporte unidadConNeumaticoMontado() {
+		UnidadTransporte unidad = new UnidadTransporteFactoryImpl().crearUnidad(PATENTE, tractorComun());
+		unidad.setPublicId(UNIDAD_PUBLIC_ID);
+		unidad.getSlots().get(0).setNeumaticoActualId(NEUMATICO_MONTADO_ID);
+		return unidad;
+	}
 
 	public static UnidadTransporteRequestDTO unidadTransporteRequest() {
 		return new UnidadTransporteRequestDTO(PATENTE, CONFIGURACION_ID);

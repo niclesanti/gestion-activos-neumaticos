@@ -1,7 +1,11 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.service;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CONFIGURACION_ID;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.NEUMATICO_MONTADO_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.PATENTE;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.UNIDAD_PUBLIC_ID;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoMontado;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.unidadConNeumaticoMontado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.semirremolque;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.tractorComun;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.unidadTransporteRequest;
@@ -15,6 +19,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,7 +37,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
@@ -68,6 +75,7 @@ class UnidadTransporteServiceImplTest {
     @Mock private ConfiguracionUnidadRepository configuracionUnidadRepository;
     /** El servicio depende solo de la interfaz: la fábrica se reemplaza por un mock. */
     @Mock private UnidadTransporteFactory unidadTransporteFactory;
+    @Mock private NeumaticoApi neumaticoApi;
 
     /** Mapper real (generado por MapStruct): el servicio depende de cómo copia los datos. */
     private final UnidadTransporteMapper unidadTransporteMapper = new UnidadTransporteMapperImpl();
@@ -77,7 +85,60 @@ class UnidadTransporteServiceImplTest {
     @BeforeEach
     void crearServicio() {
         servicio = new UnidadTransporteServiceImpl(ensamblador, unidadTransporteRepository, configuracionUnidadRepository,
-                unidadTransporteFactory, unidadTransporteMapper);
+                unidadTransporteFactory, unidadTransporteMapper, neumaticoApi);
+    }
+
+    @Nested
+    @DisplayName("obtenerDetalle")
+    class ObtenerDetalle {
+
+        @Test
+        @DisplayName("arma la ficha con el neumático montado en su slot y los demás vacíos, con una sola llamada")
+        void armaLaFicha() {
+            UnidadTransporte unidad = unidadConNeumaticoMontado();
+            when(unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.of(unidad));
+            when(neumaticoApi.buscarMontadosPorIds(List.of(NEUMATICO_MONTADO_ID)))
+                    .thenReturn(Map.of(NEUMATICO_MONTADO_ID, neumaticoMontado()));
+
+            UnidadTransporteDetalleDTO detalle = servicio.obtenerDetalle(UNIDAD_PUBLIC_ID);
+
+            assertThat(detalle.publicId()).isEqualTo(UNIDAD_PUBLIC_ID);
+            assertThat(detalle.configuracion().ejes()).hasSize(2);
+            assertThat(detalle.slots()).hasSize(7);
+            assertThat(detalle.slots().get(0).ocupado()).isTrue();
+            assertThat(detalle.slots().get(0).neumatico()).isEqualTo(neumaticoMontado());
+            assertThat(detalle.slots().subList(1, 7)).allSatisfy(slot -> {
+                assertThat(slot.ocupado()).isFalse();
+                assertThat(slot.neumatico()).isNull();
+            });
+            verify(configuracionUnidadRepository).findConEjesById(1L);
+        }
+
+        @Test
+        @DisplayName("sin neumáticos montados consulta el lote vacío")
+        void sinNeumaticos() {
+            UnidadTransporte unidad = unidadConNeumaticoMontado();
+            unidad.getSlots().get(0).setNeumaticoActualId(null);
+            when(unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.of(unidad));
+            when(neumaticoApi.buscarMontadosPorIds(List.of())).thenReturn(Map.of());
+
+            assertThat(servicio.obtenerDetalle(UNIDAD_PUBLIC_ID).slots()).allMatch(slot -> slot.neumatico() == null);
+        }
+
+        @Test
+        @DisplayName("404 si no existe o está dada de baja, sin consultar neumáticos")
+        void inexistente() {
+            when(unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> servicio.obtenerDetalle(UNIDAD_PUBLIC_ID))
+                    .isInstanceOf(EntidadNoEncontradaException.class)
+                    .hasMessage(UnidadTransporteServiceImpl.MENSAJE_UNIDAD_INEXISTENTE);
+            verifyNoInteractions(neumaticoApi);
+        }
+
     }
 
     @Nested

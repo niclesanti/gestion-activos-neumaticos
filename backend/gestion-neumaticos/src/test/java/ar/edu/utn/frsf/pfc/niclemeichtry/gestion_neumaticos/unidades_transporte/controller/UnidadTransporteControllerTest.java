@@ -1,6 +1,11 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.controller;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.NEUMATICO_MONTADO_ID;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.NUMERO_SERIE;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.PATENTE;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoMontado;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.unidadConNeumaticoMontado;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.UNIDAD_PUBLIC_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.tractorComun;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.unidadTransporteRequest;
@@ -34,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -67,6 +73,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoE
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.NivelAccesoVigente;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.SecurityConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSecurityErrorHandler;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
@@ -411,6 +418,123 @@ class UnidadTransporteControllerTest {
         @DisplayName("401 sin token")
         void sinToken() throws Exception {
             mockMvc.perform(get(CONFIGURACIONES)).andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(unidadTransporteService);
+        }
+
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/unidades-transporte/{publicId}")
+    class Detalle {
+
+        private static final String DETALLE = UNIDADES + "/{publicId}";
+
+        private UnidadTransporteDetalleDTO detalle() {
+            return mapper.toDetalleDTO(unidadConNeumaticoMontado(),
+                    Map.of(NEUMATICO_MONTADO_ID, neumaticoMontado()));
+        }
+
+        @Test
+        @DisplayName("200 con la ficha: configuración completa, slots y neumático montado, sin ids internos")
+        void detalleConLector() throws Exception {
+            when(unidadTransporteService.obtenerDetalle(UNIDAD_PUBLIC_ID)).thenReturn(detalle());
+
+            mockMvc.perform(get(DETALLE, UNIDAD_PUBLIC_ID).with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.publicId").value(UNIDAD_PUBLIC_ID.toString()))
+                    .andExpect(jsonPath("$.patente").value(PATENTE))
+                    .andExpect(jsonPath("$.configuracion.ejes.length()").value(2))
+                    .andExpect(jsonPath("$.slots.length()").value(7))
+                    .andExpect(jsonPath("$.slots[0].ocupado").value(true))
+                    .andExpect(jsonPath("$.slots[0].neumatico.numeroSerie").value(NUMERO_SERIE))
+                    .andExpect(jsonPath("$.slots[0].neumatico.marca").value("Fate"))
+                    .andExpect(jsonPath("$.slots[0].neumatico.estado").value("NUEVO"))
+                    .andExpect(jsonPath("$.slots[0].neumatico.kilometrajeTotal").value(1500.0))
+                    .andExpect(jsonPath("$.slots[6].neumatico").doesNotExist())
+                    .andExpect(jsonPath("$.id").doesNotExist())
+                    .andExpect(jsonPath("$.slots[0].neumaticoActualId").doesNotExist())
+                    .andExpect(jsonPath("$.slots[0].neumatico.id").doesNotExist())
+                    .andDo(document("unidad-transporte-detalle",
+                            preprocessRequest(prettyPrint()),
+                            preprocessResponse(prettyPrint()),
+                            pathParameters(parameterWithName("publicId").description("Identificador público de la unidad")),
+                            responseFields(
+                                    fieldWithPath("publicId").description("Identificador público"),
+                                    fieldWithPath("patente").description("Patente normalizada"),
+                                    fieldWithPath("configuracion.id").description("Id de la configuración"),
+                                    fieldWithPath("configuracion.nombre").description("Nombre de la configuración"),
+                                    fieldWithPath("configuracion.tipoUnidad").description("TRACTOR o SEMIRREMOLQUE"),
+                                    fieldWithPath("configuracion.cantSlotsAuxilio").description("Cantidad de auxilios"),
+                                    fieldWithPath("configuracion.totalEjes").description("Cantidad de ejes"),
+                                    fieldWithPath("configuracion.totalSlots").description("Cantidad de posiciones"),
+                                    fieldWithPath("configuracion.ejes[].orden").description("Orden del eje"),
+                                    fieldWithPath("configuracion.ejes[].tipoEje")
+                                            .description("DIRECCION, TRACCION o ARRASTRE"),
+                                    fieldWithPath("configuracion.ejes[].rodado").description("SIMPLE o DUAL"),
+                                    fieldWithPath("configuracion.ejes[].cantidadNeumaticos")
+                                            .description("Neumáticos del eje"),
+                                    fieldWithPath("slots[].codigo").description("Código de la posición"),
+                                    fieldWithPath("slots[].tipoSlot").description("EJE o AUXILIO"),
+                                    fieldWithPath("slots[].nroEje").description("Número de eje (null en auxilio)")
+                                            .optional(),
+                                    fieldWithPath("slots[].tipoEje").description("Tipo de eje (null en auxilio)")
+                                            .optional(),
+                                    fieldWithPath("slots[].lado").description("IZQUIERDO o DERECHO (null en auxilio)")
+                                            .optional(),
+                                    fieldWithPath("slots[].posicionRueda")
+                                            .description("SIMPLE, EXTERIOR o INTERIOR (null en auxilio)").optional(),
+                                    fieldWithPath("slots[].nroAuxilio")
+                                            .description("Número de auxilio (null en eje)").optional(),
+                                    fieldWithPath("slots[].ocupado").description("Si tiene un neumático montado"),
+                                    fieldWithPath("slots[].neumatico").description("Neumático montado (null si vacío)")
+                                            .optional(),
+                                    fieldWithPath("slots[].neumatico.publicId")
+                                            .description("Identificador público del neumático").optional(),
+                                    fieldWithPath("slots[].neumatico.numeroSerie")
+                                            .description("Número de serie (puede ser null)").optional(),
+                                    fieldWithPath("slots[].neumatico.marca").description("Nombre de la marca")
+                                            .optional(),
+                                    fieldWithPath("slots[].neumatico.estado").description("Estado del neumático")
+                                            .optional(),
+                                    fieldWithPath("slots[].neumatico.kilometrajeTotal")
+                                            .description("Kilometraje total (puede ser null)").optional())));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "ROLE_EDITOR", "ROLE_ADMINISTRADOR" })
+        @DisplayName("200 también para editor y administrador")
+        void detalleConEditorYAdministrador(String nivel) throws Exception {
+            when(unidadTransporteService.obtenerDetalle(UNIDAD_PUBLIC_ID)).thenReturn(detalle());
+
+            mockMvc.perform(get(DETALLE, UNIDAD_PUBLIC_ID).with(usuario(nivel))).andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("404 si la unidad no existe o está dada de baja")
+        void inexistente() throws Exception {
+            when(unidadTransporteService.obtenerDetalle(UNIDAD_PUBLIC_ID))
+                    .thenThrow(new EntidadNoEncontradaException("La unidad de transporte indicada no existe"));
+
+            mockMvc.perform(get(DETALLE, UNIDAD_PUBLIC_ID).with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("La unidad de transporte indicada no existe"));
+        }
+
+        @Test
+        @DisplayName("400 si el identificador no es un UUID, sin llegar al servicio")
+        void identificadorInvalido() throws Exception {
+            mockMvc.perform(get(DETALLE, "no-es-uuid").with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400));
+
+            verifyNoInteractions(unidadTransporteService);
+        }
+
+        @Test
+        @DisplayName("401 sin token")
+        void sinToken() throws Exception {
+            mockMvc.perform(get(DETALLE, UNIDAD_PUBLIC_ID)).andExpect(status().isUnauthorized());
 
             verifyNoInteractions(unidadTransporteService);
         }

@@ -1,6 +1,9 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -17,14 +20,18 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Reg
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoApi;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoMontadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.EspecificacionesUnidadTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.OrdenUnidadesTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.Patentes;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.ConfiguracionUnidad;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.SlotUnidadTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.UnidadTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.mapper.UnidadTransporteMapper;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.repository.ConfiguracionUnidadRepository;
@@ -38,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 public class UnidadTransporteServiceImpl implements UnidadTransporteService {
 
     static final String MENSAJE_PATENTE_DUPLICADA = "Ya existe una unidad de transporte con la patente %s";
+    static final String MENSAJE_UNIDAD_INEXISTENTE = "La unidad de transporte indicada no existe";
     static final String MENSAJE_CONFIGURACION_INEXISTENTE = "La configuración de unidad indicada no existe";
 
     private final EnsambladorAuditoria ensamblador;
@@ -45,6 +53,7 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
     private final ConfiguracionUnidadRepository configuracionUnidadRepository;
     private final UnidadTransporteFactory unidadTransporteFactory;
     private final UnidadTransporteMapper unidadTransporteMapper;
+    private final NeumaticoApi neumaticoApi;
 
     @Override
     @Transactional
@@ -106,6 +115,26 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
                 .map(unidadTransporteMapper::toListadoDTO);
         log.debug("Unidades de transporte encontradas: {}", pagina.getTotalElements());
         return pagina;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UnidadTransporteDetalleDTO obtenerDetalle(UUID publicId) {
+        log.debug("Consultando la ficha de la unidad de transporte {}", publicId);
+        UnidadTransporte unidad = unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(publicId)
+                .orElseThrow(() -> {
+                    log.warn("Ficha rechazada: la unidad de transporte {} no existe o está dada de baja", publicId);
+                    return new EntidadNoEncontradaException(MENSAJE_UNIDAD_INEXISTENTE);
+                });
+        // Carga los ejes en el contexto de persistencia: el mapeo de la configuración los recorre.
+        configuracionUnidadRepository.findConEjesById(unidad.getConfiguracion().getId());
+        List<Long> idsNeumaticos = unidad.getSlots().stream()
+                .map(SlotUnidadTransporte::getNeumaticoActualId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Long, NeumaticoMontadoDTO> neumaticos = neumaticoApi.buscarMontadosPorIds(idsNeumaticos);
+        log.debug("Ficha de la unidad {} armada con {} neumáticos montados", publicId, neumaticos.size());
+        return unidadTransporteMapper.toDetalleDTO(unidad, neumaticos);
     }
 
     @Override

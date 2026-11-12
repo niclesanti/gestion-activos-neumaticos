@@ -83,10 +83,54 @@
     "pagination": {
       "summary_one": "{{count}} unit · page {{page}} of {{pages}}",
       "summary_other": "{{count}} units · page {{page}} of {{pages}}"
-    }
+    },
+    "openDetail": "Open details for unit {{plate}}"
   },
   "unitTypes": {
     "TRACTOR": "Tractor",
     "SEMIRREMOLQUE": "Semi-trailer"
+  },
+  "legend": {
+    "occupied": "Occupied",
+    "empty": "Empty"
+  },
+  "detail": {
+    "description": "Unit chassis and the tire mounted at each position.",
+    "data": {
+      "title": "Unit details",
+      "configuration": "Configuration",
+      "type": "Type",
+      "axles": "Axles",
+      "occupied": "Occupied positions",
+      "occupiedValue": "{{occupied}} of {{total}}"
+    },
+    "notFound": {
+      "title": "This unit no longer exists",
+      "description": "It may have been removed. Refresh the list."
+    },
+    "error": {
+      "title": "Couldn't load the unit details",
+      "description": "Check your connection and try again.",
+      "retry": "Retry"
+    }
+  },
+  "slot": {
+    "serial": "Serial no.",
+    "brand": "Brand",
+    "state": "State",
+    "mileage": "Mileage",
+    "mileageValue": "{{value}} km",
+    "notRegistered": "Not registered",
+    "axleType": "{{type}} axle",
+    "noTire": "No tire mounted"
+  },
+  "tireStates": {
+    "NUEVO": "New",
+    "NUEVO_USADO": "Used new",
+    "HOMBROS": "Shoulders",
+    "RECAPADO": "Retreaded",
+    "RECAPADO_USADO": "Used retreaded",
+    "RECAPADO_SIN_GARANTIA": "Retreaded, no warranty",
+    "DE_BAJA": "Scrapped"
   }
 }
