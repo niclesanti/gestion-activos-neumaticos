@@ -1,0 +1,77 @@
+@startuml 03-vista-despliegue
+skinparam backgroundColor white
+skinparam defaultTextAlignment center
+skinparam shadowing false
+skinparam nodesep 40
+skinparam ranksep 60
+skinparam ArrowFontSize 12
+skinparam defaultFontSize 13
+skinparam node {
+  BackgroundColor #F5F7FA
+  BorderColor #33445B
+}
+skinparam cloud {
+  BackgroundColor #FFF4E5
+  BorderColor #B96A00
+}
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #33445B
+}
+skinparam database {
+  BackgroundColor #E8F3E8
+  BorderColor #2E7D32
+}
+
+title Vista de Despliegue — Presentación Primaria\nUna réplica por ambiente (staging ← rama develop · production ← rama main)
+
+node "Dispositivo del usuario\n<<dispositivo>>" as Cliente {
+  node "Navegador web\n<<entorno de ejecución>>" as Nav {
+    artifact "Cliente Web (PWA)" as PWA
+  }
+}
+
+cloud "Cloudflare\n<<proveedor SaaS>>" as CF {
+  node "Borde: DNS · TLS (Full strict)\nWAF · rate limiting · DDoS" as Borde
+  node "Workers (static assets)\n<<entorno de ejecución>>" as Workers {
+    artifact "Build estático del frontend\n+ _headers (CSP)" as Assets
+  }
+}
+
+node "Instancia Amazon Lightsail (2 GB, Linux)\n<<servidor>> — sin puertos publicados a internet" as Lightsail {
+  node "Docker Compose\n<<entorno de ejecución>>" as Compose {
+    node "cloudflared\n<<contenedor>>" as Tunnel
+    node "backend\n<<contenedor · perfil prod>>\nAPI :8080 · gestión :8081" as BackendC {
+      artifact "Backend API\n(Spring Boot, monolito modular)" as BackendA
+    }
+    node "postgres\n<<contenedor>>" as PG {
+      database "PostgreSQL 18\n(volumen postgres-data)" as DB
+    }
+    node "migraciones\n<<job Flyway, one-shot>>" as Mig
+    node "alloy\n<<contenedor>>" as Alloy
+  }
+}
+
+database "Cloudflare R2\n<<almacenamiento de backups>>" as R2
+cloud "Grafana Cloud (Free)\n<<proveedor SaaS>>\nPrometheus · Loki · Grafana" as GC
+
+cloud "GitHub\n<<proveedor SaaS>>\nActions + Environments\n(también publica el frontend\nen Workers con wrangler)" as GH
+
+Cliente -down-> CF : HTTPS\n(sitio y REST/JSON)
+Borde -right-> Workers : assets\nestáticos
+CF -down-> Tunnel : Tunnel\n(conexión saliente\ndesde cloudflared)
+Tunnel -down-> BackendC : HTTP :8080
+BackendC -down-> PG : JDBC\nrol gn_app
+Mig -down-> PG : Flyway\nrol gn_owner
+Alloy -up-> BackendC : scrape :8081\n+ logs ECS (volumen RO)
+Alloy -down-> GC : push HTTPS\n(saliente)
+PG .down.> R2 : pg_dump diario\n(o snapshot Lightsail)
+GH -left-> Lightsail : SSH (solo clave)\ndocker compose up -d --build
+
+note bottom of Lightsail
+  Secretos como archivos (600/644) montados en /run/secrets.
+  El backend solo recibe JWT_SECRET y DB_APP_PASSWORD.
+  El puerto 8081 nunca pasa por el Tunnel.
+end note
+
+@enduml
