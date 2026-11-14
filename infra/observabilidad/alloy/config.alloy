@@ -1,0 +1,69 @@
+// Misma configuración en local y en la nube: solo cambian las variables de entorno
+// (destinos y credenciales). Ver docs/Obs&Tel/decisiones-observabilidad.md.
+
+// ── Credencial (archivo montado como secreto) ─────────────────────
+local.file "grafana_token" {
+  filename  = "/run/secrets/GRAFANA_CLOUD_TOKEN"
+  is_secret = true
+}
+
+// ── Métricas ──────────────────────────────────────────────────────
+prometheus.scrape "backend" {
+  // "namespace" lo exige el selector del dashboard 19004.
+  targets         = [{"__address__" = "backend:8081", "namespace" = sys.env("APP_ENTORNO")}]
+  job_name        = "gestion-neumaticos-backend"
+  metrics_path    = "/actuator/prometheus"
+  scrape_interval = sys.env("SCRAPE_INTERVAL")
+  forward_to      = [prometheus.remote_write.destino.receiver]
+}
+
+prometheus.remote_write "destino" {
+  external_labels = { environment = sys.env("APP_ENTORNO") }
+  endpoint {
+    url = sys.env("METRICS_URL")
+    basic_auth {
+      username = sys.env("METRICS_USER")
+      password = local.file.grafana_token.content
+    }
+  }
+}
+
+// ── Logs ──────────────────────────────────────────────────────────
+local.file_match "backend" {
+  path_targets = [{"__path__" = "/logs/backend.json", "service_name" = "gestion-neumaticos-backend"}]
+}
+
+loki.source.file "backend" {
+  targets    = local.file_match.backend.targets
+  forward_to = [loki.process.backend.receiver]
+}
+
+loki.process "backend" {
+  // ECS de Spring Boot sale con JSON anidado: {"log":{"level":"WARN"}, ...}
+  stage.json {
+    expressions = { level = "log.level", ts = "\"@timestamp\"" }
+  }
+  stage.labels {
+    values = { level = "" }
+  }
+  // Solo service_name, environment y level como etiquetas.
+  stage.label_drop {
+    values = ["filename"]
+  }
+  stage.timestamp {
+    source = "ts"
+    format = "RFC3339"
+  }
+  forward_to = [loki.write.destino.receiver]
+}
+
+loki.write "destino" {
+  external_labels = { environment = sys.env("APP_ENTORNO") }
+  endpoint {
+    url = sys.env("LOGS_URL")
+    basic_auth {
+      username = sys.env("LOGS_USER")
+      password = local.file.grafana_token.content
+    }
+  }
+}

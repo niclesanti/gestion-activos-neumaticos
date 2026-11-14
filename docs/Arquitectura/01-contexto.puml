@@ -1,0 +1,35 @@
+@startuml 01-contexto
+skinparam backgroundColor white
+skinparam defaultTextAlignment center
+skinparam rectangle {
+  BackgroundColor #F5F7FA
+  BorderColor #33445B
+}
+skinparam cloud {
+  BackgroundColor #FFF4E5
+  BorderColor #B96A00
+}
+
+title Diagrama de Contexto\nAplicación Web para Gestión del Ciclo de Vida de Activos Neumáticos
+
+actor "Usuario Final\n(Administrador / Editor / Lector)" as Usuario
+actor "Equipo de Desarrollo\ny Operaciones" as Equipo
+
+rectangle "Aplicación Web para Gestión\ndel Ciclo de Vida de\nActivos Neumáticos" as Sistema
+
+cloud "Cloudflare\n(DNS, TLS, WAF, Workers y Tunnel)" as Cloudflare
+cloud "Grafana Cloud\n(SaaS - Plan Gratuito)" as GrafanaCloud
+
+Usuario --> Cloudflare : usa la aplicación\n(HTTPS / navegador)
+Cloudflare --> Sistema : sirve el frontend y\nredirige la API (Tunnel)
+Sistema --> GrafanaCloud : envía métricas y logs\n(HTTPS saliente)
+Equipo --> GrafanaCloud : consulta dashboards\ny alertas (HTTPS)
+
+note right of Sistema
+  El sistema incluye el Cliente Web (PWA),
+  el Backend (monolito modular) y la Base
+  de Datos. El detalle interno se muestra
+  en la Vista de Componentes y Conectores.
+end note
+
+@enduml

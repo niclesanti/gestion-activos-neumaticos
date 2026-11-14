@@ -23,3 +23,9 @@
 - **Cambios:** `GET /api/v1/unidades-transporte/{publicId}` (`hasRole('LECTOR')`, `UnidadTransporteDetalleDTO` con `SlotDetalleDTO` y neumático montado vía nuevo contrato `neumaticos.api` `NeumaticoApi`, sin N+1, 404 si no existe o está de baja, 400 por UUID inválido, sin migración). Frontend: `TransportUnitDetailDialog` (Collapsible de datos + `AxleDiagram` extraído de `AxleLayoutPreview`, slots ocupados rellenos / vacíos con el fondo, `SlotPopover` con serie, marca, estado y kilometraje), filas de la tabla clickeables, i18n es/en, componentes `collapsible` y `popover` de shadcn. Pensado para reutilizarse en HU-31.
 - **Resultado:** `./verify.sh` en `[OK]`; prueba en navegador (temas claro/oscuro, es/en, responsive) en verde; reviewer aprobó.
 - **Referencias:** `specs/ficha_unidad_transporte/`, `progress/impl_ficha_unidad_transporte.md`, `progress/review_ficha_unidad_transporte.md`.
+
+## 2026-11-14 — Observabilidad: métricas y logs en local (sin HU en `feature_list.json`)
+- **Agentes:** leader, implementer (plan aprobado por el humano; el documento de decisiones hizo de spec).
+- **Cambios:** Actuator `health,prometheus` en puerto de gestión 8081 con `SecurityActuatorConfig`, logs ECS en archivo, Grafana Alloy + Prometheus + Loki + Grafana en `compose.yaml` bajo profiles `observabilidad` / `observabilidad-local` (Grafana en `127.0.0.1:3001`), dashboard 19004 provisionado, `infra/observabilidad/`, variables en `.env.example`. Docs actualizadas (decisiones-observabilidad, decisiones-despliegue, despliegue-seguro, CLAUDE.md).
+- **Resultado:** `./verify.sh` en `[OK]` (tras `mvnw clean`: un `target/` compilado por un IDE con JDK 25 rompe surefire); en Chrome, el dashboard muestra datos reales y Loki los logins rechazados con etiquetas `service_name`, `environment` y `level`. Pendiente la parte de nube.
+- **Referencias:** `progress/impl_observabilidad.md`, `docs/Obs&Tel/decisiones-observabilidad.md`.

@@ -1,0 +1,83 @@
+@startuml vista-modulos
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam component {
+  BackgroundColor #F5F5F5
+  BorderColor #555555
+}
+skinparam package {
+  BackgroundColor #FCFCFC
+  BorderColor #888888
+}
+
+title Vista de Módulos (Backend) — Gestión del Ciclo de Vida de Activos Neumáticos\n(Spring Modulith — trazo continuo: implementado · trazo punteado gris: planificado)
+
+package "Infraestructura transversal" as infra {
+  [security] as security
+  [config + exception] as config
+  [common] as common
+}
+
+package "Módulos de gestión" as gestion {
+  [usuarios] as usuarios
+  [unidades_transporte] as unidades
+  [neumaticos] as neumaticos
+  [conductores] as conductores
+  [proveedores] as proveedores
+  [almacenamiento] as centros
+  [reparacion] as reparacion
+}
+
+package "Historial de trazabilidad (observador reactivo)" as historial {
+  [trazabilidad] as trazabilidad
+}
+
+package "Agregación y consumo (solo lectura) — planificado" as agregacion {
+  [dashboard] as dashboard #EEEEEE
+  [reportes] as reportes #EEEEEE
+}
+
+note left of infra
+  Todos los módulos de "gestión",
+  "historial" y "agregación" dependen
+  de config, exception y common.auditoria.
+  Estas dependencias base se omiten
+  del diagrama por claridad.
+end note
+
+note bottom of gestion
+  conductores, reparacion y almacenamiento
+  aún no exponen API pública ni emiten eventos.
+end note
+
+' ===== IMPLEMENTADO =====
+' -- Puertos inversos: la infraestructura define el contrato, el dominio lo implementa --
+usuarios ..|> security : implementa puerto\nNivelAccesoVigente
+usuarios ..|> common   : implementa puerto\nAuditoresResolver
+
+' -- Dependencias directas vía <<api>> (@NamedInterface) --
+neumaticos --> proveedores : <<api>> ProveedorApi\n(validar proveedor)
+unidades --> neumaticos    : <<api>> NeumaticoApi\n(neumático montado en slot)
+proveedores --> common     : <<api>> DomicilioApi
+reparacion --> common      : <<api>> DomicilioApi
+centros --> common         : <<api>> DomicilioApi
+
+' -- Eventos de dominio implementados --
+neumaticos ..> trazabilidad : <<event>> NeumaticoComprado
+trazabilidad --> security   : ComoSistema\n(escritura como sistema)
+
+' ===== PLANIFICADO (coreografía: cada módulo llama a su(s) par(es) inmediato(s)) =====
+unidades -[#999999,dashed]-> neumaticos   : <<api>> validar disponibilidad /\nactualizar situación
+unidades -[#999999,dashed]-> conductores  : <<api>> validar conductor (opc.)
+reparacion -[#999999,dashed]-> neumaticos : <<api>> actualizar situación
+centros -[#999999,dashed]-> neumaticos    : <<api>> actualizar situación
+neumaticos -[#999999,dashed]-> centros    : <<api>> descontar de stock\n(al dar de baja)
+neumaticos -[#999999,dashed]-> reparacion : <<api>> descontar de reparación\n(al dar de baja)
+
+' -- Eventos de dominio planificados: fan-in asincrónico hacia trazabilidad --
+unidades -[#999999,dotted]-> trazabilidad    : <<event>> NeumaticoAsignado /\nNeumaticoDesasignado
+reparacion -[#999999,dotted]-> trazabilidad  : <<event>> NeumaticoEnviadoAReparacion /\nNeumaticoReingresado
+centros -[#999999,dotted]-> trazabilidad     : <<event>> NeumaticoIngresadoAStock
+neumaticos -[#999999,dotted]-> trazabilidad  : <<event>> NeumaticoDadoDeBaja
+
+@enduml

@@ -1,0 +1,47 @@
+# Override para ambientes desplegados (staging y production). Se suma al base:
+#
+#   SECRETS_DIR=/opt/gestion-neumaticos/secrets \
+#   docker compose -f compose.yaml -f compose.deploy.yaml up -d --build
+#
+# Los secretos dejan de salir de variables del .env y se leen de archivos, uno por
+# secreto, con el mismo nombre que la variable. Los servicios y los puntos de
+# montaje (/run/secrets/<NOMBRE>) son los de compose.yaml: acá solo cambia el origen.
+#
+# Cómo preparar SECRETS_DIR (usuario de despliegue):
+#   - Escribir cada archivo con printf '%s' "$VALOR" > "$SECRETS_DIR/NOMBRE"
+#     (nunca echo: el salto de línea final pasaría a formar parte de la clave).
+#   - Directorio en 700 y archivos en 644, o 640 con un grupo compartido. Con 600
+#     los contenedores no pueden leerlos: Compose monta el archivo con el dueño y
+#     los permisos del host y los procesos corren como otro usuario (spring, postgres).
+#   - Archivos: JWT_SECRET, DB_APP_PASSWORD, DB_OWNER_PASSWORD, DB_PASSWORD y
+#     GRAFANA_CLOUD_TOKEN (este último solo con el perfil "observabilidad").
+#
+# Requiere Docker Compose v2.24 o superior (!reset).
+services:
+  # El backend es read_only: Compose no puede crear allí secretos con origen
+  # "environment", así que en compose.yaml recibe JWT_SECRET y DB_APP_PASSWORD como
+  # variables. Acá se quitan y pasan a archivos (Spring los lee con configtree).
+  backend:
+    environment:
+      JWT_SECRET: !reset null
+      DB_APP_PASSWORD: !reset null
+    secrets:
+      - JWT_SECRET
+      - DB_APP_PASSWORD
+
+secrets:
+  JWT_SECRET:
+    environment: !reset null
+    file: ${SECRETS_DIR:?Falta SECRETS_DIR}/JWT_SECRET
+  DB_APP_PASSWORD:
+    environment: !reset null
+    file: ${SECRETS_DIR:?Falta SECRETS_DIR}/DB_APP_PASSWORD
+  DB_OWNER_PASSWORD:
+    environment: !reset null
+    file: ${SECRETS_DIR:?Falta SECRETS_DIR}/DB_OWNER_PASSWORD
+  DB_PASSWORD:
+    environment: !reset null
+    file: ${SECRETS_DIR:?Falta SECRETS_DIR}/DB_PASSWORD
+  GRAFANA_CLOUD_TOKEN:
+    environment: !reset null
+    file: ${SECRETS_DIR:?Falta SECRETS_DIR}/GRAFANA_CLOUD_TOKEN

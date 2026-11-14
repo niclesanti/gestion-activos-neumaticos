@@ -1,0 +1,60 @@
+@startuml 02-vista-cyc
+skinparam backgroundColor white
+skinparam defaultTextAlignment center
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam ArrowFontSize 12
+skinparam defaultFontSize 13
+
+skinparam component {
+  BackgroundColor #F5F7FA
+  BorderColor #33445B
+}
+skinparam database {
+  BackgroundColor #E8F3E8
+  BorderColor #2E7D32
+}
+skinparam cloud {
+  BackgroundColor #FFF4E5
+  BorderColor #B96A00
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #9AA5B1
+}
+
+title Vista de Componentes y Conectores (C&C) — Presentación Primaria\nAplicación Web para Gestión del Ciclo de Vida de Activos Neumáticos
+
+left to right direction
+
+actor "Usuario Final" as Usuario
+actor "Equipo de Desarrollo\ny Operaciones" as Equipo
+
+cloud "Cloudflare\nTLS · WAF · Workers · Tunnel" as Cloudflare
+
+component "Cliente Web (PWA)\n<<React · TypeScript · Vite>>\nestático en Workers" as Frontend
+
+package "Instancia (Docker Compose)" {
+  component "Backend API\n<<Spring Boot · Java 21>>\nMonolito modular\nJWT + roles + RLS" as Backend
+  database "PostgreSQL 18\nun esquema por módulo" as DB
+  component "Migraciones\n<<Flyway>>" as Migraciones
+  component "Grafana Alloy\n<<agente>>" as Agente
+}
+
+cloud "Grafana Cloud (Free)\nPrometheus · Loki · Grafana" as GrafanaCloud
+
+Usuario --> Cloudflare : HTTPS
+Cloudflare --> Frontend : assets\nestáticos
+Frontend --> Cloudflare : REST/JSON\n(Bearer JWT)
+Cloudflare --> Backend : Tunnel\nAPI :8080
+
+Backend --> DB : JPA\nrol gn_app
+Migraciones --> DB : esquema\nrol gn_owner
+
+Agente --> Backend : scrape :8081\n+ lee logs ECS
+Agente --> GrafanaCloud : push HTTPS
+Equipo --> GrafanaCloud : dashboards\ny alertas
+
+@enduml

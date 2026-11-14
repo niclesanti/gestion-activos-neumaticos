@@ -10,7 +10,13 @@
 set -eu
 
 : "${DB_OWNER_USER:?Falta DB_OWNER_USER}"
-: "${DB_OWNER_PASSWORD:?Falta DB_OWNER_PASSWORD}"
+# La clave llega como archivo (DB_OWNER_PASSWORD_FILE, Docker secret) o, como
+# alternativa, en la variable DB_OWNER_PASSWORD.
+if [ -n "${DB_OWNER_PASSWORD_FILE:-}" ]; then
+    [ -r "$DB_OWNER_PASSWORD_FILE" ] || { echo "No se puede leer $DB_OWNER_PASSWORD_FILE" >&2; exit 1; }
+    DB_OWNER_PASSWORD="$(cat "$DB_OWNER_PASSWORD_FILE")"
+fi
+: "${DB_OWNER_PASSWORD:?Falta DB_OWNER_PASSWORD (o DB_OWNER_PASSWORD_FILE)}"
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
     -v owner="$DB_OWNER_USER" -v clave="$DB_OWNER_PASSWORD" -v base="$POSTGRES_DB" <<'SQL'

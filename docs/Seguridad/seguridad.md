@@ -175,6 +175,10 @@ Endpoints de negocio anotados hasta ahora:
 | `GET /api/v1/unidades-transporte/{publicId}` (ficha de una unidad con sus neumáticos montados, HU-10) | `hasRole('LECTOR')` | Los tres roles; una unidad dada de baja responde 404 |
 | `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion`, `unidades-transporte` y `centros-almacenamiento` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
 
+### 2.10.2 Actuator y puerto de gestión
+
+`health` y `prometheus` se sirven en el puerto de gestión **8081**, que no se publica ni pasa por el Tunnel: solo lo alcanza Alloy dentro de la red de Docker. Una `SecurityFilterChain` propia (`SecurityActuatorConfig`, anterior a la principal) los deja en `permitAll` y hace `denyAll` del resto; `env`, `heapdump`, `loggers` e `info` ni siquiera están expuestos, y en el puerto 8080 `/actuator/**` responde 404. `health` no muestra detalles. La protección es de red, no de credenciales. Diseño completo en [`decisiones-observabilidad.md`](../Obs&Tel/decisiones-observabilidad.md).
+
 ### 2.10.1 Cabeceras HTTP de la API
 
 Spring Security agrega por defecto `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cache-Control: no-store` y, en requests HTTPS, `Strict-Transport-Security` (1 año, `includeSubDomains`). Además:
