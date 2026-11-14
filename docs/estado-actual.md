@@ -2,6 +2,10 @@
 
 > Registro de lo implementado, por módulo y por branch. **Leelo solo si necesitás saber qué existe** (p. ej. el `spec_author` antes de especificar sobre un módulo). Lo actualiza el leader al cerrar una HU. Las convenciones y la arquitectura están en `CLAUDE.md`.
 
+## Observabilidad (local implementada, nube pendiente)
+
+Branch `config/deploy`. Stack local funcionando con `docker compose --profile observabilidad-local up -d`: backend con Actuator `health,prometheus` en el puerto de gestión 8081 (no publicado) y logs ECS en `/logs/backend.json`; Grafana Alloy empuja a Prometheus y Loki locales; Grafana en `127.0.0.1:3001` con el dashboard 19004 provisionado. Falta, cuando existan `staging` y `production`: cuenta y tokens de Grafana Cloud, variables/secretos en los GitHub Environments, `--profile observabilidad` en el workflow de despliegue y las alertas. Diseño y ajustes en `docs/Obs&Tel/decisiones-observabilidad.md`.
+
 ## Current state
 
 Branch `feature/login` implements HU-01 (log in) and HU-02 (log out) end to end: JWT login/logout/me in the backend (`usuarios` + `security`) and, in the frontend, the real login form, protected routes, and role-based authorization on three layers: the UI access matrix (`ROUTE_ACCESS`), Spring method security ready for endpoints (`@PreAuthorize` + `RoleHierarchy`), and PostgreSQL least-privilege roles + RLS. It was then hardened against the OWASP Top 10:2025 audit in `docs/pruebas-seguridad.md` (login rate limiting and bulkhead, roles read from the DB per request, CSP/security headers, non-superuser owner + separate migrations job, idle timeout, etc.; re-test at the end of that doc). Branch `feature/alta-neumaticos` implements HU-11 (register a tire):

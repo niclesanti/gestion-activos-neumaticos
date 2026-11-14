@@ -31,6 +31,7 @@ Valen para los dos ambientes: cada ambiente tiene su propia instancia, su propio
 | Exposición del backend y HTTPS | **Cloudflare Tunnel** | La instancia no publica puertos a internet. Cloudflare termina TLS y agrega la protección contra DDoS. |
 | DNS / dominio | **Dominio gestionado en Cloudflare** | Lo necesita el Tunnel. Los subdominios se separan por ambiente (ver 6). |
 | Secretos | **GitHub Environments** (`staging`, `production`) | Fuente de verdad de los secretos de cada ambiente (ver 5). |
+| Observabilidad (métricas, logs, dashboard, alertas) | **Grafana Cloud (plan Free)** + un contenedor **Grafana Alloy** en la instancia (`docker compose --profile observabilidad up -d`) | No se hospeda nada pesado en la instancia: Alloy empuja métricas y logs de forma saliente. Diseño en [`decisiones-observabilidad.md`](../Obs&Tel/decisiones-observabilidad.md). Costo: USD 0. |
 | Backups de la base | **Snapshots de Lightsail** o `pg_dump` diario a **Cloudflare R2** | R2 tiene un plan gratuito de almacenamiento y no cobra egreso. |
 
 ```
@@ -73,8 +74,8 @@ En una instancia propia, los secretos terminan en la memoria del backend sí o s
 
 **Fuente de verdad: GitHub Environments.**
 
-- Se crean dos environments en el repositorio, `staging` y `production`, cada uno con sus propios secretos (`JWT_SECRET`, `DB_APP_PASSWORD`, contraseña del owner, token del Tunnel).
-- La configuración que no es secreta (`FRONTEND_URL`, `SPRING_PROFILES_ACTIVE`, `VITE_API_URL`) va como *variables* del mismo environment.
+- Se crean dos environments en el repositorio, `staging` y `production`, cada uno con sus propios secretos (`JWT_SECRET`, `DB_APP_PASSWORD`, contraseña del owner, token del Tunnel, `GRAFANA_CLOUD_TOKEN` con solo los scopes `metrics:write` y `logs:write`, uno por ambiente).
+- La configuración que no es secreta (`FRONTEND_URL`, `SPRING_PROFILES_ACTIVE`, `VITE_API_URL`, y para observabilidad `APP_ENTORNO`, `SCRAPE_INTERVAL=60s`, `METRICS_URL`, `METRICS_USER`, `LOGS_URL`, `LOGS_USER`) va como *variables* del mismo environment.
 - El environment `production` exige una aprobación manual antes de desplegar.
 - El workflow de despliegue es el único que lee los valores y los escribe en la instancia en cada deploy. La instancia no tiene credenciales de AWS ni de GitHub.
 

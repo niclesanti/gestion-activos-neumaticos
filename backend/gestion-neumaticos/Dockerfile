@@ -15,9 +15,13 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 COPY --from=build /workspace/target/*.jar app.jar
 RUN chown spring:spring app.jar
+# Logs ECS en archivo (los lee Alloy): el volumen nombrado de compose hereda
+# este dueño, porque el contenedor corre con el sistema de archivos de solo lectura.
+RUN mkdir /logs && chown spring:spring /logs
 USER spring
 
-EXPOSE 8080
+# 8080: API. 8081: puerto de gestión (Actuator), solo red interna de Docker.
+EXPOSE 8080 8081
 # Memoria de la JVM (ver compose.yaml, mem_limit del backend):
 # - MaxRAMPercentage: el heap es un porcentaje del límite del contenedor, no del
 #   host (por defecto sería 25 %). El resto queda para metaspace, hilos y código.

@@ -19,8 +19,17 @@ services:
       SPRING_FLYWAY_ENABLED: "false"
       FRONTEND_URL: ${FRONTEND_URL}
       JWT_SECRET: ${JWT_SECRET}
+      # Observabilidad: logs ECS en archivo (los lee Alloy) y etiqueta del ambiente.
+      # El puerto de gestión 8081 (Actuator) no se publica: solo lo ve Alloy.
+      APP_ENTORNO: ${APP_ENTORNO:-local}
+      LOGGING_FILE_NAME: /logs/backend.json
     ports:
       - "127.0.0.1:8080:8080"
+    volumes:
+      - logs-backend:/logs
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     # Tope de memoria del contenedor: la JVM dimensiona el heap como un 60 % de
     # este valor (Dockerfile). Si aparecen OutOfMemoryError, subirlo por .env.
     mem_limit: ${BACKEND_MEM_LIMIT:-640m}
@@ -118,6 +127,86 @@ services:
     depends_on:
       - postgres
 
+  # ── Observabilidad (docs/Obs&Tel/decisiones-observabilidad.md) ─────
+  # Alloy es el único componente que también corre en la nube (profile
+  # "observabilidad"); Prometheus, Loki y Grafana solo en local:
+  #   docker compose --profile observabilidad-local up -d
+  alloy:
+    image: grafana/alloy:v1.22.0
+    profiles: ["observabilidad", "observabilidad-local"]
+    command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    environment:
+      APP_ENTORNO: ${APP_ENTORNO:-local}
+      SCRAPE_INTERVAL: ${SCRAPE_INTERVAL:-60s}
+      METRICS_URL: ${METRICS_URL}
+      METRICS_USER: ${METRICS_USER}
+      LOGS_URL: ${LOGS_URL}
+      LOGS_USER: ${LOGS_USER}
+    secrets:
+      - GRAFANA_CLOUD_TOKEN
+    volumes:
+      - ./infra/observabilidad/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - logs-backend:/logs:ro
+      - alloy-data:/var/lib/alloy/data
+    mem_limit: 256m
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - backend
+    # Sin "ports": la UI de Alloy (12345) no se publica.
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    profiles: ["observabilidad-local"]
+    # Solo recibe lo que empuja Alloy (remote write); no hace scrape propio.
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=3d
+    volumes:
+      - prometheus-data:/prometheus
+
+  loki:
+    image: grafana/loki:3.7.10
+    profiles: ["observabilidad-local"]
+    # Configuración por defecto de la imagen (single binary, filesystem).
+    volumes:
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:13.3.1
+    profiles: ["observabilidad-local"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/observabilidad/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observabilidad/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      # 3001: el 3000 es del frontend.
+      - "127.0.0.1:3001:3000"
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - prometheus
+      - loki
+
+# Fuente local del token de Grafana Cloud (valor de relleno en local). En la
+# nube lo escribe el workflow de despliegue como archivo de secretos.
+secrets:
+  GRAFANA_CLOUD_TOKEN:
+    environment: GRAFANA_CLOUD_TOKEN
+
 volumes:
   postgres-data:
   pgadmin-data:
+  logs-backend:
+  alloy-data:
+  prometheus-data:
+  loki-data:
+  grafana-data:

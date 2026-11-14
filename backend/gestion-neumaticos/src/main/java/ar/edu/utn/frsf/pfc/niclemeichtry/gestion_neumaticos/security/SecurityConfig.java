@@ -82,7 +82,9 @@ public class SecurityConfig {
 								new NegatedRequestMatcher(documentacion()),
 								new StaticHeadersWriter("Content-Security-Policy", CSP_API))))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/actuator/health", "/actuator/info").permitAll()
+						// Actuator vive en otro puerto (SecurityActuatorConfig). Aca no hay nada
+						// publicado bajo /actuator: se deja pasar para que responda 404 y no 401.
+						.requestMatchers("/actuator/**").permitAll()
 						.requestMatchers(DOCUMENTACION).permitAll()
 						.requestMatchers(LOGIN).permitAll()
 						.anyRequest().authenticated())

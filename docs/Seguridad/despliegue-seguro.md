@@ -116,7 +116,8 @@ El bulkhead del hash (`PasswordConfig`) también es por instancia, y es lo corre
 
 ## 9. Monitoreo y alertas (A09)
 
-- Alertar sobre ráfagas de `Inicio de sesión rechazado` y `Login bloqueado por límite` en los logs del backend (incluyen IP e identificador).
+- Alertar sobre ráfagas de `Inicio de sesión rechazado` y `Login bloqueado por límite` en los logs del backend (incluyen IP e identificador). Los logs llegan a Grafana Cloud (Loki) y las reglas de alerta están definidas en [`decisiones-observabilidad.md`](../Obs&Tel/decisiones-observabilidad.md#8-grafana-cloud-configuración-manual).
+- El puerto de gestión del backend (8081, Actuator `health` y `prometheus`) no se publica ni pasa por el Tunnel: `cloudflared` apunta solo a `backend:8080`.
 - Revisar **Security → Events** de Cloudflare (bloqueos del WAF y del rate limiting).
 - Los 5xx del backend loguean el stack en `ERROR`; los 4xx que provoca el cliente quedan en `WARN` sin stack.
 
