@@ -21,6 +21,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
     ports:
       - "127.0.0.1:8080:8080"
+    # Tope de memoria del contenedor: la JVM dimensiona el heap como un 60 % de
+    # este valor (Dockerfile). Si aparecen OutOfMemoryError, subirlo por .env.
+    mem_limit: ${BACKEND_MEM_LIMIT:-640m}
     read_only: true
     tmpfs:
       - /tmp
@@ -78,6 +81,10 @@ services:
 
   postgres:
     image: postgres:18-alpine
+    # La app usa un pool de 5 conexiones: 20 alcanzan (migraciones, pgAdmin y
+    # las reservadas del superusuario incluidas) y cada una es un proceso.
+    command: ["postgres", "-c", "max_connections=20"]
+    mem_limit: ${POSTGRES_MEM_LIMIT:-512m}
     environment:
       POSTGRES_DB: ${DB_NAME}
       # Superusuario de la imagen: solo lo usa el script de initdb para crear

@@ -18,4 +18,14 @@ RUN chown spring:spring app.jar
 USER spring
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Memoria de la JVM (ver compose.yaml, mem_limit del backend):
+# - MaxRAMPercentage: el heap es un porcentaje del límite del contenedor, no del
+#   host (por defecto sería 25 %). El resto queda para metaspace, hilos y código.
+# - SerialGC: menos memoria extra que G1 y sobra para una app de baja concurrencia.
+# - ExitOnOutOfMemoryError: ante un OOM el proceso termina y el contenedor se
+#   reinicia limpio, en vez de quedar colgado a medias.
+ENTRYPOINT ["java", \
+  "-XX:MaxRAMPercentage=60", \
+  "-XX:+UseSerialGC", \
+  "-XX:+ExitOnOutOfMemoryError", \
+  "-jar", "app.jar"]
