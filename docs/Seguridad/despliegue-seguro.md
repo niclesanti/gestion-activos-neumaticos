@@ -29,7 +29,7 @@ Generar cada secreto al azar y guardarlo en el gestor de secretos del entorno (n
 | `DB_APP_PASSWORD` | `openssl rand -hex 24` | Rol `gn_app`. **Sin `$`**: viaja dentro de un string con dollar quoting; el job de migraciones la rechaza. |
 | `JWT_SECRET` | `openssl rand -base64 32` | Base64 de ≥ 32 bytes; la app no arranca si no lo es. |
 
-Las variables de entorno quedan visibles con `docker inspect` para quien tenga acceso al daemon de Docker (por ejemplo, `DB_OWNER_PASSWORD` en el contenedor de Postgres). En producción, restringir ese acceso o pasar los secretos como *Docker secrets* / archivos montados (las imágenes de Postgres admiten `POSTGRES_PASSWORD_FILE`).
+Las variables de entorno quedan visibles con `docker inspect` para quien tenga acceso al daemon de Docker. Por eso, en staging y production los secretos **no** van como variables: se escriben como archivos (uno por secreto, con el nombre de la variable) en un directorio del servidor y se levanta el stack con `SECRETS_DIR=<ruta> docker compose -f compose.yaml -f compose.deploy.yaml up -d --build`. Cada servicio ve en `/run/secrets/` solo los que necesita (el backend, `JWT_SECRET` y `DB_APP_PASSWORD`). Escribir los archivos con `printf '%s'` (no `echo`), con el directorio en `700` y los archivos en `644` (o `640` con un grupo compartido): con `600` los contenedores, que corren como otro usuario, no pueden leerlos. Detalle en [`decisiones-despliegue.md`](../deploy/decisiones-despliegue.md) §5.
 
 Valores de producción:
 
@@ -110,9 +110,9 @@ El bulkhead del hash (`PasswordConfig`) también es por instancia, y es lo corre
 
 | Secreto | Procedimiento | Efecto |
 |---|---|---|
-| `JWT_SECRET` | Cambiar la variable y reiniciar el backend. | Cierra todas las sesiones (los tokens dejan de validar). |
-| `DB_APP_PASSWORD` | Cambiar la variable, correr el job de migraciones (aplica la clave nueva) y reiniciar el backend. | Sin corte de sesiones. |
-| `DB_OWNER_PASSWORD` | `ALTER ROLE gn_owner PASSWORD '…'` como superusuario y actualizar la variable. | Solo afecta al job de migraciones. |
+| `JWT_SECRET` | Cambiar el archivo y recrear el backend (`up -d --force-recreate backend`; un `up -d` solo no alcanza porque la configuración no cambia). | Cierra todas las sesiones (los tokens dejan de validar). |
+| `DB_APP_PASSWORD` | Cambiar el archivo, correr el job de migraciones (aplica la clave nueva) y recrear el backend. | Sin corte de sesiones. |
+| `DB_OWNER_PASSWORD` | `ALTER ROLE gn_owner PASSWORD '…'` como superusuario y actualizar el archivo. | Solo afecta al job de migraciones. |
 
 ## 9. Monitoreo y alertas (A09)
 

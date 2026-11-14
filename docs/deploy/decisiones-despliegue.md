@@ -81,10 +81,14 @@ En una instancia propia, los secretos terminan en la memoria del backend sí o s
 
 **En la instancia: archivos y no variables de entorno.**
 
-- Los secretos se escriben como archivos en un directorio propio, por ejemplo `/opt/gestion-neumaticos/secrets/`. Pertenecen a un usuario dedicado al despliegue y tienen permisos `600`.
-- `compose.yaml` los declara en `secrets:` y los monta dentro de cada contenedor en `/run/secrets/`. Así no aparecen en `docker inspect`, que es el riesgo menor que quedó anotado en [`pruebas-seguridad.md`](pruebas-seguridad.md).
-- **Backend:** Spring Boot los lee de forma nativa con `spring.config.import=optional:configtree:/run/secrets/`. Si cada archivo se llama igual que la variable actual (por ejemplo `JWT_SECRET`), las propiedades existentes (`${JWT_SECRET}`) siguen funcionando sin cambios.
-- **Otros contenedores:** la imagen de PostgreSQL acepta variables `*_FILE` (por ejemplo `POSTGRES_PASSWORD_FILE`). En el job de migraciones hay que verificar cómo recibe la clave y, si solo acepta variables de entorno, leerla del archivo al arrancar el contenedor.
+- Los secretos se escriben como archivos en un directorio propio (`SECRETS_DIR`, por ejemplo `/opt/gestion-neumaticos/secrets/`), uno por secreto y con el nombre de la variable: `JWT_SECRET`, `DB_APP_PASSWORD`, `DB_OWNER_PASSWORD`, `DB_PASSWORD` y `GRAFANA_CLOUD_TOKEN`. Se escriben con `printf '%s'` (nunca `echo`, para no agregar un salto de línea).
+- **Permisos:** directorio en `700` para el usuario de despliegue y archivos en `644` (o `640` con un grupo compartido). Con `600` los contenedores no pueden leerlos: Compose monta el archivo con el dueño y los permisos del host, y los procesos corren como otro usuario (`spring` en el backend, `postgres` en la base).
+- **Cómo se levanta:** `SECRETS_DIR=<ruta> docker compose -f compose.yaml -f compose.deploy.yaml up -d --build`. `compose.yaml` declara los `secrets:` con origen en variables del `.env` (así funciona en local); `compose.deploy.yaml` cambia ese origen a `file: ${SECRETS_DIR}/<NOMBRE>`. Los contenedores los ven en `/run/secrets/<NOMBRE>` y no aparecen en `docker inspect`, que es el riesgo menor que quedó anotado en [`pruebas-seguridad.md`](pruebas-seguridad.md). Requiere Docker Compose v2.24 o superior.
+- **Backend:** recibe `JWT_SECRET` y `DB_APP_PASSWORD`, y nada más. Spring Boot los lee con `spring.config.import=optional:configtree:/run/secrets/`, y como cada archivo se llama igual que la variable, `${JWT_SECRET}` funciona sin cambios. Como el backend es `read_only`, Compose no puede crear allí secretos con origen en variables: por eso, en local, el backend recibe esas dos como variables, y `compose.deploy.yaml` las quita (`!reset`) y las monta como archivos.
+- **PostgreSQL:** usa `POSTGRES_PASSWORD_FILE`, y `infra/postgres/initdb/01-crear-owner.sh` lee la clave del owner de `DB_OWNER_PASSWORD_FILE` (con `DB_OWNER_PASSWORD` como alternativa).
+- **Migraciones:** Flyway solo acepta `FLYWAY_PASSWORD` como variable. El `command` del servicio la lee del archivo antes de `exec flyway migrate`, y también lee `DB_APP_PASSWORD` como placeholder. Sigue rechazando una clave que contenga `$`.
+- **Salto de línea final:** el backend lo tolera (`JwtConfig` recorta el valor), pero igual conviene escribir los archivos sin él. Un `JWT_SECRET` menor a 32 bytes sí hace que el backend se niegue a arrancar.
+- **Rotación:** cambiar el archivo no cambia la configuración del contenedor, así que hay que recrearlo (`up -d --force-recreate <servicio>`).
 
 **Acceso a la instancia.**
 
@@ -101,7 +105,7 @@ Los mismos pasos sirven para `staging` (rama `develop`) y para `production` (ram
 
 1. Crear la instancia de Lightsail (Linux), instalar Docker y Docker Compose, y crear el usuario de despliegue con acceso SSH solo por clave.
 2. Cargar los secretos y las variables en el GitHub Environment del ambiente (ver 5).
-3. Desplegar desde la rama del ambiente: el workflow escribe los archivos de secretos en la instancia y levanta el stack con `docker compose up -d`. El job `migraciones` crea el esquema antes de que arranque el backend.
+3. Desplegar desde la rama del ambiente: el workflow escribe los archivos de secretos en la instancia y levanta el stack con `docker compose -f compose.yaml -f compose.deploy.yaml up -d`. El job `migraciones` crea el esquema antes de que arranque el backend.
 4. Instalar `cloudflared` y crear el Tunnel hacia el backend (`api-staging.<dominio>` / `api.<dominio>`).
 5. Publicar el frontend en Workers con `VITE_API_URL` apuntando a la API del ambiente (`staging.<dominio>` / `<dominio>`).
 6. Ajustar `FRONTEND_URL` (CORS) y la IP real del cliente (`CF-Connecting-IP`) según [`despliegue-seguro.md`](despliegue-seguro.md).

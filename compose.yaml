@@ -1,5 +1,7 @@
-# Stack local. Variables en el .env raíz (ver .env.example). Lo que cambia en un
-# despliegue real está en docs/despliegue-seguro.md.
+# Stack local. Variables en el .env raíz (ver .env.example). Las claves y el
+# JWT_SECRET del .env se montan como archivos en /run/secrets (no como variables
+# de entorno). Lo que cambia en un despliegue real: compose.deploy.yaml y
+# docs/Seguridad/despliegue-seguro.md.
 #
 # Los puertos se publican solo en 127.0.0.1: nada de este stack queda expuesto
 # a la red local. pgAdmin no arranca por defecto:
@@ -13,11 +15,14 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME}
-      # Solo la clave del rol sin privilegios gn_app: las migraciones las corre
-      # el servicio "migraciones" y el backend nunca recibe credenciales con DDL.
-      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
       SPRING_FLYWAY_ENABLED: "false"
       FRONTEND_URL: ${FRONTEND_URL}
+      # Solo la clave del rol sin privilegios gn_app: las migraciones las corre
+      # el servicio "migraciones" y el backend nunca recibe credenciales con DDL.
+      # En local viajan como variables porque el backend es read_only y Compose no
+      # puede crear secretos con origen "environment" en un servicio de solo
+      # lectura. compose.deploy.yaml las quita y las monta como archivos.
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       # Observabilidad: logs ECS en archivo (los lee Alloy) y etiqueta del ambiente.
       # El puerto de gestión 8081 (Actuator) no se publica: solo lo ve Alloy.
@@ -50,20 +55,30 @@ services:
     # La clave de gn_app viaja como placeholder dentro de un string con dollar
     # quoting (afterMigrate__clave_rol_app.sql): se rechaza si contiene "$".
     entrypoint: ["sh", "-c"]
+    # Flyway solo acepta la clave como variable de entorno: se lee del archivo
+    # secreto dentro del proceso, así no queda en la configuración del contenedor.
     command:
       - |
+        set -eu
+        FLYWAY_PASSWORD="$$(cat /run/secrets/DB_OWNER_PASSWORD)"
+        FLYWAY_PLACEHOLDERS_APP_PASSWORD="$$(cat /run/secrets/DB_APP_PASSWORD)"
+        if [ -z "$$FLYWAY_PASSWORD" ] || [ -z "$$FLYWAY_PLACEHOLDERS_APP_PASSWORD" ]; then
+          echo "DB_OWNER_PASSWORD y DB_APP_PASSWORD no pueden estar vacías" >&2; exit 1
+        fi
         case "$$FLYWAY_PLACEHOLDERS_APP_PASSWORD" in
           *'$$'*) echo "DB_APP_PASSWORD no puede contener '$$'" >&2; exit 1 ;;
         esac
+        export FLYWAY_PASSWORD FLYWAY_PLACEHOLDERS_APP_PASSWORD
         exec flyway migrate
+    secrets:
+      - DB_OWNER_PASSWORD
+      - DB_APP_PASSWORD
     environment:
       FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
       FLYWAY_USER: ${DB_OWNER_USER}
-      FLYWAY_PASSWORD: ${DB_OWNER_PASSWORD}
       # Por defecto, solo las migraciones. En dev se suma el seed de usuarios
       # de prueba: filesystem:/flyway/sql/migraciones,filesystem:/flyway/sql/seed-dev
       FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-filesystem:/flyway/sql/migraciones}
-      FLYWAY_PLACEHOLDERS_APP_PASSWORD: ${DB_APP_PASSWORD}
       FLYWAY_CONNECT_RETRIES: 10
       # Sin telemetría de Redgate ni chequeo de versiones contra internet.
       REDGATE_DISABLE_TELEMETRY: "true"
@@ -99,9 +114,13 @@ services:
       # Superusuario de la imagen: solo lo usa el script de initdb para crear
       # el owner. Ningún servicio de la aplicación se conecta con él.
       POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/DB_PASSWORD
       DB_OWNER_USER: ${DB_OWNER_USER}
-      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
+      # La lee 01-crear-owner.sh.
+      DB_OWNER_PASSWORD_FILE: /run/secrets/DB_OWNER_PASSWORD
+    secrets:
+      - DB_PASSWORD
+      - DB_OWNER_PASSWORD
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./infra/postgres/initdb:/docker-entrypoint-initdb.d:ro
@@ -196,9 +215,19 @@ services:
       - prometheus
       - loki
 
-# Fuente local del token de Grafana Cloud (valor de relleno en local). En la
-# nube lo escribe el workflow de despliegue como archivo de secretos.
+# Secretos: llegan a los contenedores como archivos en /run/secrets/<NOMBRE>.
+# En local salen de las variables del .env; en staging y production,
+# compose.deploy.yaml los toma de archivos (ver ese archivo). El backend se
+# declara solo en compose.deploy.yaml (ver el comentario de su environment).
 secrets:
+  JWT_SECRET:
+    environment: JWT_SECRET
+  DB_APP_PASSWORD:
+    environment: DB_APP_PASSWORD
+  DB_OWNER_PASSWORD:
+    environment: DB_OWNER_PASSWORD
+  DB_PASSWORD:
+    environment: DB_PASSWORD
   GRAFANA_CLOUD_TOKEN:
     environment: GRAFANA_CLOUD_TOKEN
 
