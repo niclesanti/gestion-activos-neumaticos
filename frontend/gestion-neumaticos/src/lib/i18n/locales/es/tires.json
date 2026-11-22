@@ -109,8 +109,59 @@
     "invalid": "Revisá los datos del formulario",
     "unexpected": "No pudimos registrar el neumático. Intentá de nuevo en unos minutos"
   },
-  "empty": {
-    "title": "Todavía no hay neumáticos para mostrar",
-    "description": "Pronto vas a poder consultar, filtrar y seguir el ciclo de vida de cada neumático desde acá."
+  "situation": {
+    "EN_STOCK": "En stock",
+    "MONTADO": "Montado",
+    "EN_REPARACION": "En reparación",
+    "EN_ESPERA": "En espera",
+    "DE_BAJA": "De baja"
+  },
+  "filters": {
+    "search": {
+      "label": "Número de serie",
+      "placeholder": "Buscá por número de serie"
+    },
+    "brand": {
+      "label": "Marca",
+      "all": "Todas"
+    },
+    "status": {
+      "label": "Estado",
+      "all": "Todos"
+    },
+    "situation": {
+      "label": "Situación operativa",
+      "all": "Todas"
+    },
+    "clear": "Limpiar filtros"
+  },
+  "list": {
+    "columns": {
+      "serialNumber": "Número de serie",
+      "brand": "Marca",
+      "status": "Estado",
+      "situation": "Situación operativa",
+      "mileage": "Kilometraje"
+    },
+    "noSerialNumber": "Sin número de serie",
+    "mileageUnknown": "No registrado",
+    "mileageValue": "{{value}} km",
+    "empty": {
+      "title": "Todavía no hay neumáticos registrados",
+      "description": "Registrá el primer neumático para empezar a seguir su ciclo de vida."
+    },
+    "noResults": {
+      "title": "No se encontraron neumáticos",
+      "description": "Probá con otros filtros o limpiá la búsqueda."
+    },
+    "error": {
+      "title": "No pudimos cargar los neumáticos",
+      "description": "Revisá tu conexión e intentá de nuevo.",
+      "retry": "Reintentar"
+    },
+    "pagination": {
+      "summary_one": "{{count}} neumático · página {{page}} de {{pages}}",
+      "summary_other": "{{count}} neumáticos · página {{page}} de {{pages}}"
+    }
   }
 }

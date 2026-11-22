@@ -1,9 +1,8 @@
-import { CircleDotIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { CreateTireDialog } from "@/features/tires/components/create-tire-dialog"
+import { TiresTable } from "@/features/tires/components/tires-table"
 
 export function TiresPage() {
   const { t } = useTranslation("tires")
@@ -19,13 +18,7 @@ export function TiresPage() {
         // la sección, el botón tendrá que ocultarse según su nivel.
         actions={<CreateTireDialog />}
       />
-      {/* TODO: listado de neumáticos. Al implementarlo, quitar el placeholder
-          y `empty` en i18n. */}
-      <EmptyState
-        icon={CircleDotIcon}
-        title={t("empty.title")}
-        description={t("empty.description")}
-      />
+      <TiresTable />
     </div>
   )
 }

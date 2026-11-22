@@ -3,6 +3,8 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.MARCA_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.PROVEEDOR_PUBLIC_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.marca;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumatico;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoNuevoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoUsadoRequest;
@@ -34,6 +36,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
@@ -260,6 +263,54 @@ class NeumaticoServiceImplTest {
             verifyNoInteractions(eventPublisher);
         }
 
+    }
+
+    @Nested
+    @DisplayName("buscar")
+    class Buscar {
+
+        @Test
+        @DisplayName("mapea la página al listado y agrega el desempate por publicId al orden pedido")
+        void mapeaYDesempata() {
+            Neumatico neumatico = neumatico(neumaticoNuevoRequest());
+            when(neumaticoRepository.findAll(ArgumentMatchers.<Specification<Neumatico>>any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(neumatico), PageRequest.of(0, 10), 1));
+
+            Page<NeumaticoListadoDTO> resultado = servicio.buscar(" abc ", MARCA_ID, EstadoNeumatico.NUEVO,
+                    SituacionOperativa.EN_ESPERA, PageRequest.of(2, 5, Sort.by("numeroSerie").descending()));
+
+            assertThat(resultado.getContent()).containsExactly(neumaticoListado(neumatico));
+            assertThat(resultado.getTotalElements()).isEqualTo(1);
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(neumaticoRepository).findAll(ArgumentMatchers.<Specification<Neumatico>>any(), pageable.capture());
+            assertThat(pageable.getValue().getPageNumber()).isEqualTo(2);
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(5);
+            assertThat(pageable.getValue().getSort())
+                    .isEqualTo(Sort.by(Sort.Order.desc("numeroSerie"), Sort.Order.asc("publicId")));
+        }
+
+        @Test
+        @DisplayName("sin filtros ni orden consulta igual, ordenando solo por el desempate")
+        void sinFiltros() {
+            when(neumaticoRepository.findAll(ArgumentMatchers.<Specification<Neumatico>>any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            assertThat(servicio.buscar(null, null, null, null, PageRequest.of(0, 10)).getContent()).isEmpty();
+
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(neumaticoRepository).findAll(ArgumentMatchers.<Specification<Neumatico>>any(), pageable.capture());
+            assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by("publicId"));
+        }
+
+        @Test
+        @DisplayName("rechaza ordenar por un campo no permitido, sin consultar")
+        void rechazaOrdenNoPermitido() {
+            PageRequest ordenInvalido = PageRequest.of(0, 10, Sort.by("id"));
+
+            assertThatThrownBy(() -> servicio.buscar(null, null, null, null, ordenInvalido))
+                    .isInstanceOf(ParametroInvalidoException.class);
+            verifyNoInteractions(neumaticoRepository);
+        }
     }
 
     @Nested

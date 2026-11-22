@@ -6,6 +6,7 @@ import org.mapstruct.Mapping;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.MapstructConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.NormalizacionTexto;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
@@ -36,6 +37,9 @@ public interface NeumaticoMapper {
      */
     @Mapping(target = "marcaNombre", source = "marca.nombre")
     NeumaticoResponseDTO toResponseDTO(Neumatico neumatico);
+
+    @Mapping(target = "marca", source = "marca.nombre")
+    NeumaticoListadoDTO toListadoDTO(Neumatico neumatico);
 
     MarcaNeumaticoResponseDTO toMarcaDTO(MarcaNeumatico marcaNeumatico);
 

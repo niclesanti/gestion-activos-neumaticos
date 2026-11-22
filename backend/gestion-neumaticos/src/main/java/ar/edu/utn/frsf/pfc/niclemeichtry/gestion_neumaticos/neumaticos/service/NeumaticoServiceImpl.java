@@ -7,7 +7,9 @@ import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +19,14 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Esp
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.NormalizacionTexto;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.EspecificacionesNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.OrdenNeumaticos;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
@@ -94,6 +101,30 @@ public class NeumaticoServiceImpl implements NeumaticoService {
             publicarCompra(neumatico, proveedor, usuario);
         }
         return neumaticoMapper.toResponseDTO(neumatico);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NeumaticoListadoDTO> buscar(String numeroSerie, Long marcaId, EstadoNeumatico estado,
+            SituacionOperativa situacion, Pageable pageable) {
+        log.debug("Buscando neumáticos: numeroSerie={}, marcaId={}, estado={}, situacion={}, pageable={}",
+                numeroSerie, marcaId, estado, situacion, pageable);
+        if (!OrdenNeumaticos.esValido(pageable)) {
+            log.warn("Búsqueda de neumáticos rechazada: orden no permitido {}", pageable.getSort());
+            throw new ParametroInvalidoException("Solo se puede ordenar por número de serie");
+        }
+        Specification<Neumatico> especificacion = EspecificacionesNeumatico.activos()
+                .and(EspecificacionesNeumatico.numeroSerieContiene(NormalizacionTexto.mayusculas(numeroSerie)))
+                .and(EspecificacionesNeumatico.deMarca(marcaId))
+                .and(EspecificacionesNeumatico.conEstado(estado))
+                .and(EspecificacionesNeumatico.conSituacion(situacion));
+        // Desempate fijo por publicId (UUIDv7, orden de alta): páginas estables aun con muchos sin serie.
+        Pageable ordenado = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                pageable.getSort().and(Sort.by("publicId")));
+        Page<NeumaticoListadoDTO> pagina = neumaticoRepository.findAll(especificacion, ordenado)
+                .map(neumaticoMapper::toListadoDTO);
+        log.debug("Neumáticos encontrados: {}", pagina.getTotalElements());
+        return pagina;
     }
 
     @Override

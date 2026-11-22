@@ -4,7 +4,7 @@
 > Es la única descripción del flujo; los agentes de `.claude/agents/` solo conocen su parte.
 
 ```
-pending → spec_author → spec_ready → ⏸ HUMANO → in_progress → implementer
+pending → spec-author → spec_ready → ⏸ HUMANO → in_progress → implementer
         → leader: ./verify.sh (una vez; si falla, vuelve al implementer)
         → leader: navegador (solo si cambió frontend/)
         → reviewer (lee diff + resultados; no corre verify)
@@ -19,7 +19,7 @@ pending → spec_author → spec_ready → ⏸ HUMANO → in_progress → implem
 
 ## Según el estado de la feature
 
-**`pending`** — lanza 1 `spec_author`. Cuando devuelve `spec_ready -> specs/<name>/`, **paras** y le dices al humano:
+**`pending`** — lanza 1 `spec-author`. Cuando devuelve `spec_ready -> specs/<name>/`, **paras** y le dices al humano:
 "Spec listo en `specs/<name>/`. Revisalo y decime 'aprobado' o pedí cambios."
 
 **`spec_ready` + el humano aprobó** —
@@ -50,9 +50,9 @@ Instruye a los subagentes para que escriban sus resultados en archivos y te devu
 
 | Complejidad          | Subagentes                                                          |
 |----------------------|---------------------------------------------------------------------|
-| Trivial (1 archivo)  | spec_author → ⏸ → implementer                                       |
-| Media (2-3 archivos) | spec_author → ⏸ → implementer → reviewer                            |
-| Compleja (refactor)  | 2-3 Explore → spec_author → ⏸ → implementer → reviewer              |
+| Trivial (1 archivo)  | spec-author → ⏸ → implementer                                       |
+| Media (2-3 archivos) | spec-author → ⏸ → implementer → reviewer                            |
+| Compleja (refactor)  | 2-3 Explore → spec-author → ⏸ → implementer → reviewer              |
 | Muy compleja         | Dividir en historias y volver a aplicar la tabla                    |
 
 Los topes de tamaño de los specs (ver `specs.md`) escalan con esta complejidad: no llegues al tope si la HU es chica.

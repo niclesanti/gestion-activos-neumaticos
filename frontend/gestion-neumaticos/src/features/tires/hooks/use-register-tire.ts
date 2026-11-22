@@ -6,7 +6,7 @@ export function useRegisterTire() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: registerTire,
-    // Para el futuro listado de neumáticos.
+    // Refresca el listado de neumáticos (`["tires", "list", …]`).
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tires"] }),
   })
 }

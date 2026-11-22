@@ -8,8 +8,11 @@ import org.springframework.data.domain.Pageable;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.SituacionOperativa;
 
 public interface NeumaticoService {
 
@@ -30,6 +33,16 @@ public interface NeumaticoService {
      *         si la marca, o el proveedor de un neumático nuevo, no existen.
      */
     NeumaticoResponseDTO registrarNeumatico(NeumaticoRequestDTO neumaticoRequestDTO, String usuario);
+
+    /**
+     * Busca neumáticos activos (HU-28), paginados. Los filtros son opcionales y se combinan con AND: el
+     * número de serie coincide por contenido y sin distinguir mayúsculas; marca, estado y situación
+     * operativa por igualdad. Solo se ordena por número de serie.
+     *
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException si se ordena por otro campo.
+     */
+    Page<NeumaticoListadoDTO> buscar(String numeroSerie, Long marcaId, EstadoNeumatico estado,
+            SituacionOperativa situacion, Pageable pageable);
 
     /** Marcas de neumáticos disponibles, ordenadas por nombre. */
     List<MarcaNeumaticoResponseDTO> listarMarcas();

@@ -1,0 +1,28 @@
+{
+  "model": "opusplan",
+  "env": {
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5"
+  },
+  "permissions": {
+    "allow": [
+      "mcp__shadcn__get_add_command_for_items",
+      "mcp__shadcn__view_items_in_registries",
+      "mcp__shadcn__get_project_registries",
+      "mcp__shadcn__search_items_in_registries",
+      "Bash(./verify.sh*)",
+      "Bash(bash ./verify.sh*)",
+      "Bash(./mvnw*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run typecheck*)",
+      "Bash(npm run build*)",
+      "Bash(npm audit*)",
+      "Bash(docker compose*)",
+      "Bash(curl*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "codebase-memory-mcp",
+    "shadcn"
+  ]
+}
