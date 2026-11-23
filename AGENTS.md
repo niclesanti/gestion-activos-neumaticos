@@ -8,7 +8,7 @@
 | `CLAUDE.md` | Stack, arquitectura, convenciones | Se carga solo |
 | `feature_list.json` | Historias (HU) con estado: `pending` → `spec_ready` → `in_progress` → `done` / `blocked` | Al elegir la feature |
 | `docs/harness/flujo.md` | Flujo SDD completo, protocolo del leader | Solo el leader (sesión principal) |
-| `docs/harness/specs.md` | Formato y topes de `historia-usuario.md`, `design.md`, `tasks.md` | `spec_author` |
+| `docs/harness/specs.md` | Formato y topes de `historia-usuario.md`, `design.md`, `tasks.md` | `spec-author` |
 | `docs/harness/verification.md` | Niveles de verificación y `./verify.sh` | `implementer`, `reviewer` |
 | `docs/harness/conventions.md` | Convenciones que más se violan + checklist del reviewer | `implementer`, `reviewer` |
 | `specs/<name>/` | Spec aprobado de la feature | `implementer`, `reviewer` |
@@ -18,4 +18,4 @@
 | `docs/Entidades del dominio/*.puml` | Diagramas de entidades por módulo | Antes de modelar un módulo |
 | `docs/Seguridad/` | Diseño de seguridad, tabla `@PreAuthorize` (2.10) | Al tocar auth, endpoints o migraciones |
 | `verify.sh` | Replica el CI en local para lo que cambió (`.github/workflows/ci.yml`) | Lo corre el leader una vez al terminar |
-| `.claude/agents/` | `spec_author`, `implementer`, `reviewer` | Al orquestar |
+| `.claude/agents/` | `spec-author`, `implementer`, `reviewer` | Al orquestar |

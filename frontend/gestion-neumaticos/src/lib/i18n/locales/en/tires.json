@@ -109,8 +109,59 @@
     "invalid": "Check the form data",
     "unexpected": "We couldn't register the tire. Try again in a few minutes"
   },
-  "empty": {
-    "title": "There are no tires to show yet",
-    "description": "Soon you will be able to browse, filter and follow the lifecycle of each tire from here."
+  "situation": {
+    "EN_STOCK": "In stock",
+    "MONTADO": "Mounted",
+    "EN_REPARACION": "Under repair",
+    "EN_ESPERA": "On hold",
+    "DE_BAJA": "Decommissioned"
+  },
+  "filters": {
+    "search": {
+      "label": "Serial number",
+      "placeholder": "Search by serial number"
+    },
+    "brand": {
+      "label": "Brand",
+      "all": "All"
+    },
+    "status": {
+      "label": "Status",
+      "all": "All"
+    },
+    "situation": {
+      "label": "Operational situation",
+      "all": "All"
+    },
+    "clear": "Clear filters"
+  },
+  "list": {
+    "columns": {
+      "serialNumber": "Serial number",
+      "brand": "Brand",
+      "status": "Status",
+      "situation": "Operational situation",
+      "mileage": "Mileage"
+    },
+    "noSerialNumber": "No serial number",
+    "mileageUnknown": "Not recorded",
+    "mileageValue": "{{value}} km",
+    "empty": {
+      "title": "No tires registered yet",
+      "description": "Register the first tire to start following its lifecycle."
+    },
+    "noResults": {
+      "title": "No tires found",
+      "description": "Try other filters or clear the search."
+    },
+    "error": {
+      "title": "We couldn't load the tires",
+      "description": "Check your connection and try again.",
+      "retry": "Retry"
+    },
+    "pagination": {
+      "summary_one": "{{count}} tire · page {{page}} of {{pages}}",
+      "summary_other": "{{count}} tires · page {{page}} of {{pages}}"
+    }
   }
 }

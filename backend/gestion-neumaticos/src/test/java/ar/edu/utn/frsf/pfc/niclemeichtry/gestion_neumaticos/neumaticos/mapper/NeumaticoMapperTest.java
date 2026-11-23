@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.mapper;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.marca;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumatico;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoNuevoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoResponse;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.TipoEjeUnidadTransporte;
@@ -47,6 +49,22 @@ class NeumaticoMapperTest {
         Neumatico neumatico = neumatico(neumaticoNuevoRequest());
 
         assertThat(mapper.toResponseDTO(neumatico)).isEqualTo(neumaticoResponse(neumatico));
+    }
+
+    @Test
+    void toListadoDTOCopiaLoQueMuestraLaTabla() {
+        Neumatico neumatico = neumatico(neumaticoNuevoRequest());
+
+        assertThat(mapper.toListadoDTO(neumatico)).isEqualTo(neumaticoListado(neumatico));
+        assertThat(mapper.toListadoDTO(neumatico).marca()).isEqualTo("Fate");
+    }
+
+    @Test
+    void toListadoDTOConFuenteOMarcaNulaDejaCamposNulos() {
+        assertThat(mapper.toListadoDTO(null)).isNull();
+        assertThat(mapper.toListadoDTO(new Neumatico()))
+                .isEqualTo(new NeumaticoListadoDTO(null, null, null, null, null, null));
+        assertThat(mapper.toListadoDTO(Neumatico.builder().marca(new MarcaNeumatico()).build()).marca()).isNull();
     }
 
     @Test

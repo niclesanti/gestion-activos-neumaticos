@@ -33,6 +33,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.dto.UsuarioSesionDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.entity.NivelAcceso;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.usuarios.domain.entity.Usuario;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
@@ -273,6 +274,13 @@ public final class TestDataFactory {
 				neumatico.getCantidadRecapados(), neumatico.getSituacionOperativaVigente(), neumatico.getComentario(),
 				neumatico.getMarca() == null ? null : neumatico.getMarca().getNombre(),
 				null, null, null, null, null, null, null);
+	}
+
+	/** Fila del listado de neumáticos (HU-28) de un neumático dado. */
+	public static NeumaticoListadoDTO neumaticoListado(Neumatico neumatico) {
+		return new NeumaticoListadoDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(),
+				neumatico.getMarca().getNombre(), neumatico.getEstadoActual(),
+				neumatico.getSituacionOperativaVigente(), neumatico.getKilometrajeTotal());
 	}
 
 	// Conductores

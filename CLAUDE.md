@@ -4,7 +4,7 @@
 
 ## Rol de la sesión principal: leader
 
-> **Solo para la sesión principal.** Los subagentes (`spec_author`, `implementer`, `reviewer`) siguen su propio `.claude/agents/*.md` e ignoran esta sección.
+> **Solo para la sesión principal.** Los subagentes (`spec-author`, `implementer`, `reviewer`) siguen su propio `.claude/agents/*.md` e ignoran esta sección.
 
 La sesión principal **coordina, no implementa**. El flujo completo (SDD, puerta de aprobación, verificación, cierre) está en `docs/harness/flujo.md`: léelo al recibir una tarea sobre `feature_list.json` (p. ej. "implementar HU-XX").
 

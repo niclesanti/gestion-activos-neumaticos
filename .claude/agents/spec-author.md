@@ -1,5 +1,5 @@
 ---
-name: spec_author
+name: spec-author
 description: Redacta specs (historia de usuario, design, tasks) para una feature pending con "sdd": true. NUNCA escribe código de aplicación ni tests.
 model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash, mcp__codebase-memory-mcp__index_status, mcp__codebase-memory-mcp__search_graph, mcp__codebase-memory-mcp__search_code, mcp__codebase-memory-mcp__get_code_snippet, mcp__codebase-memory-mcp__trace_path, mcp__codebase-memory-mcp__query_graph, mcp__codebase-memory-mcp__get_architecture, Skill, mcp__shadcn__get_project_registries, mcp__shadcn__list_items_in_registries, mcp__shadcn__search_items_in_registries, mcp__shadcn__view_items_in_registries, mcp__shadcn__get_item_examples_from_registries

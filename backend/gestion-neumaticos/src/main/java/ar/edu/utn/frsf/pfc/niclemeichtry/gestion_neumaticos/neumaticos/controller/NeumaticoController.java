@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -25,8 +26,11 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Reg
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.OpenApiConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ExceptionInfo;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.SituacionOperativa;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service.NeumaticoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -80,6 +84,32 @@ public class NeumaticoController {
                 .buildAndExpand(creado.publicId())
                 .toUri();
         return ResponseEntity.created(ubicacion).body(creado);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('LECTOR')")
+    @Operation(
+            summary = "Buscar neumáticos",
+            description = "Lista, paginados, los neumáticos activos (sin baja y ni estado ni situación `DE_BAJA`) "
+                    + "que cumplan todos los filtros indicados (HU-28). `numeroSerie` coincide por contenido y sin "
+                    + "distinguir mayúsculas; `marcaId` es el id de `/marcas`; `estado` y `situacion` filtran por un "
+                    + "solo valor. Sin filtros devuelve todos los activos. Tamaño de página 10 por defecto y 20 como "
+                    + "máximo; solo se ordena por `numeroSerie` (ascendente por defecto). Cualquier nivel de acceso.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página de neumáticos (puede estar vacía)"),
+            @ApiResponse(responseCode = "400", description = "Orden por un campo no permitido o filtro con tipo inválido",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<Page<NeumaticoListadoDTO>> buscar(
+            @Parameter(description = "Número de serie completo o parcial") @RequestParam(required = false) String numeroSerie,
+            @Parameter(description = "Id de la marca (de `/marcas`)") @RequestParam(required = false) Long marcaId,
+            @Parameter(description = "Estado técnico") @RequestParam(required = false) EstadoNeumatico estado,
+            @Parameter(description = "Situación operativa vigente") @RequestParam(required = false) SituacionOperativa situacion,
+            @ParameterObject @PageableDefault(size = PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO, sort = "numeroSerie") Pageable pageable) {
+        return ResponseEntity.ok(neumaticoService.buscar(numeroSerie, marcaId, estado, situacion, pageable));
     }
 
     @GetMapping("/marcas")

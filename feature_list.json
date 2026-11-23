@@ -41,11 +41,12 @@
         "Dado que un usuario ingresa una coincidencia parcial del número de serie, entonces el sistema debe retornar todos los neumáticos activos cuyo número de serie contenga dicha cadena.",
         "Dado que un usuario combina el filtro de número de serie con otros atributos técnicos opcionales (por ejemplo, marca y estado), cuando ejecuta la búsqueda, entonces el sistema debe retornar únicamente los neumáticos que cumplan simultáneamente con todos los criterios indicados.",
         "Dado que un usuario activa la casilla \"Solo en espera\", cuando ejecuta la búsqueda, entonces el sistema debe retornar únicamente los neumáticos activos que están en el buffer de espera, pudiendo combinarse con los demás filtros (número de serie, marca, estado técnico).",
+        "[MODIFICACIÓN — reemplaza al criterio anterior, que queda obsoleto] Dado que un usuario elige una situación operativa (En stock, Montado, En reparación o En espera), cuando ejecuta la búsqueda, entonces el sistema debe retornar únicamente los neumáticos activos con esa situación, pudiendo combinarse con los demás filtros (número de serie, marca, estado técnico). Se implementa como un filtro de situación operativa y no como la casilla \"Solo en espera\"; decisión del humano.",
         "Dado que un usuario no completa ninguno de los campos de búsqueda, cuando ejecuta la búsqueda, entonces el sistema debe retornar el listado completo de neumáticos activos.",
         "La lista de resultados debe soportar paginación."
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 3,

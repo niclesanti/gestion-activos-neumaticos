@@ -17,7 +17,7 @@ Los topes son máximos, no objetivos: una HU chica ocupa mucho menos.
 
 | Estado        | Significado                                          |
 |---------------|------------------------------------------------------|
-| `pending`     | Sin spec. Actúa el `spec_author`.                    |
+| `pending`     | Sin spec. Actúa el `spec-author`.                    |
 | `spec_ready`  | Spec redactado, esperando aprobación humana.         |
 | `in_progress` | Spec aprobado, `implementer` trabajando.            |
 | `done`        | `verify.sh` verde, reviewer aprobó, leader cerró.    |
@@ -70,4 +70,4 @@ Una línea por task, en el orden natural del stack (migración → entidad/repo 
 
 ## Trazabilidad
 
-Cada `CA<n>` tiene al menos un test concreto (JUnit) o, en UI sin runner de tests, la verificación documentada en `impl_<name>.md` (lint + typecheck + comprobación en navegador). El `spec_author` prefiere criterios de frontend verificables por esos medios. Si resulta insuficiente, se propone un runner de tests como feature aparte.
+Cada `CA<n>` tiene al menos un test concreto (JUnit) o, en UI sin runner de tests, la verificación documentada en `impl_<name>.md` (lint + typecheck + comprobación en navegador). El `spec-author` prefiere criterios de frontend verificables por esos medios. Si resulta insuficiente, se propone un runner de tests como feature aparte.

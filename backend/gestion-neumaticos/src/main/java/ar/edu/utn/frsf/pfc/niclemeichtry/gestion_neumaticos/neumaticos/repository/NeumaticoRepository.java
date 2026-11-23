@@ -3,6 +3,9 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.reposito
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -16,5 +19,10 @@ public interface NeumaticoRepository extends JpaRepository<Neumatico, Long>, Jpa
     /** Con la marca en la misma consulta: sin N+1 al mostrar el lote. */
     @EntityGraph(attributePaths = "marca")
     List<Neumatico> findAllByIdIn(Collection<Long> ids);
+
+    /** Carga la marca (to-one) en la misma consulta de la página: sin N+1. */
+    @Override
+    @EntityGraph(attributePaths = "marca")
+    Page<Neumatico> findAll(Specification<Neumatico> spec, Pageable pageable);
 
 }

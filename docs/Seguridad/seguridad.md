@@ -162,6 +162,7 @@ Endpoints de negocio anotados hasta ahora:
 | Endpoint | Anotación | Quiénes |
 |---|---|---|
 | `POST /api/v1/neumaticos` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/v1/neumaticos` (búsqueda paginada por número de serie, marca, estado y situación operativa, HU-28) | `hasRole('LECTOR')` | Los tres roles en el endpoint; la página `/tires` sigue cerrada al lector (`ROUTE_ACCESS`) |
 | `GET /api/v1/neumaticos/marcas` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/proveedores` | `hasRole('LECTOR')` | Los tres roles |
