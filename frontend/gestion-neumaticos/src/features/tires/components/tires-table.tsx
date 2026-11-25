@@ -27,6 +27,7 @@ import {
   DEFAULT_TIRES_QUERY,
   type TiresQuery,
 } from "@/features/tires/api/tires-api"
+import { TireDetailDialog } from "@/features/tires/components/tire-detail-dialog"
 import {
   TireFilters,
   type TireFilterValues,
@@ -56,6 +57,10 @@ export function TiresTable() {
     page: DEFAULT_TIRES_QUERY.page,
     direction: DEFAULT_TIRES_QUERY.direction,
   })
+  const [selected, setSelected] = React.useState<{
+    publicId: string
+    serialNumber: string | null
+  } | null>(null)
   const debouncedSearch = useDebouncedValue(filters.search)
 
   const query: TiresQuery = {
@@ -175,13 +180,33 @@ export function TiresTable() {
                     </TableRow>
                   ))
                 : tires.map((tire) => (
-                    <TableRow key={tire.publicId}>
+                    <TableRow
+                      key={tire.publicId}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setSelected({
+                          publicId: tire.publicId,
+                          serialNumber: tire.numeroSerie,
+                        })
+                      }
+                    >
                       <TableCell className="font-medium">
-                        {tire.numeroSerie ?? (
-                          <span className="font-normal text-muted-foreground">
-                            {t("list.noSerialNumber")}
-                          </span>
-                        )}
+                        {/* El clic llega a la fila; el botón da el foco y el
+                            rol a teclado y lectores de pantalla. */}
+                        <button
+                          type="button"
+                          className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                          aria-label={t("list.openDetail", {
+                            serial:
+                              tire.numeroSerie ?? t("list.noSerialNumber"),
+                          })}
+                        >
+                          {tire.numeroSerie ?? (
+                            <span className="font-normal text-muted-foreground">
+                              {t("list.noSerialNumber")}
+                            </span>
+                          )}
+                        </button>
                       </TableCell>
                       <TableCell>{tire.marca}</TableCell>
                       <TableCell>
@@ -211,6 +236,12 @@ export function TiresTable() {
           </Table>
         </div>
       )}
+
+      <TireDetailDialog
+        publicId={selected?.publicId ?? null}
+        serialNumber={selected?.serialNumber ?? null}
+        onClose={() => setSelected(null)}
+      />
 
       {pageInfo ? (
         <TablePagination

@@ -9,7 +9,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.UbicacionOperativaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
@@ -85,6 +87,31 @@ class NeumaticoMapperTest {
     private static NeumaticoRequestDTO requestConSerie(String numeroSerie) {
         return new NeumaticoRequestDTO(numeroSerie, EstadoNeumatico.HOMBROS, null, null,
                 TipoEjeUnidadTransporte.DIRECCION, TipoEjeUnidadTransporte.DIRECCION, null, null, 1L, null);
+    }
+
+    @Test
+    void toDetalleDTOCopiaLosDatosTecnicosYLaUbicacionSinIds() {
+        Neumatico neumatico = neumatico(neumaticoNuevoRequest());
+        UbicacionOperativaDTO ubicacion = UbicacionOperativaDTO.deUnidad("AB123CD", "E1-IZQ");
+
+        NeumaticoDetalleDTO detalle = mapper.toDetalleDTO(neumatico, ubicacion);
+
+        assertThat(detalle).isEqualTo(new NeumaticoDetalleDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(), "Fate",
+                neumatico.getEstadoActual(), neumatico.getSituacionOperativaVigente(), neumatico.getKilometrajeTotal(),
+                neumatico.getKilometrajeUltimaReparacion(), neumatico.getTipoOrigen(), neumatico.getTipoActual(),
+                neumatico.getCantidadRecapados(), neumatico.getComentario(), ubicacion));
+        assertThat(mapper.toDetalleDTO(neumatico, UbicacionOperativaDTO.vacia()).ubicacion())
+                .isEqualTo(UbicacionOperativaDTO.vacia());
+    }
+
+    @Test
+    void toDetalleDTOConDatosNulos() {
+        assertThat(mapper.toDetalleDTO(null, null)).isNull();
+        assertThat(mapper.toDetalleDTO(new Neumatico(), null))
+                .isEqualTo(new NeumaticoDetalleDTO(null, null, null, null, null, null, null, null, null, null, null, null));
+        assertThat(mapper.toDetalleDTO(Neumatico.builder().marca(new MarcaNeumatico()).build(), null).marca()).isNull();
+        assertThat(mapper.toDetalleDTO(null, UbicacionOperativaDTO.deCentro("Depósito")).ubicacion())
+                .isEqualTo(UbicacionOperativaDTO.deCentro("Depósito"));
     }
 
     @Test

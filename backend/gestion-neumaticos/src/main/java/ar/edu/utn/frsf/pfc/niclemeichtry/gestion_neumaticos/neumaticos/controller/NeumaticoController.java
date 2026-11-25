@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.controll
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +28,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Reg
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.OpenApiConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ExceptionInfo;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
@@ -110,6 +113,29 @@ public class NeumaticoController {
             @Parameter(description = "Situación operativa vigente") @RequestParam(required = false) SituacionOperativa situacion,
             @ParameterObject @PageableDefault(size = PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO, sort = "numeroSerie") Pageable pageable) {
         return ResponseEntity.ok(neumaticoService.buscar(numeroSerie, marcaId, estado, situacion, pageable));
+    }
+
+    @GetMapping("/{publicId}")
+    @PreAuthorize("hasRole('LECTOR')")
+    @Operation(
+            summary = "Consultar la ficha de un neumático",
+            description = "Devuelve los datos técnicos del neumático, su situación operativa vigente y su "
+                    + "ubicación: unidad y posición si está montado, centro de almacenamiento si está en stock o "
+                    + "servicio de reparación si está en reparación (en espera o de baja no tiene). Un neumático "
+                    + "de baja operativa se devuelve; uno con baja lógica se comporta como inexistente (HU-14). "
+                    + "Cualquier nivel de acceso.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ficha del neumático"),
+            @ApiResponse(responseCode = "400", description = "El identificador no es un UUID",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "404", description = "El neumático no existe o tiene baja lógica",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<NeumaticoDetalleDTO> obtenerDetalle(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(neumaticoService.obtenerDetalle(publicId));
     }
 
     @GetMapping("/marcas")

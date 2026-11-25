@@ -162,6 +162,46 @@
     "pagination": {
       "summary_one": "{{count}} tire · page {{page}} of {{pages}}",
       "summary_other": "{{count}} tires · page {{page}} of {{pages}}"
+    },
+    "openDetail": "View details of tire {{serial}}"
+  },
+  "detail": {
+    "description": "Technical data, operational situation and location of the tire.",
+    "data": {
+      "title": "Technical data",
+      "serialNumber": "Serial number",
+      "brand": "Brand",
+      "mileage": "Mileage",
+      "mileageSinceRepair": "Km since last repair",
+      "originAxle": "Origin axle",
+      "currentAxle": "Current axle",
+      "retreads": "Retreads",
+      "comment": "Comments"
+    },
+    "notRegistered": "Not recorded",
+    "location": {
+      "title": "Operational location",
+      "unit": "Unit",
+      "position": "Position",
+      "storageCenter": "Storage center",
+      "repairService": "Repair service",
+      "waiting": "On hold",
+      "deregistered": "Decommissioned",
+      "unavailable": "Location not available"
+    },
+    "actions": {
+      "history": "View history",
+      "location": "View location",
+      "comingSoon": "Coming soon"
+    },
+    "notFound": {
+      "title": "The tire no longer exists",
+      "description": "It may have been decommissioned. Refresh the list."
+    },
+    "error": {
+      "title": "The details could not be loaded",
+      "description": "Check your connection and try again.",
+      "retry": "Retry"
     }
   }
 }

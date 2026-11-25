@@ -38,6 +38,8 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dt
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoMontadoDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.UbicacionOperativaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.Neumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.SituacionOperativa;
@@ -281,6 +283,31 @@ public final class TestDataFactory {
 		return new NeumaticoListadoDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(),
 				neumatico.getMarca().getNombre(), neumatico.getEstadoActual(),
 				neumatico.getSituacionOperativaVigente(), neumatico.getKilometrajeTotal());
+	}
+
+	/** Referencias internas de ubicación de los tests de la ficha del neumático (HU-14). */
+	public static final Long SLOT_ID = 7L;
+	public static final Long CENTRO_ID = 8L;
+	public static final Long SERVICIO_ID = 9L;
+
+	/** Neumático nuevo en la situación dada, con las tres referencias de ubicación cargadas. */
+	public static Neumatico neumaticoEn(SituacionOperativa situacion) {
+		Neumatico neumatico = neumatico(neumaticoNuevoRequest());
+		neumatico.setSituacionOperativaVigente(situacion);
+		neumatico.setEnEspera(situacion == SituacionOperativa.EN_ESPERA);
+		neumatico.setSlotMontadoId(SLOT_ID);
+		neumatico.setCentroAlmacenamientoId(CENTRO_ID);
+		neumatico.setServicioReparacionId(SERVICIO_ID);
+		return neumatico;
+	}
+
+	/** Ficha de un neumático en espera (sin ubicación). */
+	public static NeumaticoDetalleDTO neumaticoDetalle(Neumatico neumatico) {
+		return new NeumaticoDetalleDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(),
+				neumatico.getMarca().getNombre(), neumatico.getEstadoActual(),
+				neumatico.getSituacionOperativaVigente(), neumatico.getKilometrajeTotal(),
+				neumatico.getKilometrajeUltimaReparacion(), neumatico.getTipoOrigen(), neumatico.getTipoActual(),
+				neumatico.getCantidadRecapados(), neumatico.getComentario(), UbicacionOperativaDTO.vacia());
 	}
 
 	// Conductores

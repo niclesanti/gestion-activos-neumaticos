@@ -162,6 +162,46 @@
     "pagination": {
       "summary_one": "{{count}} neumático · página {{page}} de {{pages}}",
       "summary_other": "{{count}} neumáticos · página {{page}} de {{pages}}"
+    },
+    "openDetail": "Ver la ficha del neumático {{serial}}"
+  },
+  "detail": {
+    "description": "Datos técnicos, situación operativa y ubicación del neumático.",
+    "data": {
+      "title": "Datos técnicos",
+      "serialNumber": "Número de serie",
+      "brand": "Marca",
+      "mileage": "Kilometraje",
+      "mileageSinceRepair": "Km desde la última reparación",
+      "originAxle": "Eje de origen",
+      "currentAxle": "Eje actual",
+      "retreads": "Recapados",
+      "comment": "Comentarios"
+    },
+    "notRegistered": "No registrado",
+    "location": {
+      "title": "Ubicación operativa",
+      "unit": "Unidad",
+      "position": "Posición",
+      "storageCenter": "Centro de almacenamiento",
+      "repairService": "Servicio de reparación",
+      "waiting": "En espera",
+      "deregistered": "De baja",
+      "unavailable": "Ubicación no disponible"
+    },
+    "actions": {
+      "history": "Ver historial",
+      "location": "Ver ubicación",
+      "comingSoon": "Próximamente"
+    },
+    "notFound": {
+      "title": "El neumático ya no existe",
+      "description": "Pudo haber sido dado de baja. Actualizá el listado."
+    },
+    "error": {
+      "title": "No se pudo cargar la ficha",
+      "description": "Revisá tu conexión e intentá de nuevo.",
+      "retry": "Reintentar"
     }
   }
 }

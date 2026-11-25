@@ -75,7 +75,7 @@
         "Dado que un usuario accede a la ficha de un neumático, entonces debe poder navegar desde allí hacia su historial de trazabilidad (HU-33) y, si corresponde, hacia el detalle de su ubicación."
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 5,
