@@ -14,7 +14,7 @@ Precisiones verificables:
 
 - CA6: Tras asignar, el neumático queda con situación "Montado" en esa unidad y posición; si venía de un centro, el centro tiene un neumático menos en stock y el neumático ya no figura en él. [CA2]
 - CA7: Asignar a una posición ocupada sin haber aceptado la advertencia responde 409 y no cambia nada; aceptada, el neumático desmontado queda "En espera" y su historial registra un evento de desasignación (unidad, posición, fecha, usuario). [CA3]
-- CA8: Un neumático montado, en reparación, de baja (estado o situación) o con baja lógica es rechazado con 422 y `ExceptionInfo`, sin cambios; uno inexistente, 404. [CA4]
+- CA8: Un neumático montado, en reparación, de baja (estado o situación) o con baja lógica es rechazado con 409 y `ExceptionInfo`, sin cambios; uno inexistente, 404. [CA4]
 - CA9: Unidad inexistente o dada de baja, posición que no pertenece a la unidad o conductor inexistente responden 404 sin cambios. [CA1, CA2]
 - CA10: El Lector recibe 403 al asignar y en la ficha no ve la acción (las posiciones siguen mostrando sus datos como hoy). [CA5]
 
