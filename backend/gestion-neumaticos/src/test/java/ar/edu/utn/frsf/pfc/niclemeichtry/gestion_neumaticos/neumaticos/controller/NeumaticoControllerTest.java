@@ -1,6 +1,8 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.controller;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumatico;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoDetalle;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoEn;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoNuevoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoResponse;
@@ -15,6 +17,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
 import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
@@ -65,7 +68,9 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionCon
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.UbicacionOperativaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
@@ -415,6 +420,101 @@ class NeumaticoControllerTest {
         @DisplayName("401 sin token")
         void sinToken() throws Exception {
             mockMvc.perform(get(MARCAS)).andExpect(status().isUnauthorized());
+        }
+
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/neumaticos/{publicId}")
+    class Detalle {
+
+        private static final String DETALLE = NEUMATICOS + "/{publicId}";
+
+        @Test
+        @DisplayName("200 con la ficha y la ubicación, sin ids internos")
+        void detalleConLector() throws Exception {
+            Neumatico neumatico = neumaticoEn(SituacionOperativa.MONTADO);
+            NeumaticoDetalleDTO detalle = new NeumaticoDetalleDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(),
+                    "Fate", neumatico.getEstadoActual(), SituacionOperativa.MONTADO, 1500f, 200f,
+                    neumatico.getTipoOrigen(), neumatico.getTipoActual(), 1, "Compra inicial",
+                    UbicacionOperativaDTO.deUnidad("AB123CD", "E1-IZQ"));
+            when(neumaticoService.obtenerDetalle(neumatico.getPublicId())).thenReturn(detalle);
+
+            mockMvc.perform(get(DETALLE, neumatico.getPublicId()).with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.publicId").value(neumatico.getPublicId().toString()))
+                    .andExpect(jsonPath("$.numeroSerie").value("ABC-123"))
+                    .andExpect(jsonPath("$.marca").value("Fate"))
+                    .andExpect(jsonPath("$.situacionOperativaVigente").value("MONTADO"))
+                    .andExpect(jsonPath("$.ubicacion.unidad").value("AB123CD"))
+                    .andExpect(jsonPath("$.ubicacion.posicion").value("E1-IZQ"))
+                    .andExpect(jsonPath("$.id").doesNotExist())
+                    .andExpect(jsonPath("$.slotMontadoId").doesNotExist())
+                    .andExpect(jsonPath("$.centroAlmacenamientoId").doesNotExist())
+                    .andExpect(jsonPath("$.servicioReparacionId").doesNotExist())
+                    .andDo(document("neumatico-detalle",
+                            preprocessRequest(prettyPrint()),
+                            preprocessResponse(prettyPrint()),
+                            pathParameters(parameterWithName("publicId").description("Identificador público del neumático")),
+                            responseFields(
+                                    fieldWithPath("publicId").description("Identificador público"),
+                                    fieldWithPath("numeroSerie").description("Número de serie (puede ser null)").optional(),
+                                    fieldWithPath("marca").description("Nombre de la marca"),
+                                    fieldWithPath("estadoActual").description("Estado técnico"),
+                                    fieldWithPath("situacionOperativaVigente").description("Situación operativa vigente"),
+                                    fieldWithPath("kilometrajeTotal").description("Kilometraje total (puede ser null)").optional(),
+                                    fieldWithPath("kilometrajeUltimaReparacion")
+                                            .description("Kilometraje desde la última reparación (puede ser null)").optional(),
+                                    fieldWithPath("tipoOrigen").description("Tipo de eje de origen"),
+                                    fieldWithPath("tipoActual").description("Tipo de eje actual"),
+                                    fieldWithPath("cantidadRecapados").description("Cantidad de recapados (puede ser null)").optional(),
+                                    fieldWithPath("comentario").description("Comentario (puede ser null)").optional(),
+                                    fieldWithPath("ubicacion").description("Ubicación operativa vigente"),
+                                    fieldWithPath("ubicacion.unidad").description("Patente de la unidad (si está montado)").optional(),
+                                    fieldWithPath("ubicacion.posicion").description("Código de la posición (si está montado)").optional(),
+                                    fieldWithPath("ubicacion.centroAlmacenamiento")
+                                            .description("Nombre del centro (si está en stock)").optional(),
+                                    fieldWithPath("ubicacion.servicioReparacion")
+                                            .description("Nombre del servicio (si está en reparación)").optional())));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "ROLE_EDITOR", "ROLE_ADMINISTRADOR" })
+        @DisplayName("200 también para editor y administrador")
+        void detalleConEditorYAdministrador(String nivel) throws Exception {
+            Neumatico neumatico = neumaticoEn(SituacionOperativa.EN_ESPERA);
+            when(neumaticoService.obtenerDetalle(neumatico.getPublicId())).thenReturn(neumaticoDetalle(neumatico));
+
+            mockMvc.perform(get(DETALLE, neumatico.getPublicId()).with(usuario(nivel))).andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("404 si el neumático no existe o tiene baja lógica")
+        void inexistente() throws Exception {
+            UUID publicId = UUID.randomUUID();
+            when(neumaticoService.obtenerDetalle(publicId))
+                    .thenThrow(new EntidadNoEncontradaException("El neumático indicado no existe"));
+
+            mockMvc.perform(get(DETALLE, publicId).with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("El neumático indicado no existe"));
+        }
+
+        @Test
+        @DisplayName("400 si el identificador no es un UUID, sin llegar al servicio")
+        void identificadorInvalido() throws Exception {
+            mockMvc.perform(get(DETALLE, "no-es-uuid").with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(neumaticoService);
+        }
+
+        @Test
+        @DisplayName("401 sin token")
+        void sinToken() throws Exception {
+            mockMvc.perform(get(DETALLE, UUID.randomUUID())).andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(neumaticoService);
         }
 
     }

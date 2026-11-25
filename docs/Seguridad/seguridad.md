@@ -162,7 +162,8 @@ Endpoints de negocio anotados hasta ahora:
 | Endpoint | Anotación | Quiénes |
 |---|---|---|
 | `POST /api/v1/neumaticos` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
-| `GET /api/v1/neumaticos` (búsqueda paginada por número de serie, marca, estado y situación operativa, HU-28) | `hasRole('LECTOR')` | Los tres roles en el endpoint; la página `/tires` sigue cerrada al lector (`ROUTE_ACCESS`) |
+| `GET /api/v1/neumaticos` (búsqueda paginada por número de serie, marca, estado y situación operativa, HU-28) | `hasRole('LECTOR')` | Los tres roles; la página `/tires` también está abierta al lector, en solo lectura (HU-14, `ROUTE_ACCESS` sin la ruta) |
+| `GET /api/v1/neumaticos/{publicId}` (ficha del neumático con su ubicación operativa, HU-14) | `hasRole('LECTOR')` | Los tres roles; 404 si no existe o tiene baja lógica. La ubicación se lee de unidades, almacenamiento y reparación, donde el lector ya tiene `SELECT` (V16, V17, V18) |
 | `GET /api/v1/neumaticos/marcas` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/proveedores` | `hasRole('LECTOR')` | Los tres roles |
@@ -403,11 +404,12 @@ Toda raíz de agregado de negocio (`Usuario`, `Neumatico`, `Conductor`, `Proveed
 |---|:-:|:-:|:-:|
 | Inicio | ✔ | ✔ | ✔ |
 | Unidades de transporte | ✔ | ✔ | ✔ (solo lectura: sin botón de alta) |
-| Neumáticos, Reparaciones, Almacenamiento | ✔ | ✔ | ✘ |
+| Neumáticos | ✔ | ✔ | ✔ (solo lectura: busca y abre la ficha, sin botón "Registrar neumático"; HU-14) |
+| Reparaciones, Almacenamiento | ✔ | ✔ | ✘ |
 | Configuración (`/settings`) | ✔ | ✔ (sin Usuarios) | ✔ (sin Usuarios, solo lectura) |
 | Auditoría (`/audit`) | ✔ | ✘ | ✘ |
 
-El administrador es el "superusuario" del negocio: hace el CRUD de todo. El editor puede hacer todo menos Auditoría y la gestión de usuarios. El lector es de solo lectura: entra a Inicio, a Unidades de transporte (lista y busca por patente) y a Configuración, donde puede buscar y filtrar pero no dar de alta, modificar ni eliminar; el resto de sus permisos de lectura todavía no está definido.
+El administrador es el "superusuario" del negocio: hace el CRUD de todo. El editor puede hacer todo menos Auditoría y la gestión de usuarios. El lector es de solo lectura: entra a Inicio, a Unidades de transporte (lista y busca por patente), a Neumáticos (lista, busca y abre la ficha) y a Configuración, donde puede buscar y filtrar pero no dar de alta, modificar ni eliminar; el resto de sus permisos de lectura todavía no está definido.
 
 Dentro de Configuración, `SETTINGS_TAB_ACCESS` decide qué pestañas ve cada nivel, y `ACTION_ACCESS` (`canPerform`) qué acciones de negocio se muestran:
 
@@ -509,7 +511,7 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 ### Al construir los módulos de negocio
 
 1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores, de proveedores (HU-24), de unidades de transporte (HU-07) y de servicios de reparación (HU-18); falta en los endpoints que vengan. El montaje de neumáticos en unidades tendrá que agregar `UPDATE (neumatico_actual_id)` sobre `unidades_transporte.slots_unidad_transporte` para administrador y editor.
-2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio, a Unidades de transporte (ya definido en las tres capas: `ROUTE_ACCESS`, `GET /api/v1/unidades-transporte` con `hasRole('LECTOR')` y `SELECT` en la base; HU-27) y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre neumáticos, marcas, conductores, proveedores, unidades de transporte (con sus slots y configuraciones) y las tablas de `common`. Si entra a `/tires`, el botón "Registrar neumático" tiene que ocultarse según su nivel (hoy no se chequea porque solo llegan administrador y editor).
+2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio, a Unidades de transporte (ya definido en las tres capas: `ROUTE_ACCESS`, `GET /api/v1/unidades-transporte` con `hasRole('LECTOR')` y `SELECT` en la base; HU-27), a Neumáticos (ya definido en las tres capas: `ROUTE_ACCESS` sin la ruta, `GET /api/v1/neumaticos` y `GET /api/v1/neumaticos/{publicId}` con `hasRole('LECTOR')` y `SELECT` en la base; el botón "Registrar neumático" se oculta con la acción `tires.create`; HU-14) y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre conductores, proveedores, centros, servicios y las tablas de `common`.
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 
 ### Con la gestión de usuarios (alta, edición, baja)

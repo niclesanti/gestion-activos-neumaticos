@@ -98,3 +98,37 @@ export async function getTireBrands() {
   const { data } = await apiClient.get<TireBrand[]>("/api/v1/neumaticos/marcas")
   return data
 }
+
+/**
+ * Ubicación operativa vigente (`UbicacionOperativaDTO` del backend): solo viene
+ * lo que corresponde a la situación (montado, en stock o en reparación).
+ */
+export type TireLocation = {
+  unidad: string | null
+  posicion: string | null
+  centroAlmacenamiento: string | null
+  servicioReparacion: string | null
+}
+
+/** Ficha de un neumático (`NeumaticoDetalleDTO` del backend). */
+export type TireDetail = {
+  publicId: string
+  numeroSerie: string | null
+  marca: string
+  estadoActual: TireStatus
+  situacionOperativaVigente: OperationalSituation
+  kilometrajeTotal: number | null
+  kilometrajeUltimaReparacion: number | null
+  tipoOrigen: AxleType
+  tipoActual: AxleType
+  cantidadRecapados: number | null
+  comentario: string | null
+  ubicacion: TireLocation
+}
+
+export async function getTire(publicId: string) {
+  const { data } = await apiClient.get<TireDetail>(
+    `/api/v1/neumaticos/${publicId}`
+  )
+  return data
+}

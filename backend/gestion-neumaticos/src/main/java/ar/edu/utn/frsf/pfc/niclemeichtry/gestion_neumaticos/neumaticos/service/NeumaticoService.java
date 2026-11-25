@@ -1,6 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
@@ -43,6 +45,16 @@ public interface NeumaticoService {
      */
     Page<NeumaticoListadoDTO> buscar(String numeroSerie, Long marcaId, EstadoNeumatico estado,
             SituacionOperativa situacion, Pageable pageable);
+
+    /**
+     * Ficha de un neumático (HU-14): datos técnicos, situación vigente y ubicación (unidad y posición,
+     * centro o servicio, según la situación; en espera o de baja no tiene). Un neumático de baja
+     * operativa se devuelve; uno con baja lógica se comporta como inexistente.
+     *
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException
+     *         si no existe o tiene baja lógica.
+     */
+    NeumaticoDetalleDTO obtenerDetalle(UUID publicId);
 
     /** Marcas de neumáticos disponibles, ordenadas por nombre. */
     List<MarcaNeumaticoResponseDTO> listarMarcas();
