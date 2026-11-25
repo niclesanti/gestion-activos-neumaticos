@@ -91,7 +91,7 @@
         "Dado que un usuario con nivel de acceso Lector intenta acceder a esta funcionalidad, entonces el sistema debe denegar el acceso a dicha pantalla o funcionalidad."
       ],
       "sdd": true,
-      "status": "pending"
+      "status": "spec_ready"
     },
     {
       "id": 6,
