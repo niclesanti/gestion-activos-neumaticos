@@ -1,11 +1,14 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
@@ -47,6 +50,17 @@ public class CentroAlmacenamientoServiceImpl implements CentroAlmacenamientoServ
 
         DomicilioResponseDTO domicilio = domicilioApi.buscarDomicilio(centro.getDomicilioId()).orElse(null);
         return centroAlmacenamientoMapper.toResponseDTO(centro, domicilio);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CentroAlmacenamientoListadoDTO> listarCentros() {
+        List<CentroAlmacenamientoListadoDTO> centros = centroAlmacenamientoRepository
+                .findAllByDeletedAtIsNullOrderByNombreAsc().stream()
+                .map(centroAlmacenamientoMapper::toListadoDTO)
+                .toList();
+        log.debug("Centros de almacenamiento listados: {}", centros.size());
+        return centros;
     }
 
     @Override

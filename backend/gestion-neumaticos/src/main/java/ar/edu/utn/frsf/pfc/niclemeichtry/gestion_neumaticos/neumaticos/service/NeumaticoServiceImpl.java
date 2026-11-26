@@ -1,7 +1,10 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +28,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDup
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.ProveedorUbicacionNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.StockCentroAlmacenamiento;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.TipoUbicacion;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.UbicacionOperativaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.EspecificacionesNeumatico;
@@ -63,6 +67,7 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     private final MarcaNeumaticoRepository marcaNeumaticoRepository;
     private final ProveedorApi proveedorApi;
     private final ApplicationEventPublisher eventPublisher;
+    private final StockCentroAlmacenamiento stockCentroAlmacenamiento;
     // Los módulos que conocen la ubicación (unidades, almacenamiento, reparación) implementan el puerto: sin ciclos.
     private final List<ProveedorUbicacionNeumatico> proveedoresUbicacion;
 
@@ -114,23 +119,41 @@ public class NeumaticoServiceImpl implements NeumaticoService {
     @Override
     @Transactional(readOnly = true)
     public Page<NeumaticoListadoDTO> buscar(String numeroSerie, Long marcaId, EstadoNeumatico estado,
-            SituacionOperativa situacion, Pageable pageable) {
-        log.debug("Buscando neumáticos: numeroSerie={}, marcaId={}, estado={}, situacion={}, pageable={}",
-                numeroSerie, marcaId, estado, situacion, pageable);
+            Collection<SituacionOperativa> situaciones, UUID centro, Pageable pageable) {
+        log.debug("Buscando neumáticos: numeroSerie={}, marcaId={}, estado={}, situaciones={}, centro={}, pageable={}",
+                numeroSerie, marcaId, estado, situaciones, centro, pageable);
         if (!OrdenNeumaticos.esValido(pageable)) {
             log.warn("Búsqueda de neumáticos rechazada: orden no permitido {}", pageable.getSort());
             throw new ParametroInvalidoException("Solo se puede ordenar por número de serie");
+        }
+        Long centroId = null;
+        if (centro != null) {
+            Optional<Long> encontrado = stockCentroAlmacenamiento.buscarIdPorPublicId(centro);
+            if (encontrado.isEmpty()) {
+                log.debug("Búsqueda de neumáticos por un centro inexistente ({}): sin resultados", centro);
+                return Page.empty(pageable);
+            }
+            centroId = encontrado.get();
         }
         Specification<Neumatico> especificacion = EspecificacionesNeumatico.activos()
                 .and(EspecificacionesNeumatico.numeroSerieContiene(NormalizacionTexto.mayusculas(numeroSerie)))
                 .and(EspecificacionesNeumatico.deMarca(marcaId))
                 .and(EspecificacionesNeumatico.conEstado(estado))
-                .and(EspecificacionesNeumatico.conSituacion(situacion));
+                .and(EspecificacionesNeumatico.conSituaciones(situaciones))
+                .and(EspecificacionesNeumatico.enCentro(centroId));
         // Desempate fijo por publicId (UUIDv7, orden de alta): páginas estables aun con muchos sin serie.
         Pageable ordenado = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                 pageable.getSort().and(Sort.by("publicId")));
-        Page<NeumaticoListadoDTO> pagina = neumaticoRepository.findAll(especificacion, ordenado)
-                .map(neumaticoMapper::toListadoDTO);
+        Page<Neumatico> neumaticos = neumaticoRepository.findAll(especificacion, ordenado);
+        // Nombres de los centros de toda la página en una sola consulta: sin N+1.
+        Map<Long, String> centros = stockCentroAlmacenamiento.buscarNombresPorIds(neumaticos.getContent().stream()
+                .map(Neumatico::getCentroAlmacenamientoId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList());
+        Page<NeumaticoListadoDTO> pagina = neumaticos.map(neumatico -> neumaticoMapper.toListadoDTO(neumatico,
+                neumatico.getCentroAlmacenamientoId() == null ? null
+                        : centros.get(neumatico.getCentroAlmacenamientoId())));
         log.debug("Neumáticos encontrados: {}", pagina.getTotalElements());
         return pagina;
     }

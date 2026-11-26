@@ -132,5 +132,97 @@
     "RECAPADO_USADO": "Recapado usado",
     "RECAPADO_SIN_GARANTIA": "Recapado sin garantía",
     "DE_BAJA": "De baja"
+  },
+  "mount": {
+    "mountAction": "Montar neumático",
+    "replaceAction": "Reemplazar neumático",
+    "title": "Montar neumático",
+    "titleReplace": "Reemplazar neumático",
+    "spare": "Auxilio",
+    "steps": {
+      "label": "Pasos del montaje",
+      "tire": {
+        "label": "Neumático",
+        "heading": "¿Qué neumático vas a montar?",
+        "hint": "Buscá por número de serie o elegí la pestaña En espera o En stock. Elegilo con un clic o con Enter."
+      },
+      "driver": {
+        "label": "Conductor",
+        "heading": "¿Asociar un conductor?",
+        "hint": "Es opcional: queda registrado en el historial del neumático. Si no corresponde, tocá Omitir.",
+        "searchLabel": "Buscar conductor",
+        "placeholder": "Buscá por apellido, nombre o DNI",
+        "listLabel": "Conductores activos",
+        "empty": {
+          "title": "No hay conductores activos",
+          "description": "Podés omitir este paso y continuar sin conductor."
+        },
+        "noResults": {
+          "title": "No encontramos conductores",
+          "description": "Probá con otro apellido, nombre o DNI."
+        },
+        "error": {
+          "title": "No pudimos cargar los conductores",
+          "description": "Reintentá o omití este paso.",
+          "retry": "Reintentar"
+        },
+        "clear": "Quitar selección",
+        "dni": "DNI {{dni}}",
+        "pagination": {
+          "summary_one": "{{count}} conductor · página {{page}} de {{pages}}",
+          "summary_other": "{{count}} conductores · página {{page}} de {{pages}}"
+        }
+      },
+      "confirm": {
+        "label": "Confirmar",
+        "heading": "Revisá el montaje antes de confirmar"
+      }
+    },
+    "outgoing": {
+      "title": "Esta posición ya tiene un neumático",
+      "description": "El neumático {{serial}} ({{brand}}) se va a desmontar y va a quedar en espera."
+    },
+    "summary": {
+      "tire": "Neumático",
+      "destination": "Destino",
+      "driver": "Conductor",
+      "outgoing": "Neumático que se desmonta",
+      "noDriver": "Sin conductor",
+      "fromWaiting": "En espera",
+      "fromCenter": "En stock en {{name}}",
+      "outgoingResult": "{{brand}} · queda en espera",
+      "change": "Cambiar",
+      "changeTire": "Cambiar el neumático",
+      "changeDriver": "Cambiar el conductor"
+    },
+    "immutable": {
+      "title": "Queda registrado en el historial",
+      "description": "El montaje queda registrado en el historial del neumático de forma inmutable, con la fecha y tu usuario."
+    },
+    "acknowledge": {
+      "mount": "Entiendo que el montaje queda registrado en el historial y no se puede editar.",
+      "replace": "Entiendo que se va a desmontar el neumático {{serial}} (queda en espera) y que el reemplazo queda registrado en el historial."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "back": "Atrás",
+      "continue": "Continuar",
+      "skip": "Omitir",
+      "confirm": "Confirmar montaje",
+      "confirmReplace": "Confirmar reemplazo",
+      "submitting": "Montando…"
+    },
+    "feedback": {
+      "mounted": "Neumático montado",
+      "replaced": "Neumático reemplazado",
+      "description": "{{serial}} quedó en {{plate}} · {{position}}."
+    },
+    "errors": {
+      "slotTaken": "Mientras elegías, se montó otro neumático en esta posición. Revisá el reemplazo y confirmalo de nuevo.",
+      "tireUnavailable": "El neumático elegido ya no está disponible (lo montaron o cambió de situación). Elegí otro.",
+      "notFound": "El neumático, el conductor o la posición ya no existen. Revisá la selección.",
+      "forbidden": "No tenés permisos para montar neumáticos",
+      "unexpected": "No pudimos montar el neumático. Intentá de nuevo en unos minutos"
+    }
   }
 }

@@ -1,5 +1,6 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,13 +39,15 @@ public interface NeumaticoService {
 
     /**
      * Busca neumáticos activos (HU-28), paginados. Los filtros son opcionales y se combinan con AND: el
-     * número de serie coincide por contenido y sin distinguir mayúsculas; marca, estado y situación
-     * operativa por igualdad. Solo se ordena por número de serie.
+     * número de serie coincide por contenido y sin distinguir mayúsculas; marca y estado por igualdad; las
+     * situaciones operativas, cualquiera de las indicadas (HU-31); el centro, por su identificador público
+     * (uno inexistente devuelve una página vacía). Cada fila trae el nombre del centro si está en stock.
+     * Solo se ordena por número de serie.
      *
      * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException si se ordena por otro campo.
      */
     Page<NeumaticoListadoDTO> buscar(String numeroSerie, Long marcaId, EstadoNeumatico estado,
-            SituacionOperativa situacion, Pageable pageable);
+            Collection<SituacionOperativa> situaciones, UUID centro, Pageable pageable);
 
     /**
      * Ficha de un neumático (HU-14): datos técnicos, situación vigente y ubicación (unidad y posición,

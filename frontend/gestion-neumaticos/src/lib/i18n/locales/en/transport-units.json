@@ -132,5 +132,97 @@
     "RECAPADO_USADO": "Used retreaded",
     "RECAPADO_SIN_GARANTIA": "Retreaded, no warranty",
     "DE_BAJA": "Scrapped"
+  },
+  "mount": {
+    "mountAction": "Mount tire",
+    "replaceAction": "Replace tire",
+    "title": "Mount tire",
+    "titleReplace": "Replace tire",
+    "spare": "Spare",
+    "steps": {
+      "label": "Mounting steps",
+      "tire": {
+        "label": "Tire",
+        "heading": "Which tire are you mounting?",
+        "hint": "Search by serial number or pick the Waiting or In stock tab. Pick it with a click or Enter."
+      },
+      "driver": {
+        "label": "Driver",
+        "heading": "Link a driver?",
+        "hint": "Optional: it is recorded in the tire history. If it does not apply, choose Skip.",
+        "searchLabel": "Search driver",
+        "placeholder": "Search by last name, first name or ID",
+        "listLabel": "Active drivers",
+        "empty": {
+          "title": "There are no active drivers",
+          "description": "You can skip this step and continue without a driver."
+        },
+        "noResults": {
+          "title": "No drivers found",
+          "description": "Try another last name, first name or ID."
+        },
+        "error": {
+          "title": "We could not load the drivers",
+          "description": "Retry or skip this step.",
+          "retry": "Retry"
+        },
+        "clear": "Clear selection",
+        "dni": "ID {{dni}}",
+        "pagination": {
+          "summary_one": "{{count}} driver · page {{page}} of {{pages}}",
+          "summary_other": "{{count}} drivers · page {{page}} of {{pages}}"
+        }
+      },
+      "confirm": {
+        "label": "Confirm",
+        "heading": "Review the mounting before confirming"
+      }
+    },
+    "outgoing": {
+      "title": "This position already has a tire",
+      "description": "Tire {{serial}} ({{brand}}) will be unmounted and left waiting."
+    },
+    "summary": {
+      "tire": "Tire",
+      "destination": "Destination",
+      "driver": "Driver",
+      "outgoing": "Tire being unmounted",
+      "noDriver": "No driver",
+      "fromWaiting": "Waiting",
+      "fromCenter": "In stock at {{name}}",
+      "outgoingResult": "{{brand}} · left waiting",
+      "change": "Change",
+      "changeTire": "Change the tire",
+      "changeDriver": "Change the driver"
+    },
+    "immutable": {
+      "title": "It is recorded in the history",
+      "description": "The mounting is recorded in the tire history immutably, with the date and your user."
+    },
+    "acknowledge": {
+      "mount": "I understand the mounting is recorded in the history and cannot be edited.",
+      "replace": "I understand tire {{serial}} will be unmounted (left waiting) and the replacement is recorded in the history."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "continue": "Continue",
+      "skip": "Skip",
+      "confirm": "Confirm mounting",
+      "confirmReplace": "Confirm replacement",
+      "submitting": "Mounting…"
+    },
+    "feedback": {
+      "mounted": "Tire mounted",
+      "replaced": "Tire replaced",
+      "description": "{{serial}} is now on {{plate}} · {{position}}."
+    },
+    "errors": {
+      "slotTaken": "While you were choosing, another tire was mounted in this position. Review the replacement and confirm again.",
+      "tireUnavailable": "The chosen tire is no longer available (it was mounted or changed situation). Choose another one.",
+      "notFound": "The tire, the driver or the position no longer exists. Review your selection.",
+      "forbidden": "You do not have permission to mount tires",
+      "unexpected": "We could not mount the tire. Try again in a few minutes"
+    }
   }
 }

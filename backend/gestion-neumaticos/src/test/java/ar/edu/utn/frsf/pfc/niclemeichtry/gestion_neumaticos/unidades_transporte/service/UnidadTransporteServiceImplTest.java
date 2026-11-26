@@ -1,6 +1,19 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.service;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CODIGO_SLOT;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CONDUCTOR_PUBLIC_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CONFIGURACION_ID;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.NEUMATICO_A_MONTAR_PUBLIC_ID;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.asignacionRequest;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorResumen;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoEntrante;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoSaliente;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.unidadVacia;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.NEUMATICO_MONTADO_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.PATENTE;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.UNIDAD_PUBLIC_ID;
@@ -33,11 +46,20 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.api.ConductorApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.NeumaticoNoDisponibleException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionOcupadaException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.event.NeumaticoAsignado;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.event.NeumaticoDesasignado;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoApi;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.AsignacionNeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
@@ -76,6 +98,8 @@ class UnidadTransporteServiceImplTest {
     /** El servicio depende solo de la interfaz: la fábrica se reemplaza por un mock. */
     @Mock private UnidadTransporteFactory unidadTransporteFactory;
     @Mock private NeumaticoApi neumaticoApi;
+    @Mock private ConductorApi conductorApi;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     /** Mapper real (generado por MapStruct): el servicio depende de cómo copia los datos. */
     private final UnidadTransporteMapper unidadTransporteMapper = new UnidadTransporteMapperImpl();
@@ -85,7 +109,182 @@ class UnidadTransporteServiceImplTest {
     @BeforeEach
     void crearServicio() {
         servicio = new UnidadTransporteServiceImpl(ensamblador, unidadTransporteRepository, configuracionUnidadRepository,
-                unidadTransporteFactory, unidadTransporteMapper, neumaticoApi);
+                unidadTransporteFactory, unidadTransporteMapper, neumaticoApi, conductorApi, eventPublisher);
+    }
+
+    @Nested
+    @DisplayName("asignarNeumatico")
+    class AsignarNeumatico {
+
+        private UnidadTransporte unidad;
+
+        @BeforeEach
+        void unidadEncontrada() {
+            unidad = unidadVacia();
+            lenient().when(unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.of(unidad));
+            lenient().when(neumaticoApi.buscarMontadosPorIds(any())).thenReturn(Map.of());
+        }
+
+        private void conSlotOcupado() {
+            unidad.getSlots().get(0).setNeumaticoActualId(NEUMATICO_MONTADO_ID);
+        }
+
+        private <T> T eventoPublicado(Class<T> tipo) {
+            ArgumentCaptor<Object> eventos = ArgumentCaptor.forClass(Object.class);
+            verify(eventPublisher, atLeastOnce()).publishEvent(eventos.capture());
+            return eventos.getAllValues().stream().filter(tipo::isInstance).map(tipo::cast).findFirst().orElseThrow();
+        }
+
+        @Test
+        @DisplayName("CA2: monta en la posición libre, toca la unidad y publica la asignación sin conductor")
+        void montaEnPosicionLibre() {
+            Long slotId = unidad.getSlots().get(0).getId();
+            when(neumaticoApi.montar(NEUMATICO_A_MONTAR_PUBLIC_ID, slotId)).thenReturn(neumaticoEntrante());
+
+            UnidadTransporteDetalleDTO detalle = servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT,
+                    asignacionRequest(), USUARIO);
+
+            assertThat(detalle.slots().get(0).ocupado()).isTrue();
+            assertThat(unidad.getSlots().get(0).getNeumaticoActualId()).isEqualTo(neumaticoEntrante().id());
+            assertThat(unidad.getUpdatedAt()).isNotNull();
+            verify(unidadTransporteRepository).flush();
+            verify(neumaticoApi, never()).desmontar(any());
+            verifyNoInteractions(conductorApi);
+            NeumaticoAsignado evento = eventoPublicado(NeumaticoAsignado.class);
+            assertThat(evento.neumaticoId()).isEqualTo(neumaticoEntrante().id());
+            assertThat(evento.numeroSerie()).isEqualTo("XYZ-999");
+            assertThat(evento.unidadId()).isEqualTo(unidad.getId());
+            assertThat(evento.patente()).isEqualTo(PATENTE);
+            assertThat(evento.slotId()).isEqualTo(slotId);
+            assertThat(evento.posicion()).isEqualTo(CODIGO_SLOT);
+            assertThat(evento.conductorId()).isNull();
+            assertThat(evento.nombreConductor()).isNull();
+            assertThat(evento.usuario()).isEqualTo(USUARIO);
+            assertThat(evento.fecha()).isNotNull();
+            verify(eventPublisher, times(1)).publishEvent(any(Object.class));
+        }
+
+        @Test
+        @DisplayName("CA1: el código de la posición no distingue mayúsculas y el conductor va en el evento")
+        void conConductor() {
+            when(conductorApi.buscarActivoPorPublicId(CONDUCTOR_PUBLIC_ID)).thenReturn(Optional.of(conductorResumen()));
+            when(neumaticoApi.montar(any(), any())).thenReturn(neumaticoEntrante());
+
+            servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, "e2-izq-ext", asignacionRequest(CONDUCTOR_PUBLIC_ID, false),
+                    USUARIO);
+
+            NeumaticoAsignado evento = eventoPublicado(NeumaticoAsignado.class);
+            assertThat(evento.posicion()).isEqualTo("E2-IZQ-EXT");
+            assertThat(evento.conductorId()).isEqualTo(conductorResumen().id());
+            assertThat(evento.nombreConductor()).isEqualTo("Juan Pérez");
+        }
+
+        @Test
+        @DisplayName("CA9: unidad inexistente o de baja, posición ajena o conductor inexistente: 404 sin cambios")
+        void noEncontrados() {
+            when(unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.empty());
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, asignacionRequest(),
+                    USUARIO)).isInstanceOf(EntidadNoEncontradaException.class)
+                    .hasMessage(UnidadTransporteServiceImpl.MENSAJE_UNIDAD_INEXISTENTE);
+
+            when(unidadTransporteRepository.findByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.of(unidad));
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, "E9-IZQ", asignacionRequest(),
+                    USUARIO)).isInstanceOf(EntidadNoEncontradaException.class)
+                    .hasMessage("La posición indicada no pertenece a la unidad");
+
+            when(conductorApi.buscarActivoPorPublicId(CONDUCTOR_PUBLIC_ID)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT,
+                    asignacionRequest(CONDUCTOR_PUBLIC_ID, null), USUARIO))
+                    .isInstanceOf(EntidadNoEncontradaException.class)
+                    .hasMessage("El conductor indicado no existe");
+
+            verify(neumaticoApi, never()).montar(any(), any());
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("CA7: posición ocupada sin aceptar el reemplazo: 409 sin desmontar ni montar")
+        void ocupadaSinReemplazo() {
+            conSlotOcupado();
+
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT,
+                    asignacionRequest(null, false), USUARIO))
+                    .isInstanceOf(PosicionOcupadaException.class)
+                    .hasMessage("La posición E1-IZQ ya tiene un neumático montado");
+
+            verify(neumaticoApi, never()).desmontar(any());
+            verify(neumaticoApi, never()).montar(any(), any());
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("CA3: con el reemplazo aceptado desmonta el actual, monta el nuevo y publica ambos eventos")
+        void reemplaza() {
+            conSlotOcupado();
+            Long slotId = unidad.getSlots().get(0).getId();
+            when(neumaticoApi.desmontar(NEUMATICO_MONTADO_ID)).thenReturn(neumaticoSaliente());
+            when(neumaticoApi.montar(NEUMATICO_A_MONTAR_PUBLIC_ID, slotId)).thenReturn(neumaticoEntrante());
+
+            servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, asignacionRequest(null, true), USUARIO);
+
+            InOrder orden = inOrder(neumaticoApi, eventPublisher);
+            orden.verify(neumaticoApi).desmontar(NEUMATICO_MONTADO_ID);
+            orden.verify(neumaticoApi).montar(NEUMATICO_A_MONTAR_PUBLIC_ID, slotId);
+            orden.verify(eventPublisher).publishEvent(any(NeumaticoDesasignado.class));
+            orden.verify(eventPublisher).publishEvent(any(NeumaticoAsignado.class));
+            assertThat(unidad.getSlots().get(0).getNeumaticoActualId()).isEqualTo(neumaticoEntrante().id());
+            NeumaticoDesasignado desasignado = eventoPublicado(NeumaticoDesasignado.class);
+            assertThat(desasignado.neumaticoId()).isEqualTo(NEUMATICO_MONTADO_ID);
+            assertThat(desasignado.patente()).isEqualTo(PATENTE);
+            assertThat(desasignado.posicion()).isEqualTo(CODIGO_SLOT);
+            assertThat(desasignado.slotId()).isEqualTo(slotId);
+            assertThat(desasignado.usuario()).isEqualTo(USUARIO);
+            assertThat(desasignado.fecha()).isEqualTo(eventoPublicado(NeumaticoAsignado.class).fecha());
+        }
+
+        @Test
+        @DisplayName("reemplazar un neumático por sí mismo se rechaza con 409")
+        void reemplazoPorElMismo() {
+            conSlotOcupado();
+            when(neumaticoApi.desmontar(NEUMATICO_MONTADO_ID)).thenReturn(neumaticoSaliente());
+
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT,
+                    new AsignacionNeumaticoRequestDTO(neumaticoSaliente().publicId(), null, true), USUARIO))
+                    .isInstanceOf(NeumaticoNoDisponibleException.class);
+
+            verify(neumaticoApi, never()).montar(any(), any());
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("CA8: un neumático no disponible se rechaza sin publicar eventos")
+        void neumaticoNoDisponible() {
+            when(neumaticoApi.montar(any(), any())).thenThrow(new NeumaticoNoDisponibleException("no disponible"));
+
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, asignacionRequest(),
+                    USUARIO)).isInstanceOf(NeumaticoNoDisponibleException.class);
+
+            assertThat(unidad.getSlots().get(0).getNeumaticoActualId()).isNull();
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("un montaje concurrente que gana la carrera (índice único) responde 409 de posición ocupada")
+        void carrera() {
+            when(neumaticoApi.montar(any(), any())).thenReturn(neumaticoEntrante());
+            doThrow(new DataIntegrityViolationException("uk_neumaticos_slot_montado"))
+                    .when(unidadTransporteRepository).flush();
+
+            assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, asignacionRequest(),
+                    USUARIO)).isInstanceOf(PosicionOcupadaException.class)
+                    .hasCauseInstanceOf(DataIntegrityViolationException.class);
+
+            verifyNoInteractions(eventPublisher);
+        }
+
     }
 
     @Nested

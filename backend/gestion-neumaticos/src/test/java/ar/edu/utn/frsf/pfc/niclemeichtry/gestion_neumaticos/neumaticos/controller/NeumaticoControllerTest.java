@@ -1,5 +1,6 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.controller;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CENTRO_ALMACENAMIENTO_PUBLIC_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumatico;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoDetalle;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.neumaticoEn;
@@ -261,7 +262,8 @@ class NeumaticoControllerTest {
     @DisplayName("GET /api/v1/neumaticos")
     class Buscar {
 
-        private final NeumaticoListadoDTO fila = neumaticoListado(neumatico(neumaticoNuevoRequest()));
+        private final NeumaticoListadoDTO fila = neumaticoListado(neumatico(neumaticoNuevoRequest()),
+                "Depósito Central");
 
         private Page<NeumaticoListadoDTO> paginaConUnNeumatico() {
             return new PageImpl<>(List.of(fila), PageRequest.of(0, 10), 1);
@@ -269,7 +271,7 @@ class NeumaticoControllerTest {
 
         private Pageable pageableUsado() {
             ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
-            verify(neumaticoService).buscar(any(), any(), any(), any(), pageable.capture());
+            verify(neumaticoService).buscar(any(), any(), any(), any(), any(), pageable.capture());
             return pageable.getValue();
         }
 
@@ -277,11 +279,14 @@ class NeumaticoControllerTest {
         @DisplayName("200 con el listado resumido y los filtros recibidos, sin ids internos")
         void buscaConLector() throws Exception {
             when(neumaticoService.buscar(eq("abc"), eq(1L), eq(EstadoNeumatico.NUEVO),
-                    eq(SituacionOperativa.EN_ESPERA), any(Pageable.class))).thenReturn(paginaConUnNeumatico());
+                    eq(List.of(SituacionOperativa.EN_STOCK, SituacionOperativa.EN_ESPERA)),
+                    eq(CENTRO_ALMACENAMIENTO_PUBLIC_ID), any(Pageable.class))).thenReturn(paginaConUnNeumatico());
 
             mockMvc.perform(get(NEUMATICOS).with(usuario("ROLE_LECTOR"))
                             .param("numeroSerie", "abc").param("marcaId", "1").param("estado", "NUEVO")
-                            .param("situacion", "EN_ESPERA").param("page", "0").param("size", "5")
+                            .param("situacion", "EN_STOCK", "EN_ESPERA")
+                            .param("centro", CENTRO_ALMACENAMIENTO_PUBLIC_ID.toString())
+                            .param("page", "0").param("size", "5")
                             .param("sort", "numeroSerie,asc"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content[0].publicId").value(fila.publicId().toString()))
@@ -290,6 +295,7 @@ class NeumaticoControllerTest {
                     .andExpect(jsonPath("$.content[0].estadoActual").value("NUEVO"))
                     .andExpect(jsonPath("$.content[0].situacionOperativaVigente").value("EN_ESPERA"))
                     .andExpect(jsonPath("$.content[0].kilometrajeTotal").value(0))
+                    .andExpect(jsonPath("$.content[0].centroAlmacenamiento").value("Depósito Central"))
                     .andExpect(jsonPath("$.content[0].id").doesNotExist())
                     .andExpect(jsonPath("$.page.totalElements").value(1))
                     .andDo(document("neumaticos-busqueda",
@@ -299,7 +305,10 @@ class NeumaticoControllerTest {
                                     parameterWithName("numeroSerie").description("Número de serie completo o parcial (opcional)"),
                                     parameterWithName("marcaId").description("Id de la marca, de `/marcas` (opcional)"),
                                     parameterWithName("estado").description("Estado técnico (opcional)"),
-                                    parameterWithName("situacion").description("Situación operativa vigente (opcional)"),
+                                    parameterWithName("situacion").description("Situación operativa vigente (opcional, "
+                                            + "repetible: cualquiera de ellas)"),
+                                    parameterWithName("centro").description("Identificador público del centro de "
+                                            + "almacenamiento (opcional; inexistente = página vacía)"),
                                     parameterWithName("page").description("Página, desde 0"),
                                     parameterWithName("size").description("Tamaño de página (10 por defecto, máximo 20)"),
                                     parameterWithName("sort").description("Solo `numeroSerie,asc|desc`")),
@@ -310,6 +319,8 @@ class NeumaticoControllerTest {
                                     fieldWithPath("content[].estadoActual").description("Estado técnico"),
                                     fieldWithPath("content[].situacionOperativaVigente").description("Situación operativa"),
                                     fieldWithPath("content[].kilometrajeTotal").description("Kilometraje total").optional(),
+                                    fieldWithPath("content[].centroAlmacenamiento")
+                                            .description("Nombre del centro si está en stock (null si no)").optional(),
                                     fieldWithPath("page.size").description("Tamaño de página"),
                                     fieldWithPath("page.number").description("Número de página, desde 0"),
                                     fieldWithPath("page.totalElements").description("Total de neumáticos"),
@@ -322,7 +333,7 @@ class NeumaticoControllerTest {
         @ValueSource(strings = { "ROLE_EDITOR", "ROLE_ADMINISTRADOR" })
         @DisplayName("200 también para editor y administrador")
         void buscaConEditorYAdministrador(String nivel) throws Exception {
-            when(neumaticoService.buscar(any(), any(), any(), any(), any(Pageable.class)))
+            when(neumaticoService.buscar(any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(paginaConUnNeumatico());
 
             mockMvc.perform(get(NEUMATICOS).with(usuario(nivel))).andExpect(status().isOk());
@@ -331,12 +342,12 @@ class NeumaticoControllerTest {
         @Test
         @DisplayName("sin parámetros: sin filtros, 10 por página, ordenados por número de serie ascendente")
         void sinParametros_usaOrdenYTamanioPorDefecto() throws Exception {
-            when(neumaticoService.buscar(any(), any(), any(), any(), any(Pageable.class)))
+            when(neumaticoService.buscar(any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(paginaConUnNeumatico());
 
             mockMvc.perform(get(NEUMATICOS).with(usuario("ROLE_LECTOR"))).andExpect(status().isOk());
 
-            verify(neumaticoService).buscar(isNull(), isNull(), isNull(), isNull(), any(Pageable.class));
+            verify(neumaticoService).buscar(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class));
             Pageable pageable = pageableUsado();
             assertThat(pageable.getPageNumber()).isZero();
             assertThat(pageable.getPageSize()).isEqualTo(PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO);
@@ -346,7 +357,7 @@ class NeumaticoControllerTest {
         @Test
         @DisplayName("200 con página vacía si no hay coincidencias")
         void sinResultados_devuelvePaginaVacia() throws Exception {
-            when(neumaticoService.buscar(any(), any(), any(), any(), any(Pageable.class)))
+            when(neumaticoService.buscar(any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
 
             mockMvc.perform(get(NEUMATICOS).with(usuario("ROLE_LECTOR")).param("numeroSerie", "QQQ"))
@@ -358,7 +369,7 @@ class NeumaticoControllerTest {
         @Test
         @DisplayName("un tamaño mayor al máximo se acota a 20")
         void tamanioMayorAlMaximo_seAcota() throws Exception {
-            when(neumaticoService.buscar(any(), any(), any(), any(), any(Pageable.class)))
+            when(neumaticoService.buscar(any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenReturn(paginaConUnNeumatico());
 
             mockMvc.perform(get(NEUMATICOS).with(usuario("ROLE_LECTOR")).param("size", "500"))
@@ -370,7 +381,7 @@ class NeumaticoControllerTest {
         @Test
         @DisplayName("400 si se ordena por un campo no permitido")
         void ordenNoPermitido() throws Exception {
-            when(neumaticoService.buscar(any(), any(), any(), any(), any(Pageable.class)))
+            when(neumaticoService.buscar(any(), any(), any(), any(), any(), any(Pageable.class)))
                     .thenThrow(new ParametroInvalidoException("Solo se puede ordenar por número de serie"));
 
             mockMvc.perform(get(NEUMATICOS).with(usuario("ROLE_LECTOR")).param("sort", "id,asc"))
@@ -379,7 +390,7 @@ class NeumaticoControllerTest {
         }
 
         @ParameterizedTest
-        @CsvSource({ "estado,INEXISTENTE", "situacion,INEXISTENTE", "marcaId,abc" })
+        @CsvSource({ "estado,INEXISTENTE", "situacion,INEXISTENTE", "marcaId,abc", "centro,no-es-uuid" })
         @DisplayName("400 si un filtro trae un valor de tipo inválido, sin llegar al servicio")
         void filtroConTipoInvalido(String parametro, String valor) throws Exception {
             mockMvc.perform(get(NEUMATICOS).with(usuario("ROLE_LECTOR")).param(parametro, valor))

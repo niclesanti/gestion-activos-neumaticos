@@ -2,7 +2,9 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.service
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,11 +14,13 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Esp
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.OrdenAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.mapper.ConductorMapper;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.repository.ConductorRepository;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.NormalizacionTexto;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +58,22 @@ public class ConductorServiceImpl implements ConductorService {
         }
         log.info("Conductor {} registrado por {}", conductor.getPublicId(), usuario);
         return conductorMapper.toResponseDTO(conductor);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ConductorListadoDTO> buscar(String q, Pageable pageable) {
+        log.debug("Buscando conductores: q={}, pageable={}", q, pageable);
+        Specification<Conductor> activos = (root, query, cb) -> cb.isNull(root.get("deletedAt"));
+        Specification<Conductor> especificacion = activos
+                .and(EspecificacionesAuditoria.contiene(NormalizacionTexto.opcional(q), "apellido", "nombre", "dni"));
+        // Orden fijo (apellido, nombre y, para páginas estables, el alta): no se acepta el del cliente.
+        Pageable ordenado = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                Sort.by("apellido", "nombre", "publicId"));
+        Page<ConductorListadoDTO> pagina = conductorRepository.findAll(especificacion, ordenado)
+                .map(conductorMapper::toListadoDTO);
+        log.debug("Conductores encontrados: {}", pagina.getTotalElements());
+        return pagina;
     }
 
     @Override

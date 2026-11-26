@@ -95,9 +95,12 @@ public class NeumaticoController {
             summary = "Buscar neumáticos",
             description = "Lista, paginados, los neumáticos activos (sin baja y ni estado ni situación `DE_BAJA`) "
                     + "que cumplan todos los filtros indicados (HU-28). `numeroSerie` coincide por contenido y sin "
-                    + "distinguir mayúsculas; `marcaId` es el id de `/marcas`; `estado` y `situacion` filtran por un "
-                    + "solo valor. Sin filtros devuelve todos los activos. Tamaño de página 10 por defecto y 20 como "
-                    + "máximo; solo se ordena por `numeroSerie` (ascendente por defecto). Cualquier nivel de acceso.",
+                    + "distinguir mayúsculas; `marcaId` es el id de `/marcas`; `estado` filtra por un solo valor; "
+                    + "`situacion` se puede repetir y trae los que tengan cualquiera de ellas; `centro` es el "
+                    + "`publicId` de un centro de almacenamiento (uno inexistente devuelve una página vacía). Cada "
+                    + "fila trae el nombre del centro si está en stock. Sin filtros devuelve todos los activos. "
+                    + "Tamaño de página 10 por defecto y 20 como máximo; solo se ordena por `numeroSerie` "
+                    + "(ascendente por defecto). Cualquier nivel de acceso.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de neumáticos (puede estar vacía)"),
@@ -110,9 +113,10 @@ public class NeumaticoController {
             @Parameter(description = "Número de serie completo o parcial") @RequestParam(required = false) String numeroSerie,
             @Parameter(description = "Id de la marca (de `/marcas`)") @RequestParam(required = false) Long marcaId,
             @Parameter(description = "Estado técnico") @RequestParam(required = false) EstadoNeumatico estado,
-            @Parameter(description = "Situación operativa vigente") @RequestParam(required = false) SituacionOperativa situacion,
+            @Parameter(description = "Situación operativa vigente; repetible (cualquiera de ellas)") @RequestParam(required = false) List<SituacionOperativa> situacion,
+            @Parameter(description = "Identificador público del centro de almacenamiento") @RequestParam(required = false) UUID centro,
             @ParameterObject @PageableDefault(size = PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO, sort = "numeroSerie") Pageable pageable) {
-        return ResponseEntity.ok(neumaticoService.buscar(numeroSerie, marcaId, estado, situacion, pageable));
+        return ResponseEntity.ok(neumaticoService.buscar(numeroSerie, marcaId, estado, situacion, centro, pageable));
     }
 
     @GetMapping("/{publicId}")

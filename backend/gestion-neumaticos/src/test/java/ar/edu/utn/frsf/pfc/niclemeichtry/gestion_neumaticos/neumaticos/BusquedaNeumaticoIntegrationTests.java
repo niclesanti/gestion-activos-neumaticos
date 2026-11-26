@@ -106,7 +106,8 @@ class BusquedaNeumaticoIntegrationTests {
 
 	private Page<NeumaticoListadoDTO> buscar(String serie, Long marcaId, EstadoNeumatico estado,
 			SituacionOperativa situacion) {
-		return neumaticoService.buscar(serie, marcaId, estado, situacion, POR_SERIE);
+		return neumaticoService.buscar(serie, marcaId, estado, situacion == null ? null : List.of(situacion), null,
+				POR_SERIE);
 	}
 
 	@Test
@@ -195,9 +196,9 @@ class BusquedaNeumaticoIntegrationTests {
 	void pagina() {
 		insertar(null, "Fate", "NUEVO", "EN_STOCK", false, false);
 
-		Page<NeumaticoListadoDTO> primera = neumaticoService.buscar(null, null, null, null,
+		Page<NeumaticoListadoDTO> primera = neumaticoService.buscar(null, null, null, null, null,
 				PageRequest.of(0, 4, Sort.by("numeroSerie")));
-		Page<NeumaticoListadoDTO> segunda = neumaticoService.buscar(null, null, null, null,
+		Page<NeumaticoListadoDTO> segunda = neumaticoService.buscar(null, null, null, null, null,
 				PageRequest.of(1, 4, Sort.by("numeroSerie")));
 
 		assertThat(primera.getContent()).hasSize(4);
@@ -217,6 +218,33 @@ class BusquedaNeumaticoIntegrationTests {
 		buscar(null, null, null, null);
 
 		assertThat(estadisticas.getPrepareStatementCount()).isLessThanOrEqualTo(2);
+	}
+
+	@Test
+	@DisplayName("HU-31: situaciones repetibles (OR), filtro por centro y nombre del centro en cada fila")
+	void disponiblesYCentro() {
+		UUID centro = UUID.randomUUID();
+		owner.update("DELETE FROM almacenamiento.centros_almacenamiento");
+		owner.update("""
+				INSERT INTO almacenamiento.centros_almacenamiento
+				  (public_id, nombre, cantidad_neumaticos_en_stock, domicilio_id, created_by, updated_by)
+				VALUES (?, 'Depósito Central', 1, 999001, ?, ?)""", centro, usuario, usuario);
+		owner.update("""
+				UPDATE neumaticos.neumaticos SET centro_almacenamiento_id =
+				  (SELECT id FROM almacenamiento.centros_almacenamiento WHERE public_id = ?)
+				WHERE numero_serie = 'AB-123'""", centro);
+
+		Page<NeumaticoListadoDTO> disponibles = neumaticoService.buscar(null, null, null,
+				List.of(SituacionOperativa.EN_STOCK, SituacionOperativa.EN_ESPERA), null, POR_SERIE);
+		Page<NeumaticoListadoDTO> delCentro = neumaticoService.buscar(null, null, null,
+				List.of(SituacionOperativa.EN_STOCK), centro, POR_SERIE);
+
+		assertThat(disponibles.getContent()).extracting(NeumaticoListadoDTO::numeroSerie,
+				NeumaticoListadoDTO::centroAlmacenamiento)
+				.containsExactly(tuple("AB-123", "Depósito Central"), tuple("XYZ_9%", null));
+		assertThat(series(delCentro)).containsExactly("AB-123");
+		assertThat(neumaticoService.buscar(null, null, null, null, UUID.randomUUID(), POR_SERIE).getContent())
+				.isEmpty();
 	}
 
 	@Test

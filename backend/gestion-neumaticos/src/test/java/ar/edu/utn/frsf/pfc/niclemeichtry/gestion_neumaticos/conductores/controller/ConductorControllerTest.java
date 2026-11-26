@@ -1,6 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.controller;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductor;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorResponse;
 import static org.hamcrest.Matchers.allOf;
@@ -9,7 +10,13 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
@@ -26,11 +33,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.restdocs.test.autoconfigure.AutoConfigureRestDocs;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -43,10 +57,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.service.ConductorService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.NivelAccesoVigente;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.SecurityConfig;
@@ -54,7 +70,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSec
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(ConductorController.class)
-@Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class })
+@Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class, PaginacionConfig.class })
 @AutoConfigureRestDocs
 class ConductorControllerTest {
 
@@ -181,6 +197,71 @@ class ConductorControllerTest {
                             .contentType(MediaType.APPLICATION_JSON).content(json(conductorRequest())))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message").value("Ya existe un conductor con el DNI 30123456"));
+        }
+
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/conductores")
+    class Buscar {
+
+        private final ConductorListadoDTO fila = conductorListado(conductor(conductorRequest()));
+
+        @Test
+        @DisplayName("200 con la página de conductores activos y el texto buscado")
+        void buscaConLector() throws Exception {
+            when(conductorService.buscar(eq("pér"), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(fila), PageRequest.of(0, 5), 1));
+
+            mockMvc.perform(get(CONDUCTORES).with(usuario("ROLE_LECTOR"))
+                            .param("q", "pér").param("page", "0").param("size", "5"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].publicId").value(fila.publicId().toString()))
+                    .andExpect(jsonPath("$.content[0].apellido").value("Pérez"))
+                    .andExpect(jsonPath("$.content[0].id").doesNotExist())
+                    .andExpect(jsonPath("$.page.totalElements").value(1))
+                    .andDo(document("conductores-buscar",
+                            preprocessRequest(prettyPrint()),
+                            preprocessResponse(prettyPrint()),
+                            queryParameters(
+                                    parameterWithName("q").description("Apellido, nombre o DNI, completo o parcial "
+                                            + "(opcional)"),
+                                    parameterWithName("page").description("Página, desde 0"),
+                                    parameterWithName("size").description("Tamaño de página (10 por defecto, máximo 20)")),
+                            responseFields(
+                                    fieldWithPath("content[].publicId").description("Identificador público"),
+                                    fieldWithPath("content[].nombre").description("Nombre"),
+                                    fieldWithPath("content[].apellido").description("Apellido"),
+                                    fieldWithPath("content[].dni").description("DNI (puede ser null)").optional(),
+                                    fieldWithPath("page.size").description("Tamaño de página"),
+                                    fieldWithPath("page.number").description("Número de página, desde 0"),
+                                    fieldWithPath("page.totalElements").description("Total de conductores"),
+                                    fieldWithPath("page.totalPages").description("Total de páginas"))));
+
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(conductorService).buscar(eq("pér"), pageable.capture());
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(5);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "ROLE_EDITOR", "ROLE_ADMINISTRADOR" })
+        @DisplayName("200 también para editor y administrador, 10 por página por defecto")
+        void buscaConEditorYAdministrador(String nivel) throws Exception {
+            when(conductorService.buscar(any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(fila)));
+
+            mockMvc.perform(get(CONDUCTORES).with(usuario(nivel))).andExpect(status().isOk());
+
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(conductorService).buscar(isNull(), pageable.capture());
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO);
+        }
+
+        @Test
+        @DisplayName("401 sin token")
+        void sinToken() throws Exception {
+            mockMvc.perform(get(CONDUCTORES)).andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(conductorService);
         }
 
     }

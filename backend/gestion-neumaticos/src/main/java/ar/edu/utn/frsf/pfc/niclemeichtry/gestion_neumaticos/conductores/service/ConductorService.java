@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 
@@ -21,6 +22,13 @@ public interface ConductorService {
      *         si ya existe un conductor con el mismo DNI.
      */
     ConductorResponseDTO registrarConductor(ConductorRequestDTO conductorRequestDTO, String usuario);
+
+    /**
+     * Conductores activos, paginados y ordenados por apellido, nombre y alta (orden fijo: se ignora el
+     * que pida el cliente). {@code q} filtra por contenido, sin distinguir mayúsculas, en apellido, nombre
+     * o DNI; vacío no filtra.
+     */
+    Page<ConductorListadoDTO> buscar(String q, Pageable pageable);
 
     /**
      * Fichas de auditoría (alta, última modificación y baja) de conductores, paginadas y

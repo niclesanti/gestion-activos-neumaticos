@@ -162,19 +162,22 @@ Endpoints de negocio anotados hasta ahora:
 | Endpoint | Anotación | Quiénes |
 |---|---|---|
 | `POST /api/v1/neumaticos` (alta, HU-11) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
-| `GET /api/v1/neumaticos` (búsqueda paginada por número de serie, marca, estado y situación operativa, HU-28) | `hasRole('LECTOR')` | Los tres roles; la página `/tires` también está abierta al lector, en solo lectura (HU-14, `ROUTE_ACCESS` sin la ruta) |
+| `GET /api/v1/neumaticos` (búsqueda paginada por número de serie, marca, estado y situación operativa, HU-28; `situacion` repetible y `centro`, HU-31) | `hasRole('LECTOR')` | Los tres roles; la página `/tires` también está abierta al lector, en solo lectura (HU-14, `ROUTE_ACCESS` sin la ruta). El nombre del centro de cada fila se lee de almacenamiento, donde el lector ya tiene `SELECT` (V18) |
 | `GET /api/v1/neumaticos/{publicId}` (ficha del neumático con su ubicación operativa, HU-14) | `hasRole('LECTOR')` | Los tres roles; 404 si no existe o tiene baja lógica. La ubicación se lee de unidades, almacenamiento y reparación, donde el lector ya tiene `SELECT` (V16, V17, V18) |
 | `GET /api/v1/neumaticos/marcas` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/proveedores` (alta de proveedor, HU-24) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/proveedores` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/servicios-reparacion` (alta de servicio de reparación, HU-18) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `POST /api/v1/centros-almacenamiento` (alta de centro de almacenamiento) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/v1/centros-almacenamiento` (centros activos con su stock, sin paginar; buscador del montaje, HU-31) | `hasRole('LECTOR')` | Los tres roles |
 | `GET /api/v1/provincias` | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/conductores` (alta de conductor) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
+| `GET /api/v1/conductores` (conductores activos paginados, búsqueda `q` por apellido, nombre o DNI; montaje, HU-31) | `hasRole('LECTOR')` | Los tres roles |
 | `POST /api/v1/unidades-transporte` (alta de unidad, HU-07) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 |
 | `GET /api/v1/unidades-transporte/configuraciones` | `hasRole('LECTOR')` | Los tres roles |
 | `GET /api/v1/unidades-transporte` (búsqueda paginada por patente, HU-27) | `hasRole('LECTOR')` | Los tres roles |
 | `GET /api/v1/unidades-transporte/{publicId}` (ficha de una unidad con sus neumáticos montados, HU-10) | `hasRole('LECTOR')` | Los tres roles; una unidad dada de baja responde 404 |
+| `PUT /api/v1/unidades-transporte/{publicId}/slots/{codigo}/neumatico` (montar un neumático en una posición, con reemplazo opcional, HU-31) | `hasRole('EDITOR')` | Editor y administrador; el lector recibe 403 y en la ficha no ve la acción (`transportUnits.assignTire`). En la base, solo administrador y editor tienen `UPDATE (neumatico_actual_id)` sobre los slots y `UPDATE (updated_at, updated_by)` sobre la unidad (V20) |
 | `GET /api/v1/<recurso>/auditoria` (consulta de auditoría, HU-43), para `usuarios`, `neumaticos`, `conductores`, `proveedores`, `servicios-reparacion`, `unidades-transporte` y `centros-almacenamiento` | `hasRole('ADMINISTRADOR')` | Solo el administrador; editor y lector reciben 403. Solo lectura: no existe ningún `POST`/`PUT`/`DELETE` sobre `/auditoria` |
 
 ### 2.10.2 Actuator y puerto de gestión
@@ -298,10 +301,11 @@ Con el mismo patrón, `usuarios.nivel_acceso_vigente(public_id)` (`V9`) devuelve
 |---|:-:|:-:|:-:|
 | SELECT | ✔ | ✔ | ✔ |
 | INSERT | ✔ | ✔ | ✘ |
-| UPDATE / DELETE | ✘ | ✘ | ✘ |
+| UPDATE (slot: `neumatico_actual_id`; unidad: `updated_at`, `updated_by`) | ✔ | ✔ | ✘ |
+| DELETE | ✘ | ✘ | ✘ |
 
 - Las tres configuraciones de la empresa (tractor común, tractor para cargas pesadas y semirremolque) y sus ejes las carga `V16`; nadie las modifica desde la app.
-- Por ahora solo existe el alta (HU-07): la unidad y todos sus slots se insertan en la misma transacción. Ninguna historia modifica ni borra todavía; el montaje de neumáticos agregará `UPDATE (neumatico_actual_id)` sobre los slots.
+- El alta (HU-07) inserta la unidad y todos sus slots en la misma transacción. El montaje de neumáticos (HU-31, `V20`) solo cambia el neumático del slot y firma la unidad (`updated_*`, política `UPDATE` con la misma firma que `V19`); el resto de la posición, la patente, la configuración y la baja no tienen `GRANT UPDATE` (la entidad del slot los marca `updatable = false` y la unidad usa `@DynamicUpdate`). Dos índices únicos parciales (`slots(neumatico_actual_id)` y `neumaticos(slot_montado_id)`) impiden que un neumático quede en dos posiciones o una posición con dos neumáticos aunque dos montajes concurrentes pasen la validación; el descuento del stock del centro bloquea su fila (`SELECT … FOR UPDATE`).
 - La patente se guarda normalizada (mayúsculas, sin espacios ni guiones) y la base exige el formato anterior `ABC123` o Mercosur `AB123CD` (`CHECK`); la unicidad recae sobre ese valor. Un `CHECK` exige que un slot de eje tenga número de eje, tipo, lado y posición y no número de auxilio, y al revés en un slot de auxilio.
 - `neumatico_actual_id` es una referencia por id al módulo `neumaticos`, sin FK entre schemas.
 - `AutorizacionBaseDatosTests` cubre los permisos y restricciones de las cuatro tablas y `RegistroUnidadTransporteIntegrationTests` que el lector no inserta ni llamando directo al servicio.
@@ -510,7 +514,7 @@ Lo que sigue abierto después de corregir los hallazgos de [`pruebas-seguridad.m
 
 ### Al construir los módulos de negocio
 
-1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores, de proveedores (HU-24), de unidades de transporte (HU-07) y de servicios de reparación (HU-18); falta en los endpoints que vengan. El montaje de neumáticos en unidades tendrá que agregar `UPDATE (neumatico_actual_id)` sobre `unidades_transporte.slots_unidad_transporte` para administrador y editor.
+1. **Anotar cada endpoint nuevo con `@PreAuthorize`** según la convención de 2.10, y crear cada tabla con RLS, la política restrictiva y los grants mínimos (2.11). Aplicado en el alta de neumáticos (HU-11), de conductores, de proveedores (HU-24), de unidades de transporte (HU-07) y de servicios de reparación (HU-18); falta en los endpoints que vengan. El montaje de neumáticos en unidades (HU-31) ya agregó `UPDATE (neumatico_actual_id)` sobre los slots y `UPDATE (updated_at, updated_by)` sobre la unidad para administrador y editor (`V20`).
 2. **Definir los permisos de lectura del lector** en las tres capas (`ROUTE_ACCESS`, `@PreAuthorize("hasRole('LECTOR')")` y políticas de base). Hoy entra a Inicio, a Unidades de transporte (ya definido en las tres capas: `ROUTE_ACCESS`, `GET /api/v1/unidades-transporte` con `hasRole('LECTOR')` y `SELECT` en la base; HU-27), a Neumáticos (ya definido en las tres capas: `ROUTE_ACCESS` sin la ruta, `GET /api/v1/neumaticos` y `GET /api/v1/neumaticos/{publicId}` con `hasRole('LECTOR')` y `SELECT` en la base; el botón "Registrar neumático" se oculta con la acción `tires.create`; HU-14) y a Configuración (todas las pestañas menos Usuarios, solo lectura: buscar y filtrar), aunque la base ya le da `SELECT` sobre conductores, proveedores, centros, servicios y las tablas de `common`.
 3. **Lectura del historial de trazabilidad:** dar `SELECT` sobre `trazabilidad.*` a los roles que correspondan cuando exista el endpoint de consulta.
 

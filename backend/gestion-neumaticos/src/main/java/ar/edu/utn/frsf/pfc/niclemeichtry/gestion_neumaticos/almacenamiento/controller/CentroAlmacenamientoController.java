@@ -1,6 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.controller;
 
 import java.net.URI;
+import java.util.List;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service.CentroAlmacenamientoService;
@@ -76,6 +78,23 @@ public class CentroAlmacenamientoController {
                 .buildAndExpand(creado.publicId())
                 .toUri();
         return ResponseEntity.created(ubicacion).body(creado);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('LECTOR')")
+    @Operation(
+            summary = "Listar centros de almacenamiento",
+            description = "Devuelve los centros activos con su cantidad de neumáticos en stock, ordenados por "
+                    + "nombre y sin paginar (son pocos). Lo usa el buscador de neumáticos para filtrar por centro "
+                    + "(HU-31). Cualquier nivel de acceso.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Listado de centros (puede estar vacío)"),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<List<CentroAlmacenamientoListadoDTO>> listar() {
+        return ResponseEntity.ok(centroAlmacenamientoService.listarCentros());
     }
 
     @GetMapping("/auditoria")

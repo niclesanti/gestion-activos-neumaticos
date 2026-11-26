@@ -69,6 +69,14 @@ public abstract class AuditableEntity {
         this.deletedBy = usuario;
     }
 
+    /**
+     * Toca la raíz cuando el servicio solo cambió un hijo del agregado (ej. un slot): la deja modificada
+     * para que el flush la actualice y Auditing firme {@code updated_at}/{@code updated_by}.
+     */
+    public void registrarModificacion(Instant fecha) {
+        this.updatedAt = fecha;
+    }
+
     public boolean isDadoDeBaja() {
         return deletedAt != null;
     }

@@ -15,6 +15,7 @@ import { SettingsPage } from "@/features/settings/pages/settings-page"
 import { StoragePage } from "@/features/storage/pages/storage-page"
 import { StorageCentersCatalog } from "@/features/storage-centers/components/storage-centers-catalog"
 import { SuppliersCatalog } from "@/features/suppliers/components/suppliers-catalog"
+import { TirePicker } from "@/features/tires/components/tire-picker"
 import { TiresPage } from "@/features/tires/pages/tires-page"
 import { TransportUnitsPage } from "@/features/transport-units/pages/transport-units-page"
 import { ROUTES } from "@/lib/routes"
@@ -35,7 +36,12 @@ export function AppRouter() {
               <Route path={ROUTES.home} element={<HomePage />} />
               <Route
                 path={ROUTES.transportUnits}
-                element={<TransportUnitsPage />}
+                element={
+                  // El buscador del montaje (HU-31) es del feature tires.
+                  <TransportUnitsPage
+                    renderTirePicker={(props) => <TirePicker {...props} />}
+                  />
+                }
               />
               <Route path={ROUTES.tires} element={<TiresPage />} />
               <Route path={ROUTES.repairs} element={<RepairsPage />} />

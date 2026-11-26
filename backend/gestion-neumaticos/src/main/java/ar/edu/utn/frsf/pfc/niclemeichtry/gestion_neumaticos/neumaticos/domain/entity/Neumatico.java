@@ -122,6 +122,32 @@ public class Neumatico extends AuditableEntity {
         this.slotMontadoId = slotMontadoId;
     }
 
+    /**
+     * Disponible para montar (HU-31): activo (sin baja lógica ni estado {@code DE_BAJA}) y en stock o en
+     * espera. La situación {@code DE_BAJA} queda afuera por no ser ninguna de las dos.
+     */
+    public boolean estaDisponible() {
+        return !isDadoDeBaja()
+                && estadoActual != EstadoNeumatico.DE_BAJA
+                && (situacionOperativaVigente == SituacionOperativa.EN_STOCK
+                        || situacionOperativaVigente == SituacionOperativa.EN_ESPERA);
+    }
+
+    /** Lo monta en el slot: sale del stock o de la espera. Tipo de eje y kilometraje no cambian. */
+    public void montar(Long slotId) {
+        this.situacionOperativaVigente = SituacionOperativa.MONTADO;
+        this.enEspera = false;
+        this.slotMontadoId = slotId;
+        this.centroAlmacenamientoId = null;
+    }
+
+    /** Lo saca de su slot y lo deja en espera de que se opere con él. */
+    public void desmontar() {
+        this.situacionOperativaVigente = SituacionOperativa.EN_ESPERA;
+        this.enEspera = true;
+        this.slotMontadoId = null;
+    }
+
     private static Float sumar(Float actual, Float incremento) {
         return actual == null ? null : actual + incremento;
     }

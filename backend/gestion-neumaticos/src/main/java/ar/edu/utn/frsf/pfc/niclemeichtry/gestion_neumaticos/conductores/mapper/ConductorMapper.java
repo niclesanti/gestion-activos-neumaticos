@@ -3,6 +3,8 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.api.ConductorResumenDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
@@ -21,5 +23,9 @@ public interface ConductorMapper {
     Conductor toEntity(ConductorRequestDTO conductorRequestDTO);
 
     ConductorResponseDTO toResponseDTO(Conductor conductor);
+
+    ConductorListadoDTO toListadoDTO(Conductor conductor);
+
+    ConductorResumenDTO toResumen(Conductor conductor);
 
 }

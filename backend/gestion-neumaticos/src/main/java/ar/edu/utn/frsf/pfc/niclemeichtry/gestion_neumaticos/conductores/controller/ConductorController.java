@@ -15,12 +15,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.service.ConductorService;
@@ -73,6 +75,26 @@ public class ConductorController {
                 .buildAndExpand(creado.publicId())
                 .toUri();
         return ResponseEntity.created(ubicacion).body(creado);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('LECTOR')")
+    @Operation(
+            summary = "Buscar conductores",
+            description = "Lista, paginados, los conductores activos ordenados por apellido y nombre (orden fijo). "
+                    + "`q` busca por contenido, sin distinguir mayúsculas, en apellido, nombre o DNI; sin `q` "
+                    + "devuelve todos. Tamaño de página 10 por defecto y 20 como máximo. Lo usa el montaje de "
+                    + "neumáticos para elegir el conductor (HU-31). Cualquier nivel de acceso.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Página de conductores (puede estar vacía)"),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<Page<ConductorListadoDTO>> buscar(
+            @Parameter(description = "Apellido, nombre o DNI, completo o parcial") @RequestParam(required = false) String q,
+            @ParameterObject @PageableDefault(size = PaginacionConfig.TAMANIO_PAGINA_POR_DEFECTO) Pageable pageable) {
+        return ResponseEntity.ok(conductorService.buscar(q, pageable));
     }
 
     @GetMapping("/auditoria")

@@ -19,6 +19,7 @@ import {
   REGISTRABLE_TIRE_STATUSES,
   type TireStatus,
 } from "@/features/tires/schemas/tire-schema"
+import { cn } from "@/lib/utils"
 
 /** Valor del `Select` que representa "sin filtro". */
 const ALL = "ALL"
@@ -30,7 +31,7 @@ export type TireFilterValues = {
   situacion: OperationalSituation | null
 }
 
-type Option = { value: string; label: string }
+export type FilterOption = { value: string; label: string }
 
 /**
  * Barra de filtros del listado de neumáticos. No guarda estado: el padre lo
@@ -50,7 +51,7 @@ export function TireFilters({
   const { t } = useTranslation("tires")
   const brands = useTireBrands()
 
-  const brandOptions: Option[] = [
+  const brandOptions: FilterOption[] = [
     { value: ALL, label: t("filters.brand.all") },
     ...(brands.data ?? []).map((brand) => ({
       value: String(brand.id),
@@ -58,14 +59,14 @@ export function TireFilters({
     })),
   ]
   // DE_BAJA no se ofrece: un neumático de baja nunca está activo.
-  const statusOptions: Option[] = [
+  const statusOptions: FilterOption[] = [
     { value: ALL, label: t("filters.status.all") },
     ...REGISTRABLE_TIRE_STATUSES.map((value) => ({
       value,
       label: t(`status.${value}`),
     })),
   ]
-  const situationOptions: Option[] = [
+  const situationOptions: FilterOption[] = [
     { value: ALL, label: t("filters.situation.all") },
     ...OPERATIONAL_SITUATIONS.filter((value) => value !== "DE_BAJA").map(
       (value) => ({ value, label: t(`situation.${value}`) })
@@ -145,23 +146,26 @@ export function TireFilters({
   )
 }
 
-function FilterSelect({
+/** Select con etiqueta de los filtros; también lo usa el buscador del montaje. */
+export function FilterSelect({
   id,
   label,
   options,
   value,
   disabled = false,
+  className,
   onChange,
 }: {
   id: string
   label: string
-  options: Option[]
+  options: FilterOption[]
   value: string
   disabled?: boolean
+  className?: string
   onChange: (value: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-1.5 lg:w-48">
+    <div className={cn("flex flex-col gap-1.5 lg:w-48", className)}>
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>

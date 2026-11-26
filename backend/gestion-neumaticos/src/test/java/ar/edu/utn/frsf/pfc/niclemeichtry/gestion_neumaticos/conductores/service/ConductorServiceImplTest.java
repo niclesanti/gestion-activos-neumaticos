@@ -1,6 +1,8 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.service;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.DNI;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductor;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.conductorRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.mapper.ConductorMapper;
@@ -79,6 +82,38 @@ class ConductorServiceImplTest {
         ArgumentCaptor<Conductor> guardado = ArgumentCaptor.forClass(Conductor.class);
         verify(conductorRepository).saveAndFlush(guardado.capture());
         return guardado.getValue();
+    }
+
+    @Nested
+    @DisplayName("buscar")
+    class Buscar {
+
+        @Test
+        @DisplayName("lista los activos con orden fijo por apellido, nombre y alta, ignorando el pedido")
+        void ordenFijo() {
+            Conductor conductor = conductor(conductorRequest());
+            when(conductorRepository.findAll(ArgumentMatchers.<Specification<Conductor>>any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(conductor), PageRequest.of(1, 5), 6));
+
+            Page<ConductorListadoDTO> pagina = servicio.buscar("  pér ", PageRequest.of(1, 5, Sort.by("dni")));
+
+            assertThat(pagina.getContent()).containsExactly(conductorListado(conductor));
+            ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+            verify(conductorRepository).findAll(ArgumentMatchers.<Specification<Conductor>>any(), pageable.capture());
+            assertThat(pageable.getValue().getPageNumber()).isEqualTo(1);
+            assertThat(pageable.getValue().getPageSize()).isEqualTo(5);
+            assertThat(pageable.getValue().getSort()).isEqualTo(Sort.by("apellido", "nombre", "publicId"));
+        }
+
+        @Test
+        @DisplayName("sin texto de búsqueda consulta igual")
+        void sinTexto() {
+            when(conductorRepository.findAll(ArgumentMatchers.<Specification<Conductor>>any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            assertThat(servicio.buscar(null, PageRequest.of(0, 10)).getContent()).isEmpty();
+        }
+
     }
 
     @Nested

@@ -203,5 +203,27 @@
       "description": "Revisá tu conexión e intentá de nuevo.",
       "retry": "Reintentar"
     }
+  },
+  "picker": {
+    "tabs": {
+      "label": "Origen del neumático",
+      "waiting": "En espera",
+      "stock": "En stock"
+    },
+    "center": {
+      "label": "Centro de almacenamiento",
+      "all": "Todos los centros",
+      "option": "{{name}} ({{count}} en stock)"
+    },
+    "listLabel": "Neumáticos disponibles",
+    "empty": {
+      "waiting": "No hay neumáticos en espera",
+      "stock": "No hay neumáticos en stock",
+      "description": "Para montar, el neumático tiene que estar en stock o en espera."
+    },
+    "noResults": {
+      "title": "No encontramos neumáticos disponibles",
+      "description": "Probá con otro número de serie, otra pestaña u otro centro."
+    }
   }
 }

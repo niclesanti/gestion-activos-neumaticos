@@ -57,16 +57,21 @@ class NeumaticoMapperTest {
     void toListadoDTOCopiaLoQueMuestraLaTabla() {
         Neumatico neumatico = neumatico(neumaticoNuevoRequest());
 
-        assertThat(mapper.toListadoDTO(neumatico)).isEqualTo(neumaticoListado(neumatico));
-        assertThat(mapper.toListadoDTO(neumatico).marca()).isEqualTo("Fate");
+        assertThat(mapper.toListadoDTO(neumatico, null)).isEqualTo(neumaticoListado(neumatico));
+        assertThat(mapper.toListadoDTO(neumatico, null).marca()).isEqualTo("Fate");
+        assertThat(mapper.toListadoDTO(neumatico, "Depósito Central"))
+                .isEqualTo(neumaticoListado(neumatico, "Depósito Central"));
     }
 
     @Test
     void toListadoDTOConFuenteOMarcaNulaDejaCamposNulos() {
-        assertThat(mapper.toListadoDTO(null)).isNull();
-        assertThat(mapper.toListadoDTO(new Neumatico()))
-                .isEqualTo(new NeumaticoListadoDTO(null, null, null, null, null, null));
-        assertThat(mapper.toListadoDTO(Neumatico.builder().marca(new MarcaNeumatico()).build()).marca()).isNull();
+        assertThat(mapper.toListadoDTO(null, null)).isNull();
+        assertThat(mapper.toListadoDTO(null, "Depósito Central"))
+                .isEqualTo(new NeumaticoListadoDTO(null, null, null, null, null, null, "Depósito Central"));
+        assertThat(mapper.toListadoDTO(new Neumatico(), null))
+                .isEqualTo(new NeumaticoListadoDTO(null, null, null, null, null, null, null));
+        assertThat(mapper.toListadoDTO(Neumatico.builder().marca(new MarcaNeumatico()).build(), null).marca())
+                .isNull();
     }
 
     @Test

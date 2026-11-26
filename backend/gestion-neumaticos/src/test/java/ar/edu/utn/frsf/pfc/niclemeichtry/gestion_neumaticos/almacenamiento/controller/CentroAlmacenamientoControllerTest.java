@@ -2,6 +2,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.cont
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.CENTRO_ALMACENAMIENTO_PUBLIC_ID;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamiento;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoResponse;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.domicilio;
@@ -24,11 +25,13 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWit
 import static org.springframework.restdocs.payload.PayloadDocumentation.requestFields;
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +52,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domai
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service.CentroAlmacenamientoService;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.NivelAccesoVigente;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.SecurityConfig;
@@ -56,7 +60,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.security.web.JsonSec
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(CentroAlmacenamientoController.class)
-@Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class })
+@Import({ SecurityConfig.class, JsonSecurityErrorHandler.class, CorsConfig.class, PaginacionConfig.class })
 @AutoConfigureRestDocs
 class CentroAlmacenamientoControllerTest {
 
@@ -234,6 +238,36 @@ class CentroAlmacenamientoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(json(centroAlmacenamientoRequest())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("La provincia indicada no existe"));
+    }
+
+    @Test
+    @DisplayName("GET: cualquier nivel lista los centros activos con su stock, sin domicilio ni ids internos")
+    void listaCentros() throws Exception {
+        CentroAlmacenamiento centro = centroAlmacenamiento(centroAlmacenamientoRequest());
+        when(centroAlmacenamientoService.listarCentros()).thenReturn(List.of(centroAlmacenamientoListado(centro)));
+
+        mockMvc.perform(get(CENTROS).with(usuario("ROLE_LECTOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].publicId").value(CENTRO_ALMACENAMIENTO_PUBLIC_ID.toString()))
+                .andExpect(jsonPath("$[0].nombre").value("Depósito Central"))
+                .andExpect(jsonPath("$[0].cantidadNeumaticosEnStock").value(0))
+                .andExpect(jsonPath("$[0].domicilio").doesNotExist())
+                .andExpect(jsonPath("$[0].id").doesNotExist())
+                .andDo(document("centros-almacenamiento-listar",
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("[].publicId").description("Identificador público"),
+                                fieldWithPath("[].nombre").description("Nombre del centro"),
+                                fieldWithPath("[].cantidadNeumaticosEnStock")
+                                        .description("Neumáticos en stock hoy"))));
+    }
+
+    @Test
+    @DisplayName("GET: 401 sin token")
+    void listarSinToken() throws Exception {
+        mockMvc.perform(get(CENTROS)).andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(centroAlmacenamientoService);
     }
 
 }
