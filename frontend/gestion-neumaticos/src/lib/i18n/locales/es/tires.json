@@ -203,5 +203,23 @@
       "description": "Revisá tu conexión e intentá de nuevo.",
       "retry": "Reintentar"
     }
+  },
+  "picker": {
+    "origin": {
+      "label": "Origen",
+      "all": "Todos los disponibles",
+      "waiting": "En espera",
+      "stock": "En stock (cualquier centro)",
+      "center": "{{name}} ({{count}} en stock)"
+    },
+    "listLabel": "Neumáticos disponibles",
+    "empty": {
+      "title": "No hay neumáticos disponibles",
+      "description": "Para montar, el neumático tiene que estar en stock o en espera."
+    },
+    "noResults": {
+      "title": "No encontramos neumáticos disponibles",
+      "description": "Probá con otro número de serie u otro origen."
+    }
   }
 }

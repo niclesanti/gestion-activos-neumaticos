@@ -62,6 +62,17 @@ public class ControllerAdvisor {
         return respuesta(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(PosicionOcupadaException.class)
+    public ResponseEntity<ExceptionInfo> handlePosicionOcupadaException(PosicionOcupadaException ex, WebRequest request) {
+        return respuesta(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(NeumaticoNoDisponibleException.class)
+    public ResponseEntity<ExceptionInfo> handleNeumaticoNoDisponibleException(NeumaticoNoDisponibleException ex,
+            WebRequest request) {
+        return respuesta(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionInfo> handleGeneralException(Exception ex, WebRequest request) {
         if (ex instanceof ErrorResponse errorResponse) {

@@ -40,8 +40,10 @@ public interface NeumaticoMapper {
     @Mapping(target = "marcaNombre", source = "marca.nombre")
     NeumaticoResponseDTO toResponseDTO(Neumatico neumatico);
 
-    @Mapping(target = "marca", source = "marca.nombre")
-    NeumaticoListadoDTO toListadoDTO(Neumatico neumatico);
+    /** Fila del listado: el nombre del centro lo resuelve el servicio por lote (null si no está en stock). */
+    @Mapping(target = "marca", source = "neumatico.marca.nombre")
+    @Mapping(target = "centroAlmacenamiento", source = "centroAlmacenamiento")
+    NeumaticoListadoDTO toListadoDTO(Neumatico neumatico, String centroAlmacenamiento);
 
     /** Ficha: la ubicación viene resuelta por el servicio según la situación del neumático. */
     @Mapping(target = "marca", source = "neumatico.marca.nombre")

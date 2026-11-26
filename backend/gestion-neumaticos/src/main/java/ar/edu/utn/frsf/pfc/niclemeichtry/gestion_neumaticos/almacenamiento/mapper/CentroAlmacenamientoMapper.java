@@ -3,6 +3,7 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.mapp
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
@@ -30,5 +31,7 @@ public interface CentroAlmacenamientoMapper {
     @Mapping(target = "cantidadNeumaticosEnStock", source = "centro.cantidadNeumaticosEnStock")
     @Mapping(target = "domicilio", source = "domicilio")
     CentroAlmacenamientoResponseDTO toResponseDTO(CentroAlmacenamiento centro, DomicilioResponseDTO domicilio);
+
+    CentroAlmacenamientoListadoDTO toListadoDTO(CentroAlmacenamiento centro);
 
 }

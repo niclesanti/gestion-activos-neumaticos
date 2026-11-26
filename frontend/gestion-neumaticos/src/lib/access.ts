@@ -79,6 +79,8 @@ export const ACTION_ACCESS = {
   "repairServices.create": ADMIN_AND_EDITOR,
   "tires.create": ADMIN_AND_EDITOR,
   "transportUnits.create": ADMIN_AND_EDITOR,
+  // Montar o reemplazar el neumático de una posición desde la ficha (HU-31).
+  "transportUnits.assignTire": ADMIN_AND_EDITOR,
   "storageCenters.create": ADMIN_AND_EDITOR,
 } as const satisfies Record<string, readonly AccessLevel[]>
 

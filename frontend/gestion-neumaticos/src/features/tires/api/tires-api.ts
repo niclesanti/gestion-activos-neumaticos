@@ -45,6 +45,8 @@ export type TireListItem = {
   estadoActual: TireStatus
   situacionOperativaVigente: OperationalSituation
   kilometrajeTotal: number | null
+  /** Nombre del centro si está en stock; null si no. */
+  centroAlmacenamiento: string | null
 }
 
 export type TiresQuery = {
@@ -56,6 +58,10 @@ export type TiresQuery = {
   estado: TireStatus | null
   /** Situación operativa; null = todas. */
   situacion: OperationalSituation | null
+  /** Varias situaciones (cualquiera de ellas); se suma a `situacion`. */
+  situaciones?: OperationalSituation[]
+  /** `publicId` de un centro de almacenamiento; null = todos. */
+  centro?: string | null
   page: number
   size: number
   direction: "asc" | "desc"
@@ -79,14 +85,25 @@ export async function searchTires(query: TiresQuery) {
         numeroSerie: query.numeroSerie || undefined,
         marcaId: query.marcaId ?? undefined,
         estado: query.estado ?? undefined,
-        situacion: query.situacion ?? undefined,
+        situacion: situationsParam(query),
+        centro: query.centro ?? undefined,
         page: query.page,
         size: query.size,
         sort: `numeroSerie,${query.direction}`,
       },
+      // `situacion` repetible: situacion=EN_STOCK&situacion=EN_ESPERA (sin []).
+      paramsSerializer: { indexes: null },
     }
   )
   return data
+}
+
+function situationsParam(query: TiresQuery) {
+  const situations = [
+    ...(query.situacion ? [query.situacion] : []),
+    ...(query.situaciones ?? []),
+  ]
+  return situations.length > 0 ? situations : undefined
 }
 
 export async function registerTire(values: TireFormValues) {

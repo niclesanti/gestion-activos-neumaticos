@@ -1,5 +1,9 @@
+import * as React from "react"
+
+import { ArrowLeftRightIcon, PlusIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { Button } from "@/components/ui/button"
 import {
   Popover,
   PopoverContent,
@@ -13,20 +17,25 @@ import { cn } from "@/lib/utils"
 /**
  * Una posición de la ficha: la rueda es el botón (teclado, táctil y lector de
  * pantalla) y abre, también al pasar el mouse, los datos del neumático
- * montado o la indicación de que está vacía.
+ * montado o la indicación de que está vacía. Con `onMount` (editor y
+ * administrador, HU-31) suma la acción de montar o reemplazar el neumático;
+ * sin ella (lector) solo muestra los datos.
  */
 export function SlotPopover({
   slot,
   className,
+  onMount,
 }: {
   slot: UnitSlotDetail
   className: string
+  onMount?: (slot: UnitSlotDetail) => void
 }) {
   const { t } = useTranslation("transport-units")
+  const [open, setOpen] = React.useState(false)
   const state = slot.ocupado ? t("legend.occupied") : t("legend.empty")
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         openOnHover
         delay={150}
@@ -45,6 +54,24 @@ export function SlotPopover({
         ) : (
           <EmptySlot slot={slot} />
         )}
+        {onMount ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={slot.ocupado ? "outline" : "default"}
+            onClick={() => {
+              setOpen(false)
+              onMount(slot)
+            }}
+          >
+            {slot.ocupado ? (
+              <ArrowLeftRightIcon data-icon="inline-start" />
+            ) : (
+              <PlusIcon data-icon="inline-start" />
+            )}
+            {slot.ocupado ? t("mount.replaceAction") : t("mount.mountAction")}
+          </Button>
+        ) : null}
       </PopoverContent>
     </Popover>
   )

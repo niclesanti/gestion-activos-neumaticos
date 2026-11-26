@@ -128,3 +128,25 @@ export async function getTransportUnit(publicId: string) {
   )
   return data
 }
+
+/** Montaje de un neumático en una posición (`AsignacionNeumaticoRequestDTO`). */
+export type AssignTireBody = {
+  neumaticoPublicId: string
+  /** Conductor asociado al evento; null = sin conductor. */
+  conductorPublicId: string | null
+  /** Aceptación de la advertencia de posición ocupada (desmonta el actual). */
+  reemplazar: boolean
+}
+
+/** Monta el neumático y devuelve la ficha actualizada (HU-31). */
+export async function assignTire(
+  unitPublicId: string,
+  slotCode: string,
+  body: AssignTireBody
+) {
+  const { data } = await apiClient.put<TransportUnitDetail>(
+    `/api/v1/unidades-transporte/${unitPublicId}/slots/${encodeURIComponent(slotCode)}/neumatico`,
+    body
+  )
+  return data
+}

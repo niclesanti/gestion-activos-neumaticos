@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.FiltroAuditoria;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.AsignacionNeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
@@ -50,6 +51,28 @@ public interface UnidadTransporteService {
      *         si no existe o está dada de baja.
      */
     UnidadTransporteDetalleDTO obtenerDetalle(UUID publicId);
+
+    /**
+     * Monta un neumático disponible (en stock o en espera) en una posición de la unidad (HU-31), en una
+     * sola transacción: si la posición está ocupada y se aceptó el reemplazo, desmonta el actual (queda en
+     * espera); monta el nuevo (sale del stock de su centro), actualiza la posición, firma la unidad y
+     * publica los eventos de desasignación (si hubo) y de asignación para trazabilidad.
+     *
+     * @param publicId  identificador público de la unidad.
+     * @param codigo    código de la posición (ej. "E2-IZQ-EXT").
+     * @param request   neumático, conductor opcional y aceptación del reemplazo.
+     * @param usuario   identificador público del usuario que monta.
+     * @return la ficha de la unidad actualizada.
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException
+     *         si la unidad no existe o está dada de baja, la posición no es de la unidad, o el neumático o el
+     *         conductor no existen (o el conductor está dado de baja).
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionOcupadaException
+     *         si la posición está ocupada y no se aceptó el reemplazo, o la ocupó otro montaje concurrente.
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.NeumaticoNoDisponibleException
+     *         si el neumático no está en stock ni en espera, está dado de baja o ya está en esa posición.
+     */
+    UnidadTransporteDetalleDTO asignarNeumatico(UUID publicId, String codigo, AsignacionNeumaticoRequestDTO request,
+            String usuario);
 
     /** Las configuraciones precargadas, con sus ejes en orden. */
     List<ConfiguracionUnidadDTO> listarConfiguraciones();

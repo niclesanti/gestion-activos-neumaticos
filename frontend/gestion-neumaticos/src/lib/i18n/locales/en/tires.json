@@ -203,5 +203,23 @@
       "description": "Check your connection and try again.",
       "retry": "Retry"
     }
+  },
+  "picker": {
+    "origin": {
+      "label": "Origin",
+      "all": "All available",
+      "waiting": "Waiting",
+      "stock": "In stock (any center)",
+      "center": "{{name}} ({{count}} in stock)"
+    },
+    "listLabel": "Available tires",
+    "empty": {
+      "title": "There are no available tires",
+      "description": "To be mounted, a tire must be in stock or waiting."
+    },
+    "noResults": {
+      "title": "No available tires found",
+      "description": "Try another serial number or origin."
+    }
   }
 }

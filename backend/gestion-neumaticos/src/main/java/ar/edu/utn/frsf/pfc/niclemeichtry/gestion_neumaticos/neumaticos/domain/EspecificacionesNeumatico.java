@@ -1,5 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain;
 
+import java.util.Collection;
+
 import org.springframework.data.jpa.domain.Specification;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
@@ -49,11 +51,19 @@ public final class EspecificacionesNeumatico {
         return (root, query, cb) -> cb.equal(root.get("estadoActual"), estado);
     }
 
-    /** Neumáticos con esa situación operativa vigente. Null no filtra. */
-    public static Specification<Neumatico> conSituacion(SituacionOperativa situacion) {
-        if (situacion == null) {
+    /** Neumáticos con alguna de esas situaciones operativas vigentes (OR). Null o vacía no filtra. */
+    public static Specification<Neumatico> conSituaciones(Collection<SituacionOperativa> situaciones) {
+        if (situaciones == null || situaciones.isEmpty()) {
             return Specification.unrestricted();
         }
-        return (root, query, cb) -> cb.equal(root.get("situacionOperativaVigente"), situacion);
+        return (root, query, cb) -> root.get("situacionOperativaVigente").in(situaciones);
+    }
+
+    /** Neumáticos guardados en el centro de almacenamiento con ese id interno. Null no filtra. */
+    public static Specification<Neumatico> enCentro(Long centroAlmacenamientoId) {
+        if (centroAlmacenamientoId == null) {
+            return Specification.unrestricted();
+        }
+        return (root, query, cb) -> cb.equal(root.get("centroAlmacenamientoId"), centroAlmacenamientoId);
     }
 }

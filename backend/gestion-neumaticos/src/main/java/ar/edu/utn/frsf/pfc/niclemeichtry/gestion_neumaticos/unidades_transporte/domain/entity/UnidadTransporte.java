@@ -2,8 +2,10 @@ package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UuidGenerator;
 
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.AuditableEntity;
@@ -31,8 +33,12 @@ import lombok.ToString;
 /**
  * Agregado raíz del módulo: la unidad y sus slots, que se crean con ella
  * (ver {@code UnidadTransporteFactory}) y se guardan en cascada.
+ *
+ * <p>{@code @DynamicUpdate}: el UPDATE lleva solo las columnas cambiadas, porque la
+ * base solo da UPDATE sobre {@code updated_at}/{@code updated_by} (V20).
  */
 @Entity
+@DynamicUpdate
 @Table(name = "unidades_transporte", schema = "unidades_transporte")
 @Getter
 @Setter
@@ -70,6 +76,13 @@ public class UnidadTransporte extends AuditableEntity {
     public void addSlot(SlotUnidadTransporte slot) {
         slot.setUnidad(this);
         slots.add(slot);
+    }
+
+    /** La posición de la unidad con ese código (ej. "E2-IZQ-EXT"), sin distinguir mayúsculas. */
+    public Optional<SlotUnidadTransporte> buscarSlot(String codigo) {
+        return slots.stream()
+                .filter(slot -> slot.getCodigo().equalsIgnoreCase(codigo))
+                .findFirst();
     }
 
     public List<SlotUnidadTransporte> getSlotsDeEje(int nroEje) {

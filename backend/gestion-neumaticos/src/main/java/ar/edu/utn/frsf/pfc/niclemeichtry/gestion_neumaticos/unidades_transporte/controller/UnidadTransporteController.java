@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,6 +28,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.Reg
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.OpenApiConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ExceptionInfo;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.AsignacionNeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.ConfiguracionUnidadDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteListadoDTO;
@@ -143,6 +145,41 @@ public class UnidadTransporteController {
     })
     public ResponseEntity<UnidadTransporteDetalleDTO> obtenerDetalle(@PathVariable UUID publicId) {
         return ResponseEntity.ok(unidadTransporteService.obtenerDetalle(publicId));
+    }
+
+    @PutMapping("/{publicId}/slots/{codigo}/neumatico")
+    @PreAuthorize("hasRole('EDITOR')")
+    @Operation(
+            summary = "Montar un neumático en una posición",
+            description = "Monta un neumático disponible (en stock de cualquier centro o en espera) en la posición "
+                    + "indicada por su código (ej. `E2-IZQ-EXT`), opcionalmente con el conductor asociado al evento "
+                    + "(HU-31). Si estaba en stock, el centro lo descuenta. Si la posición ya tiene un neumático, "
+                    + "responde 409 salvo que `reemplazar` sea true: en ese caso el actual se desmonta y queda en "
+                    + "espera. Registra en el historial la asignación (y la desasignación del reemplazado) de forma "
+                    + "asíncrona. Devuelve la ficha actualizada. Solo editores y administradores.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Neumático montado; ficha actualizada de la unidad"),
+            @ApiResponse(responseCode = "400", description = "Falta el neumático o un identificador no es un UUID",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "403", description = "El usuario no es editor ni administrador",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "404", description = "La unidad no existe o está dada de baja, la posición "
+                    + "no es de la unidad, o el neumático o el conductor no existen",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "409", description = "La posición está ocupada y no se aceptó el reemplazo, "
+                    + "o el neumático no está en stock ni en espera (montado, en reparación o de baja)",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<UnidadTransporteDetalleDTO> asignarNeumatico(
+            @PathVariable UUID publicId,
+            @PathVariable String codigo,
+            @Valid @RequestBody AsignacionNeumaticoRequestDTO request,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(unidadTransporteService.asignarNeumatico(publicId, codigo, request,
+                jwt.getSubject()));
     }
 
     @GetMapping("/auditoria")

@@ -1,5 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.service;
 
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamiento;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.domicilio;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.domicilioRequest;
@@ -141,6 +143,15 @@ class CentroAlmacenamientoServiceImplTest {
                 .isInstanceOf(EntidadNoEncontradaException.class);
 
         verify(centroAlmacenamientoRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("lista los centros activos ordenados por nombre, con su stock")
+    void listaCentros() {
+        CentroAlmacenamiento centro = centroAlmacenamiento(centroAlmacenamientoRequest());
+        when(centroAlmacenamientoRepository.findAllByDeletedAtIsNullOrderByNombreAsc()).thenReturn(List.of(centro));
+
+        assertThat(servicio.listarCentros()).containsExactly(centroAlmacenamientoListado(centro));
     }
 
     @Nested

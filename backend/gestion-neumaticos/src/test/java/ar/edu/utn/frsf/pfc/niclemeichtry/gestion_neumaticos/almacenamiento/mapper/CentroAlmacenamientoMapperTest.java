@@ -1,6 +1,7 @@
 package ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.mapper;
 
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamiento;
+import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoListado;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoRequest;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.centroAlmacenamientoResponse;
 import static ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestDataFactory.domicilio;
@@ -10,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
@@ -56,6 +58,16 @@ class CentroAlmacenamientoMapperTest {
     void unOrigenNuloDaNulo() {
         assertThat(mapper.toEntity(null)).isNull();
         assertThat(mapper.toResponseDTO(null, null)).isNull();
+        assertThat(mapper.toListadoDTO(null)).isNull();
+    }
+
+    @Test
+    void toListadoDTOCopiaNombreYStock() {
+        CentroAlmacenamiento centro = centroAlmacenamiento(centroAlmacenamientoRequest());
+        centro.agregarNeumaticoStock();
+
+        assertThat(mapper.toListadoDTO(centro)).isEqualTo(centroAlmacenamientoListado(centro));
+        assertThat(mapper.toListadoDTO(centro).cantidadNeumaticosEnStock()).isEqualTo(1);
     }
 
     @Test
@@ -64,6 +76,8 @@ class CentroAlmacenamientoMapperTest {
                 .isEqualTo(new CentroAlmacenamiento());
         assertThat(mapper.toResponseDTO(new CentroAlmacenamiento(), null))
                 .isEqualTo(new CentroAlmacenamientoResponseDTO(null, null, 0, null));
+        assertThat(mapper.toListadoDTO(new CentroAlmacenamiento()))
+                .isEqualTo(new CentroAlmacenamientoListadoDTO(null, null, 0));
     }
 
 }

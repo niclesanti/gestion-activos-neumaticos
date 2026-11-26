@@ -22,6 +22,9 @@ public interface NeumaticoRepository extends JpaRepository<Neumatico, Long>, Jpa
     @EntityGraph(attributePaths = "marca")
     List<Neumatico> findAllByIdIn(Collection<Long> ids);
 
+    /** Neumático por su identificador público, aun con baja lógica (el montaje lo rechaza con 409). */
+    Optional<Neumatico> findByPublicId(UUID publicId);
+
     /** Neumático sin baja lógica con su marca en la misma consulta. */
     @EntityGraph(attributePaths = "marca")
     Optional<Neumatico> findByPublicIdAndDeletedAtIsNull(UUID publicId);

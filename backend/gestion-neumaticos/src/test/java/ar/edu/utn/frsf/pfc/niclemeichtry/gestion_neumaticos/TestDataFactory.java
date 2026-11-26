@@ -19,9 +19,12 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.AuditorDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.EstadoRegistro;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.auditoria.RegistroAuditoriaDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.dto.CentroAlmacenamientoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.almacenamiento.domain.entity.CentroAlmacenamiento;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.api.ConductorResumenDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorListadoDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.dto.ConductorResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.domain.entity.Conductor;
@@ -38,6 +41,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dt
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoResponseDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.EstadoNeumatico;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoMontadoDTO;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoMontajeDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.UbicacionOperativaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.NeumaticoDetalleDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.entity.MarcaNeumatico;
@@ -56,6 +60,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.api.Domicilio
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Domicilio;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Localidad;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.common.domain.entity.Provincia;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.AsignacionNeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.UnidadTransporteRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.entity.UnidadTransporte;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.service.UnidadTransporteFactoryImpl;
@@ -278,11 +283,16 @@ public final class TestDataFactory {
 				null, null, null, null, null, null, null);
 	}
 
-	/** Fila del listado de neumáticos (HU-28) de un neumático dado. */
+	/** Fila del listado de neumáticos (HU-28) de un neumático dado, sin centro de almacenamiento. */
 	public static NeumaticoListadoDTO neumaticoListado(Neumatico neumatico) {
+		return neumaticoListado(neumatico, null);
+	}
+
+	/** Fila del listado de neumáticos con el nombre de su centro de almacenamiento (HU-31). */
+	public static NeumaticoListadoDTO neumaticoListado(Neumatico neumatico, String centroAlmacenamiento) {
 		return new NeumaticoListadoDTO(neumatico.getPublicId(), neumatico.getNumeroSerie(),
 				neumatico.getMarca().getNombre(), neumatico.getEstadoActual(),
-				neumatico.getSituacionOperativaVigente(), neumatico.getKilometrajeTotal());
+				neumatico.getSituacionOperativaVigente(), neumatico.getKilometrajeTotal(), centroAlmacenamiento);
 	}
 
 	/** Referencias internas de ubicación de los tests de la ficha del neumático (HU-14). */
@@ -337,6 +347,18 @@ public final class TestDataFactory {
 	public static ConductorResponseDTO conductorResponse(Conductor conductor) {
 		return new ConductorResponseDTO(conductor.getPublicId(), conductor.getDni(), conductor.getNombre(),
 				conductor.getApellido());
+	}
+
+	public static final UUID CONDUCTOR_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-000000000004");
+
+	/** Conductor activo tal como lo entrega ConductorApi (Juan Pérez). */
+	public static ConductorResumenDTO conductorResumen() {
+		return new ConductorResumenDTO(100L, CONDUCTOR_PUBLIC_ID, "Juan", "Pérez");
+	}
+
+	public static ConductorListadoDTO conductorListado(Conductor conductor) {
+		return new ConductorListadoDTO(conductor.getPublicId(), conductor.getNombre(), conductor.getApellido(),
+				conductor.getDni());
 	}
 
 	// Domicilios (common)
@@ -470,6 +492,11 @@ public final class TestDataFactory {
 				.build();
 	}
 
+	public static CentroAlmacenamientoListadoDTO centroAlmacenamientoListado(CentroAlmacenamiento centro) {
+		return new CentroAlmacenamientoListadoDTO(centro.getPublicId(), centro.getNombre(),
+				centro.getCantidadNeumaticosEnStock());
+	}
+
 	public static CentroAlmacenamientoResponseDTO centroAlmacenamientoResponse(CentroAlmacenamiento centro,
 			DomicilioResponseDTO domicilio) {
 		return new CentroAlmacenamientoResponseDTO(centro.getPublicId(), centro.getNombre(),
@@ -495,6 +522,42 @@ public final class TestDataFactory {
 		UnidadTransporte unidad = new UnidadTransporteFactoryImpl().crearUnidad(PATENTE, tractorComun());
 		unidad.setPublicId(UNIDAD_PUBLIC_ID);
 		unidad.getSlots().get(0).setNeumaticoActualId(NEUMATICO_MONTADO_ID);
+		return unidad;
+	}
+
+	// Montaje de neumáticos (HU-31)
+
+	public static final UUID NEUMATICO_A_MONTAR_PUBLIC_ID = UUID.fromString("0199e8a0-0000-7000-8000-000000000005");
+	/** Código de la primera posición del tractor común (la que ocupa el neumático montado). */
+	public static final String CODIGO_SLOT = "E1-IZQ";
+
+	/** Montaje sin conductor ni reemplazo del neumático {@link #NEUMATICO_A_MONTAR_PUBLIC_ID}. */
+	public static AsignacionNeumaticoRequestDTO asignacionRequest() {
+		return new AsignacionNeumaticoRequestDTO(NEUMATICO_A_MONTAR_PUBLIC_ID, null, null);
+	}
+
+	public static AsignacionNeumaticoRequestDTO asignacionRequest(UUID conductorPublicId, Boolean reemplazar) {
+		return new AsignacionNeumaticoRequestDTO(NEUMATICO_A_MONTAR_PUBLIC_ID, conductorPublicId, reemplazar);
+	}
+
+	/** El neumático a montar, tal como lo devuelve NeumaticoApi.montar. */
+	public static NeumaticoMontajeDTO neumaticoEntrante() {
+		return new NeumaticoMontajeDTO(20L, NEUMATICO_A_MONTAR_PUBLIC_ID, "XYZ-999");
+	}
+
+	/** El neumático montado de {@link #unidadConNeumaticoMontado()}, tal como lo devuelve NeumaticoApi.desmontar. */
+	public static NeumaticoMontajeDTO neumaticoSaliente() {
+		return new NeumaticoMontajeDTO(NEUMATICO_MONTADO_ID, NEUMATICO_MONTADO_PUBLIC_ID, NUMERO_SERIE);
+	}
+
+	/** Tractor común (7 slots, todos vacíos) con ids internos en la unidad y en cada slot. */
+	public static UnidadTransporte unidadVacia() {
+		UnidadTransporte unidad = new UnidadTransporteFactoryImpl().crearUnidad(PATENTE, tractorComun());
+		unidad.setId(50L);
+		unidad.setPublicId(UNIDAD_PUBLIC_ID);
+		for (int i = 0; i < unidad.getSlots().size(); i++) {
+			unidad.getSlots().get(i).setId(500L + i);
+		}
 		return unidad;
 	}
 

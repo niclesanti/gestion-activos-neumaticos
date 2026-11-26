@@ -110,6 +110,12 @@ class AutorizacionBaseDatosTests {
 				.hasStackTraceContaining("permission denied");
 	}
 
+	private static void permisoDenegadoPorRls(Runnable operacion) {
+		assertThatThrownBy(operacion::run)
+				.isInstanceOf(DataAccessException.class)
+				.hasStackTraceContaining("row-level security");
+	}
+
 	@Nested
 	@DisplayName("Rol de la conexión")
 	class RolDeConexion {
@@ -927,7 +933,8 @@ class AutorizacionBaseDatosTests {
 		}
 
 		@Test
-		@DisplayName("editor y administrador insertan unidades y slots, pero no los modifican ni borran")
+		@DisplayName("editor y administrador insertan unidades y slots y montan neumáticos (V20), pero no cambian "
+				+ "el resto ni borran")
 		void editorYAdministradorInsertan() {
 			for (UUID usuario : List.of(editor, admin)) {
 				autenticar(usuario, nivelDe(usuario));
@@ -937,16 +944,52 @@ class AutorizacionBaseDatosTests {
 				Long unidad = app.queryForObject(
 						"SELECT id FROM unidades_transporte.unidades_transporte WHERE patente = ?", Long.class, patente);
 				assertThat(app.update(INSERTAR_SLOT_EJE, unidad)).isOne();
+				assertThat(app.update("UPDATE unidades_transporte.slots_unidad_transporte SET neumatico_actual_id = ? "
+						+ "WHERE unidad_id = ?", unidad, unidad)).isOne();
+				assertThat(app.update("UPDATE unidades_transporte.unidades_transporte SET updated_at = now(), "
+						+ "updated_by = seguridad.usuario_actual() WHERE id = ?", unidad)).isOne();
 				permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET patente = 'ZZ999ZZ'"));
 				permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET public_id = ?",
 						UUID.randomUUID()));
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET deleted_at = now()"));
+				permisoDenegado(() -> app.update("UPDATE unidades_transporte.unidades_transporte SET created_by = ?",
+						usuario));
 				permisoDenegado(() -> app.update("UPDATE unidades_transporte.slots_unidad_transporte "
-						+ "SET neumatico_actual_id = 1"));
+						+ "SET tipo_slot = 'AUXILIO'"));
 				permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.slots_unidad_transporte"));
 				permisoDenegado(() -> app.update("DELETE FROM unidades_transporte.unidades_transporte"));
 			}
 			assertThat(owner.queryForObject("SELECT count(*) FROM unidades_transporte.slots_unidad_transporte",
 					Integer.class)).isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("la modificación de la unidad firma como updated_by el usuario de la sesión (V20)")
+		void modificacionDeLaUnidadFirmada() {
+			Long unidad = insertarUnidadConOwner("AB123CD");
+			autenticar(editor, NivelAcceso.ROLE_EDITOR);
+
+			permisoDenegadoPorRls(() -> app.update("UPDATE unidades_transporte.unidades_transporte "
+					+ "SET updated_at = now(), updated_by = ? WHERE id = ?", admin, unidad));
+		}
+
+		@Test
+		@DisplayName("un neumático ocupa una sola posición y una posición tiene un solo neumático (V20)")
+		void montajeUnico() {
+			Long unidad = insertarUnidadConOwner("AB123CD");
+			owner.update(INSERTAR_SLOT_EJE, unidad);
+			owner.update("""
+					INSERT INTO unidades_transporte.slots_unidad_transporte (unidad_id, tipo_slot, nro_auxilio)
+					VALUES (?, 'AUXILIO', 1)""", unidad);
+			owner.update("UPDATE unidades_transporte.slots_unidad_transporte SET neumatico_actual_id = 77 "
+					+ "WHERE tipo_slot = 'EJE'");
+
+			assertThatThrownBy(() -> owner.update("UPDATE unidades_transporte.slots_unidad_transporte "
+					+ "SET neumatico_actual_id = 77 WHERE tipo_slot = 'AUXILIO'"))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("uk_slots_unidad_transporte_neumatico");
+			assertThat(owner.update("UPDATE unidades_transporte.slots_unidad_transporte "
+					+ "SET neumatico_actual_id = NULL WHERE tipo_slot = 'EJE'")).isOne();
 		}
 
 		@Test
@@ -1027,6 +1070,32 @@ class AutorizacionBaseDatosTests {
 				permisoDenegado(() -> app.queryForObject("SELECT count(*) FROM trazabilidad.eventos_neumatico",
 						Integer.class));
 			}
+		}
+
+		@Test
+		@DisplayName("asignación y desasignación llevan unidad y posición; los demás tipos no (V20)")
+		void datosDeMontajeSoloEnAsignaciones() {
+			assertThat(app.update("""
+					INSERT INTO trazabilidad.eventos_neumatico (id, tipo, fecha, usuario, neumatico_id, unidad_id,
+					    patente_unidad, slot_id, posicion_slot, conductor_id, nombre_conductor)
+					VALUES (nextval('trazabilidad.eventos_neumatico_id_seq'), 'ASIGNACION', now(), 'usuario', 1, 1,
+					    'AB123CD', 1, 'E1-IZQ', 1, 'Juan Pérez')""")).isOne();
+			assertThatThrownBy(() -> owner.update("""
+					INSERT INTO trazabilidad.eventos_neumatico (tipo, fecha, usuario, neumatico_id)
+					VALUES ('DESASIGNACION', now(), 'usuario', 1)"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_eventos_neumatico_datos_montaje");
+			assertThatThrownBy(() -> owner.update("""
+					INSERT INTO trazabilidad.eventos_neumatico (tipo, fecha, usuario, neumatico_id, unidad_id)
+					VALUES ('COMPRA', now(), 'usuario', 1, 1)"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_eventos_neumatico_datos_montaje");
+			assertThatThrownBy(() -> owner.update("""
+					INSERT INTO trazabilidad.eventos_neumatico (tipo, fecha, usuario, neumatico_id, unidad_id,
+					    patente_unidad, slot_id, posicion_slot, conductor_id)
+					VALUES ('ASIGNACION', now(), 'usuario', 1, 1, 'AB123CD', 1, 'E1-IZQ', 1)"""))
+					.isInstanceOf(DataAccessException.class)
+					.hasStackTraceContaining("ck_eventos_neumatico_conductor_coherente");
 		}
 
 		@Test
@@ -1167,7 +1236,7 @@ class AutorizacionBaseDatosTests {
 		}
 
 		@Test
-		@DisplayName("conductores y unidades de transporte todavía no se modifican: tampoco sus columnas de auditoría")
+		@DisplayName("conductores no se modifican todavía y las unidades solo firman updated_* (V20): sin baja")
 		void sinModificacionTodavia() {
 			autenticar(admin, NivelAcceso.ROLE_ADMINISTRADOR);
 
@@ -1187,11 +1256,6 @@ class AutorizacionBaseDatosTests {
 			permisoDenegado(() -> app.update("UPDATE proveedores.proveedores SET deleted_by = seguridad.usuario_actual()"));
 		}
 
-		private void permisoDenegadoPorRls(Runnable operacion) {
-			assertThatThrownBy(operacion::run)
-					.isInstanceOf(DataAccessException.class)
-					.hasStackTraceContaining("row-level security");
-		}
 	}
 
 	@Nested

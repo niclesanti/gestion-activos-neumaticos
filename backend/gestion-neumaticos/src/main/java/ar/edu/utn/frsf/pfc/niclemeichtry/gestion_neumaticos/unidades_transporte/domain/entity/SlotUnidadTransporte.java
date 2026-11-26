@@ -22,7 +22,8 @@ import lombok.ToString;
 /**
  * Posición de neumático de una unidad. Un slot de eje se identifica por
  * (nroEje, lado, posicionRueda); uno de auxilio, solo por nroAuxilio (la base
- * exige esa consistencia con un CHECK).
+ * exige esa consistencia con un CHECK). Solo el neumático montado cambia: el
+ * resto es {@code updatable = false}, como el GRANT de la base (V20).
  */
 @Entity
 @Table(name = "slots_unidad_transporte", schema = "unidades_transporte")
@@ -43,25 +44,25 @@ public class SlotUnidadTransporte {
     private UnidadTransporte unidad;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_slot", nullable = false, length = 10)
+    @Column(name = "tipo_slot", nullable = false, length = 10, updatable = false)
     private TipoSlot tipoSlot;
 
-    @Column(name = "nro_eje")
+    @Column(name = "nro_eje", updatable = false)
     private Integer nroEje;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_eje", length = 20)
+    @Column(name = "tipo_eje", length = 20, updatable = false)
     private TipoEje tipoEje;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "lado", length = 10)
+    @Column(name = "lado", length = 10, updatable = false)
     private Lado lado;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "posicion_rueda", length = 10)
+    @Column(name = "posicion_rueda", length = 10, updatable = false)
     private PosicionRueda posicionRueda;
 
-    @Column(name = "nro_auxilio")
+    @Column(name = "nro_auxilio", updatable = false)
     private Integer nroAuxilio;
 
     // Referencia por id al módulo neumaticos (sin asociación JPA ni FK).
@@ -82,6 +83,11 @@ public class SlotUnidadTransporte {
             case EXTERIOR -> codigo + "-EXT";
             case INTERIOR -> codigo + "-INT";
         };
+    }
+
+    /** Monta el neumático (id interno) en esta posición; reemplaza al que hubiera. */
+    public void asignarNeumatico(Long neumaticoId) {
+        this.neumaticoActualId = neumaticoId;
     }
 
     public boolean estaOcupado() {

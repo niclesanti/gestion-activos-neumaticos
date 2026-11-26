@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +44,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.ProveedorUbicacionNeumatico;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.StockCentroAlmacenamiento;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.TipoUbicacion;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.UbicacionOperativaDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.domain.dto.MarcaNeumaticoResponseDTO;
@@ -89,6 +91,7 @@ class NeumaticoServiceImplTest {
     @Mock private ProveedorUbicacionNeumatico proveedorUnidad;
     @Mock private ProveedorUbicacionNeumatico proveedorCentro;
     @Mock private ProveedorUbicacionNeumatico proveedorServicio;
+    @Mock private StockCentroAlmacenamiento stockCentroAlmacenamiento;
 
     /** Mapper real (generado por MapStruct): el servicio depende de cómo copia los datos. */
     private final NeumaticoMapper neumaticoMapper = new NeumaticoMapperImpl();
@@ -98,7 +101,8 @@ class NeumaticoServiceImplTest {
     @BeforeEach
     void crearServicio() {
         servicio = new NeumaticoServiceImpl(ensamblador, neumaticoRepository, neumaticoMapper, marcaNeumaticoRepository,
-                proveedorApi, eventPublisher, List.of(proveedorUnidad, proveedorCentro, proveedorServicio));
+                proveedorApi, eventPublisher, stockCentroAlmacenamiento,
+                List.of(proveedorUnidad, proveedorCentro, proveedorServicio));
     }
 
     /** Simula el INSERT: la base asigna id y publicId. */
@@ -291,7 +295,7 @@ class NeumaticoServiceImplTest {
                     .thenReturn(new PageImpl<>(List.of(neumatico), PageRequest.of(0, 10), 1));
 
             Page<NeumaticoListadoDTO> resultado = servicio.buscar(" abc ", MARCA_ID, EstadoNeumatico.NUEVO,
-                    SituacionOperativa.EN_ESPERA, PageRequest.of(2, 5, Sort.by("numeroSerie").descending()));
+                    List.of(SituacionOperativa.EN_ESPERA), null, PageRequest.of(2, 5, Sort.by("numeroSerie").descending()));
 
             assertThat(resultado.getContent()).containsExactly(neumaticoListado(neumatico));
             assertThat(resultado.getTotalElements()).isEqualTo(1);
@@ -309,7 +313,7 @@ class NeumaticoServiceImplTest {
             when(neumaticoRepository.findAll(ArgumentMatchers.<Specification<Neumatico>>any(), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of()));
 
-            assertThat(servicio.buscar(null, null, null, null, PageRequest.of(0, 10)).getContent()).isEmpty();
+            assertThat(servicio.buscar(null, null, null, null, null, PageRequest.of(0, 10)).getContent()).isEmpty();
 
             ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
             verify(neumaticoRepository).findAll(ArgumentMatchers.<Specification<Neumatico>>any(), pageable.capture());
@@ -321,9 +325,43 @@ class NeumaticoServiceImplTest {
         void rechazaOrdenNoPermitido() {
             PageRequest ordenInvalido = PageRequest.of(0, 10, Sort.by("id"));
 
-            assertThatThrownBy(() -> servicio.buscar(null, null, null, null, ordenInvalido))
+            assertThatThrownBy(() -> servicio.buscar(null, null, null, null, null, ordenInvalido))
                     .isInstanceOf(ParametroInvalidoException.class);
             verifyNoInteractions(neumaticoRepository);
+        }
+
+        @Test
+        @DisplayName("un centro inexistente devuelve una página vacía sin consultar neumáticos")
+        void centroInexistente() {
+            UUID centro = UUID.randomUUID();
+            when(stockCentroAlmacenamiento.buscarIdPorPublicId(centro)).thenReturn(Optional.empty());
+
+            Page<NeumaticoListadoDTO> resultado = servicio.buscar(null, null, null,
+                    List.of(SituacionOperativa.EN_STOCK), centro, PageRequest.of(0, 10));
+
+            assertThat(resultado.getContent()).isEmpty();
+            assertThat(resultado.getTotalElements()).isZero();
+            verifyNoInteractions(neumaticoRepository);
+        }
+
+        @Test
+        @DisplayName("con centro existente filtra y cada fila en stock trae el nombre del centro, resuelto por lote")
+        void conCentroYNombres() {
+            UUID centro = UUID.randomUUID();
+            Neumatico enStock = neumaticoEn(SituacionOperativa.EN_STOCK);
+            Neumatico enEspera = neumatico(neumaticoUsadoRequest());
+            when(stockCentroAlmacenamiento.buscarIdPorPublicId(centro)).thenReturn(Optional.of(CENTRO_ID));
+            when(neumaticoRepository.findAll(ArgumentMatchers.<Specification<Neumatico>>any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(enStock, enEspera), PageRequest.of(0, 10), 2));
+            when(stockCentroAlmacenamiento.buscarNombresPorIds(List.of(CENTRO_ID)))
+                    .thenReturn(Map.of(CENTRO_ID, "Depósito Central"));
+
+            Page<NeumaticoListadoDTO> resultado = servicio.buscar(null, null, null,
+                    List.of(SituacionOperativa.EN_STOCK, SituacionOperativa.EN_ESPERA), centro, PageRequest.of(0, 10));
+
+            assertThat(resultado.getContent()).containsExactly(neumaticoListado(enStock, "Depósito Central"),
+                    neumaticoListado(enEspera));
+            verify(stockCentroAlmacenamiento).buscarNombresPorIds(List.of(CENTRO_ID));
         }
     }
 
