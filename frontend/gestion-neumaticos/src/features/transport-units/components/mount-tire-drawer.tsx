@@ -5,21 +5,17 @@ import {
   CheckIcon,
   InfoIcon,
   Loader2Icon,
+  SearchIcon,
   TriangleAlertIcon,
+  UserRoundIcon,
+  XIcon,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { TablePagination } from "@/components/common/table-pagination"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox"
 import {
   Drawer,
   DrawerContent,
@@ -28,7 +24,18 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Input } from "@/components/ui/input"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { DriverOption } from "@/features/transport-units/api/drivers-api"
 import type {
   TransportUnitDetail,
@@ -237,142 +244,156 @@ function MountFlow({
         <StepIndicator current={stepIndex} />
       </DrawerHeader>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-        {notice ? (
-          <Alert variant={notice.tone === "error" ? "destructive" : "default"}>
-            <TriangleAlertIcon />
-            <AlertDescription>{notice.message}</AlertDescription>
-          </Alert>
-        ) : null}
+      {/* Cabecera y pie fijos; solo el paso scrollea, con la barra de
+          ScrollArea. El Viewport mide h-full: se lo vuelve ítem flex para que
+          tome el alto que le deja el panel. */}
+      <ScrollArea className="flex min-h-0 flex-1 flex-col *:data-[slot=scroll-area-viewport]:min-h-0 *:data-[slot=scroll-area-viewport]:flex-1">
+        <div className="flex flex-col gap-4 p-4">
+          {notice ? (
+            <Alert
+              variant={notice.tone === "error" ? "destructive" : "default"}
+            >
+              <TriangleAlertIcon />
+              <AlertDescription>{notice.message}</AlertDescription>
+            </Alert>
+          ) : null}
 
-        {step === "tire" ? (
-          <section className="flex flex-col gap-3">
-            <StepHeading>{t("mount.steps.tire.heading")}</StepHeading>
-            <p className="text-sm text-muted-foreground">
-              {t("mount.steps.tire.hint")}
-            </p>
-            {outgoing ? (
+          {step === "tire" ? (
+            <section className="flex flex-col gap-3">
+              <StepHeading>{t("mount.steps.tire.heading")}</StepHeading>
+              <p className="text-sm text-muted-foreground">
+                {t("mount.steps.tire.hint")}
+              </p>
+              {outgoing ? (
+                <Alert>
+                  <InfoIcon />
+                  <AlertTitle>{t("mount.outgoing.title")}</AlertTitle>
+                  <AlertDescription>
+                    {t("mount.outgoing.description", {
+                      serial: outgoing.numeroSerie ?? t("slot.notRegistered"),
+                      brand: outgoing.marca,
+                    })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {renderTirePicker ? (
+                <TirePickerHost
+                  render={renderTirePicker}
+                  selected={tire}
+                  onSelect={setTire}
+                  onConfirm={chooseTire}
+                />
+              ) : null}
+            </section>
+          ) : step === "driver" ? (
+            <section className="flex flex-col gap-3">
+              <StepHeading ref={headingRef}>
+                {t("mount.steps.driver.heading")}
+              </StepHeading>
+              <p className="text-sm text-muted-foreground">
+                {t("mount.steps.driver.hint")}
+              </p>
+              <DriverPicker
+                value={driver}
+                onChange={setDriver}
+                onConfirm={(picked) => {
+                  setDriver(picked)
+                  goTo("confirm")
+                }}
+              />
+            </section>
+          ) : (
+            <section className="flex flex-col gap-4">
+              <StepHeading ref={headingRef}>
+                {t("mount.steps.confirm.heading")}
+              </StepHeading>
+              <dl className="flex flex-col gap-3 rounded-3xl border bg-muted/30 p-4 text-sm">
+                <SummaryRow
+                  label={t("mount.summary.tire")}
+                  onChange={() => goTo("tire")}
+                  changeLabel={t("mount.summary.changeTire")}
+                >
+                  <span className="font-mono">
+                    {tire?.numeroSerie ?? t("slot.notRegistered")}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {tire
+                      ? `${tire.marca} · ${
+                          tire.situacion === "EN_ESPERA"
+                            ? t("mount.summary.fromWaiting")
+                            : t("mount.summary.fromCenter", {
+                                name: tire.centroAlmacenamiento ?? "",
+                              })
+                        }`
+                      : null}
+                  </span>
+                </SummaryRow>
+                <Separator />
+                <SummaryRow label={t("mount.summary.destination")}>
+                  <span className="font-mono">
+                    {unit.patente} · {slot.codigo}
+                  </span>
+                  <span className="text-muted-foreground">{slotKind}</span>
+                </SummaryRow>
+                <Separator />
+                <SummaryRow
+                  label={t("mount.summary.driver")}
+                  onChange={() => goTo("driver")}
+                  changeLabel={t("mount.summary.changeDriver")}
+                >
+                  <span>
+                    {driver ? driverLabel(driver) : t("mount.summary.noDriver")}
+                  </span>
+                </SummaryRow>
+                {outgoing ? (
+                  <>
+                    <Separator />
+                    <SummaryRow label={t("mount.summary.outgoing")}>
+                      <span className="font-mono">
+                        {outgoing.numeroSerie ?? t("slot.notRegistered")}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {t("mount.summary.outgoingResult", {
+                          brand: outgoing.marca,
+                        })}
+                      </span>
+                    </SummaryRow>
+                  </>
+                ) : null}
+              </dl>
+
               <Alert>
                 <InfoIcon />
-                <AlertTitle>{t("mount.outgoing.title")}</AlertTitle>
+                <AlertTitle>{t("mount.immutable.title")}</AlertTitle>
                 <AlertDescription>
-                  {t("mount.outgoing.description", {
-                    serial: outgoing.numeroSerie ?? t("slot.notRegistered"),
-                    brand: outgoing.marca,
-                  })}
+                  {t("mount.immutable.description")}
                 </AlertDescription>
               </Alert>
-            ) : null}
-            {renderTirePicker ? (
-              <TirePickerHost
-                render={renderTirePicker}
-                selected={tire}
-                onSelect={setTire}
-                onConfirm={chooseTire}
-              />
-            ) : null}
-          </section>
-        ) : step === "driver" ? (
-          <section className="flex flex-col gap-3">
-            <StepHeading ref={headingRef}>
-              {t("mount.steps.driver.heading")}
-            </StepHeading>
-            <p className="text-sm text-muted-foreground">
-              {t("mount.steps.driver.hint")}
-            </p>
-            <DriverCombobox value={driver} onChange={setDriver} />
-          </section>
-        ) : (
-          <section className="flex flex-col gap-4">
-            <StepHeading ref={headingRef}>
-              {t("mount.steps.confirm.heading")}
-            </StepHeading>
-            <dl className="flex flex-col gap-3 rounded-3xl border bg-muted/30 p-4 text-sm">
-              <SummaryRow
-                label={t("mount.summary.tire")}
-                onChange={() => goTo("tire")}
-                changeLabel={t("mount.summary.changeTire")}
+
+              <label
+                htmlFor="mount-acknowledge"
+                className="flex cursor-pointer items-start gap-3 rounded-2xl border p-3 text-sm has-data-checked:border-primary"
               >
-                <span className="font-mono">
-                  {tire?.numeroSerie ?? t("slot.notRegistered")}
-                </span>
-                <span className="text-muted-foreground">
-                  {tire
-                    ? `${tire.marca} · ${
-                        tire.situacion === "EN_ESPERA"
-                          ? t("mount.summary.fromWaiting")
-                          : t("mount.summary.fromCenter", {
-                              name: tire.centroAlmacenamiento ?? "",
-                            })
-                      }`
-                    : null}
-                </span>
-              </SummaryRow>
-              <Separator />
-              <SummaryRow label={t("mount.summary.destination")}>
-                <span className="font-mono">
-                  {unit.patente} · {slot.codigo}
-                </span>
-                <span className="text-muted-foreground">{slotKind}</span>
-              </SummaryRow>
-              <Separator />
-              <SummaryRow
-                label={t("mount.summary.driver")}
-                onChange={() => goTo("driver")}
-                changeLabel={t("mount.summary.changeDriver")}
-              >
+                <Checkbox
+                  id="mount-acknowledge"
+                  className="mt-0.5"
+                  checked={acknowledged}
+                  onCheckedChange={(checked) =>
+                    setAcknowledgedFor(checked ? ackKey : null)
+                  }
+                />
                 <span>
-                  {driver ? driverLabel(driver) : t("mount.summary.noDriver")}
+                  {outgoing
+                    ? t("mount.acknowledge.replace", {
+                        serial: outgoing.numeroSerie ?? t("slot.notRegistered"),
+                      })
+                    : t("mount.acknowledge.mount")}
                 </span>
-              </SummaryRow>
-              {outgoing ? (
-                <>
-                  <Separator />
-                  <SummaryRow label={t("mount.summary.outgoing")}>
-                    <span className="font-mono">
-                      {outgoing.numeroSerie ?? t("slot.notRegistered")}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {t("mount.summary.outgoingResult", {
-                        brand: outgoing.marca,
-                      })}
-                    </span>
-                  </SummaryRow>
-                </>
-              ) : null}
-            </dl>
-
-            <Alert>
-              <InfoIcon />
-              <AlertTitle>{t("mount.immutable.title")}</AlertTitle>
-              <AlertDescription>
-                {t("mount.immutable.description")}
-              </AlertDescription>
-            </Alert>
-
-            <label
-              htmlFor="mount-acknowledge"
-              className="flex cursor-pointer items-start gap-3 rounded-2xl border p-3 text-sm has-data-checked:border-primary"
-            >
-              <Checkbox
-                id="mount-acknowledge"
-                className="mt-0.5"
-                checked={acknowledged}
-                onCheckedChange={(checked) =>
-                  setAcknowledgedFor(checked ? ackKey : null)
-                }
-              />
-              <span>
-                {outgoing
-                  ? t("mount.acknowledge.replace", {
-                      serial: outgoing.numeroSerie ?? t("slot.notRegistered"),
-                    })
-                  : t("mount.acknowledge.mount")}
-              </span>
-            </label>
-          </section>
-        )}
-      </div>
+              </label>
+            </section>
+          )}
+        </div>
+      </ScrollArea>
 
       <DrawerFooter className="flex-row justify-between border-t pt-4">
         {step === "tire" ? (
@@ -535,72 +556,175 @@ function SummaryRow({
   )
 }
 
-/** Conductor opcional, buscado en el servidor por apellido, nombre o DNI. */
-function DriverCombobox({
+/**
+ * Conductor opcional: búsqueda en el servidor por apellido, nombre o DNI y
+ * lista paginada con el tamaño por defecto del backend (ordenada por apellido
+ * y nombre). Al entrar muestra la primera página. Un clic o Enter elige y
+ * avanza; las flechas solo marcan. La elección se puede quitar.
+ */
+function DriverPicker({
   value,
   onChange,
+  onConfirm,
 }: {
   value: DriverOption | null
   onChange: (driver: DriverOption | null) => void
+  onConfirm: (driver: DriverOption) => void
 }) {
   const { t } = useTranslation("transport-units")
   const [term, setTerm] = React.useState("")
+  const [page, setPage] = React.useState(0)
   const debouncedTerm = useDebouncedValue(term.trim())
-  const { data, isFetching, isError } = useDriverSearch(debouncedTerm)
+  const { data, isPending, isError, isFetching, refetch } = useDriverSearch(
+    debouncedTerm,
+    page
+  )
   const drivers = data?.content ?? []
+  const byId = new Map(drivers.map((driver) => [driver.publicId, driver]))
+
+  function pick(publicId: string, confirm: boolean) {
+    const driver = byId.get(publicId)
+    if (!driver) return
+    onChange(driver)
+    if (confirm) onConfirm(driver)
+  }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor="mount-driver" className="text-sm font-medium">
-        {t("mount.steps.driver.label")}
-      </label>
-      <Combobox<DriverOption>
-        items={drivers}
-        // El filtro lo hace el servidor.
-        filter={null}
-        value={value}
-        onValueChange={(next) => onChange(next ?? null)}
-        onInputValueChange={(next) => {
-          // Al elegir, el input muestra la etiqueta: no es una búsqueda nueva.
-          if (value && next === driverLabel(value)) return
-          setTerm(next)
-        }}
-        itemToStringLabel={driverLabel}
-        isItemEqualToValue={(item, selected) =>
-          item.publicId === selected.publicId
-        }
-      >
-        <ComboboxInput
-          id="mount-driver"
-          autoFocus
-          showClear={value !== null}
-          placeholder={t("mount.steps.driver.placeholder")}
-          className="w-full"
-        />
-        <ComboboxContent>
-          <ComboboxEmpty>
-            {isError
-              ? t("mount.steps.driver.error")
-              : isFetching
-                ? t("mount.steps.driver.loading")
-                : t("mount.steps.driver.empty")}
-          </ComboboxEmpty>
-          <ComboboxList>
-            {(driver: DriverOption) => (
-              <ComboboxItem key={driver.publicId} value={driver}>
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate">{driverLabel(driver)}</span>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="mount-driver-search" className="text-sm font-medium">
+          {t("mount.steps.driver.searchLabel")}
+        </label>
+        <div className="relative">
+          <SearchIcon
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            id="mount-driver-search"
+            type="search"
+            maxLength={100}
+            className="pl-8"
+            value={term}
+            placeholder={t("mount.steps.driver.placeholder")}
+            onChange={(event) => {
+              setTerm(event.target.value)
+              setPage(0)
+            }}
+          />
+        </div>
+      </div>
+
+      {value ? (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary bg-primary/5 px-3 py-2 text-sm">
+          <span className="flex min-w-0 items-center gap-2">
+            <UserRoundIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="truncate">{driverLabel(value)}</span>
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange(null)}
+          >
+            <XIcon data-icon="inline-start" />
+            {t("mount.steps.driver.clear")}
+          </Button>
+        </div>
+      ) : null}
+
+      {isError ? (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyTitle>{t("mount.steps.driver.error.title")}</EmptyTitle>
+            <EmptyDescription>
+              {t("mount.steps.driver.error.description")}
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button type="button" variant="outline" onClick={() => refetch()}>
+            {t("mount.steps.driver.error.retry")}
+          </Button>
+        </Empty>
+      ) : isPending ? (
+        <div className="flex flex-col gap-2" aria-busy="true">
+          {Array.from({ length: 4 }, (_, index) => (
+            <Skeleton key={index} className="h-14 w-full rounded-2xl" />
+          ))}
+        </div>
+      ) : drivers.length === 0 ? (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <UserRoundIcon />
+            </EmptyMedia>
+            <EmptyTitle>
+              {debouncedTerm
+                ? t("mount.steps.driver.noResults.title")
+                : t("mount.steps.driver.empty.title")}
+            </EmptyTitle>
+            <EmptyDescription>
+              {debouncedTerm
+                ? t("mount.steps.driver.noResults.description")
+                : t("mount.steps.driver.empty.description")}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <RadioGroup
+          aria-label={t("mount.steps.driver.listLabel")}
+          aria-busy={isFetching}
+          value={value?.publicId ?? null}
+          onValueChange={(next) => pick(String(next), false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && value) {
+              event.preventDefault()
+              onConfirm(value)
+            }
+          }}
+          className={cn("gap-2", isFetching && "opacity-70")}
+        >
+          {drivers.map((driver) => {
+            const id = `driver-option-${driver.publicId}`
+            return (
+              <label
+                key={driver.publicId}
+                htmlFor={id}
+                // detail > 0: clic real (el teclado dispara clics con detail 0).
+                onClick={(event) => {
+                  if (event.detail > 0) pick(driver.publicId, true)
+                }}
+                className="flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-2.5 transition-colors hover:bg-muted/50 has-data-checked:border-primary has-data-checked:bg-primary/5"
+              >
+                <RadioGroupItem id={id} value={driver.publicId} />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-sm">
+                    {driverLabel(driver)}
+                  </span>
                   {driver.dni ? (
-                    <span className="text-xs font-normal text-muted-foreground">
+                    <span className="truncate text-xs text-muted-foreground">
                       {t("mount.steps.driver.dni", { dni: driver.dni })}
                     </span>
                   ) : null}
                 </span>
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
+              </label>
+            )
+          })}
+        </RadioGroup>
+      )}
+
+      {data ? (
+        <TablePagination
+          page={data.page.number}
+          totalPages={data.page.totalPages}
+          totalElements={data.page.totalElements}
+          summary={t("mount.steps.driver.pagination.summary", {
+            count: data.page.totalElements,
+            page: data.page.number + 1,
+            pages: Math.max(data.page.totalPages, 1),
+          })}
+          onPageChange={setPage}
+        />
+      ) : null}
     </div>
   )
 }

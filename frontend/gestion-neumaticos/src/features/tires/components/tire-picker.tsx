@@ -16,9 +16,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DEFAULT_TIRES_QUERY,
-  type OperationalSituation,
   type TireListItem,
   type TiresQuery,
 } from "@/features/tires/api/tires-api"
@@ -32,20 +32,10 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import type { PickedTire, TirePickerProps } from "@/lib/tire-picker"
 import { cn } from "@/lib/utils"
 
-/** Origen: todos los disponibles, en espera, en stock o un centro (`center:<publicId>`). */
-const ORIGIN_ALL = "ALL"
-const ORIGIN_WAITING = "EN_ESPERA"
-const ORIGIN_STOCK = "EN_STOCK"
-const CENTER_PREFIX = "center:"
+type OriginTab = "EN_ESPERA" | "EN_STOCK"
 
-/** Filas por página: entran sin scroll en el panel lateral. */
-const PICKER_PAGE_SIZE = 6
-
-function situationsFor(origin: string): OperationalSituation[] {
-  if (origin === ORIGIN_WAITING) return ["EN_ESPERA"]
-  if (origin === ORIGIN_ALL) return ["EN_STOCK", "EN_ESPERA"]
-  return ["EN_STOCK"]
-}
+/** Centro del select "En stock": todos o el `publicId` de uno. */
+const ALL_CENTERS = "ALL"
 
 function toPicked(tire: TireListItem): PickedTire {
   return {
@@ -60,16 +50,21 @@ function toPicked(tire: TireListItem): PickedTire {
 }
 
 /**
- * Buscador de neumáticos disponibles para montar (HU-31): en stock de
- * cualquier centro o en espera, por número de serie y por origen. Lo compone
- * `router.tsx` dentro del montaje de `transport-units` (contrato en
- * `lib/tire-picker.ts`). Un clic o Enter sobre un neumático lo elige; las
- * flechas solo lo marcan.
+ * Buscador de neumáticos disponibles para montar (HU-31): pestañas "En
+ * espera" (por defecto) y "En stock" (con filtro por centro), búsqueda por
+ * número de serie sobre la pestaña activa y lista paginada con el tamaño y el
+ * orden (número de serie) por defecto del backend. Lo compone `router.tsx`
+ * dentro del montaje de `transport-units` (contrato en `lib/tire-picker.ts`).
+ * Un clic o Enter sobre un neumático lo elige; las flechas solo lo marcan.
  */
 export function TirePicker({ selected, onSelect, onConfirm }: TirePickerProps) {
-  const { t, i18n } = useTranslation("tires")
+  const { t } = useTranslation("tires")
   const [search, setSearch] = React.useState("")
-  const [origin, setOrigin] = React.useState(ORIGIN_ALL)
+  // Al abrir, "En espera"; al volver a este paso, la pestaña de lo elegido.
+  const [tab, setTab] = React.useState<OriginTab>(
+    selected?.situacion ?? "EN_ESPERA"
+  )
+  const [center, setCenter] = React.useState(ALL_CENTERS)
   const [page, setPage] = React.useState(0)
   const debouncedSearch = useDebouncedValue(search)
   const centers = useStorageCenters()
@@ -77,38 +72,38 @@ export function TirePicker({ selected, onSelect, onConfirm }: TirePickerProps) {
   const query: TiresQuery = {
     ...DEFAULT_TIRES_QUERY,
     numeroSerie: debouncedSearch.trim(),
-    situaciones: situationsFor(origin),
-    centro: origin.startsWith(CENTER_PREFIX)
-      ? origin.slice(CENTER_PREFIX.length)
-      : null,
+    situaciones: [tab],
+    centro: tab === "EN_STOCK" && center !== ALL_CENTERS ? center : null,
     page,
-    size: PICKER_PAGE_SIZE,
+    // Sin `size`: tamaño de página por defecto del backend.
+    size: undefined,
   }
-  const { data, isPending, isError, isFetching, refetch } = useTires(query)
-  const tires = data?.content ?? []
-  const byId = new Map(tires.map((tire) => [tire.publicId, tire]))
-  const hasFilters = search.trim() !== "" || origin !== ORIGIN_ALL
+  const result = useTires(query)
+  const hasFilters =
+    search.trim() !== "" || (tab === "EN_STOCK" && center !== ALL_CENTERS)
 
-  const originOptions: FilterOption[] = [
-    { value: ORIGIN_ALL, label: t("picker.origin.all") },
-    { value: ORIGIN_WAITING, label: t("picker.origin.waiting") },
-    { value: ORIGIN_STOCK, label: t("picker.origin.stock") },
-    ...(centers.data ?? []).map((center) => ({
-      value: `${CENTER_PREFIX}${center.publicId}`,
-      label: t("picker.origin.center", {
-        name: center.nombre,
-        count: center.cantidadNeumaticosEnStock,
+  const centerOptions: FilterOption[] = [
+    { value: ALL_CENTERS, label: t("picker.center.all") },
+    ...(centers.data ?? []).map((option) => ({
+      value: option.publicId,
+      label: t("picker.center.option", {
+        name: option.nombre,
+        count: option.cantidadNeumaticosEnStock,
       }),
     })),
   ]
 
-  function pick(publicId: string, confirm: boolean) {
-    const tire = byId.get(publicId)
-    if (!tire) return
-    const picked = toPicked(tire)
-    onSelect(picked)
-    if (confirm) onConfirm(picked)
-  }
+  const results = (
+    <TireResults
+      result={result}
+      tab={tab}
+      hasFilters={hasFilters}
+      selected={selected}
+      onSelect={onSelect}
+      onConfirm={onConfirm}
+      onPageChange={setPage}
+    />
+  )
 
   return (
     <div data-slot="tire-picker" className="flex flex-col gap-3">
@@ -137,18 +132,73 @@ export function TirePicker({ selected, onSelect, onConfirm }: TirePickerProps) {
           />
         </div>
       </div>
-      <FilterSelect
-        id="tire-picker-origin"
-        label={t("picker.origin.label")}
-        options={originOptions}
-        value={origin}
-        className="lg:w-full"
-        onChange={(next) => {
-          setOrigin(next)
+
+      <Tabs
+        value={tab}
+        onValueChange={(next) => {
+          setTab(next as OriginTab)
           setPage(0)
         }}
-      />
+        className="gap-3"
+      >
+        <TabsList aria-label={t("picker.tabs.label")} className="w-full">
+          <TabsTrigger value="EN_ESPERA">
+            {t("picker.tabs.waiting")}
+          </TabsTrigger>
+          <TabsTrigger value="EN_STOCK">{t("picker.tabs.stock")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="EN_ESPERA" className="flex flex-col gap-3">
+          {results}
+        </TabsContent>
+        <TabsContent value="EN_STOCK" className="flex flex-col gap-3">
+          <FilterSelect
+            id="tire-picker-center"
+            label={t("picker.center.label")}
+            options={centerOptions}
+            value={center}
+            className="lg:w-full"
+            onChange={(next) => {
+              setCenter(next)
+              setPage(0)
+            }}
+          />
+          {results}
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
 
+/** Lista paginada de la pestaña activa, con sus estados de carga, vacío y error. */
+function TireResults({
+  result,
+  tab,
+  hasFilters,
+  selected,
+  onSelect,
+  onConfirm,
+  onPageChange,
+}: TirePickerProps & {
+  result: ReturnType<typeof useTires>
+  tab: OriginTab
+  hasFilters: boolean
+  onPageChange: (page: number) => void
+}) {
+  const { t, i18n } = useTranslation("tires")
+  const { data, isPending, isError, isFetching, refetch } = result
+  const tires = data?.content ?? []
+  const byId = new Map(tires.map((tire) => [tire.publicId, tire]))
+
+  function pick(publicId: string, confirm: boolean) {
+    const tire = byId.get(publicId)
+    if (!tire) return
+    const picked = toPicked(tire)
+    onSelect(picked)
+    if (confirm) onConfirm(picked)
+  }
+
+  return (
+    <>
       {isError ? (
         <Empty className="border">
           <EmptyHeader>
@@ -174,7 +224,9 @@ export function TirePicker({ selected, onSelect, onConfirm }: TirePickerProps) {
             <EmptyTitle>
               {hasFilters
                 ? t("picker.noResults.title")
-                : t("picker.empty.title")}
+                : tab === "EN_ESPERA"
+                  ? t("picker.empty.waiting")
+                  : t("picker.empty.stock")}
             </EmptyTitle>
             <EmptyDescription>
               {hasFilters
@@ -225,20 +277,13 @@ export function TirePicker({ selected, onSelect, onConfirm }: TirePickerProps) {
                         })}`}
                   </span>
                 </span>
-                <Badge
-                  variant={
-                    tire.situacionOperativaVigente === "EN_ESPERA"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  className="max-w-32 shrink-0"
-                >
-                  <span className="truncate">
-                    {tire.situacionOperativaVigente === "EN_ESPERA"
-                      ? t("situation.EN_ESPERA")
-                      : (tire.centroAlmacenamiento ?? t("situation.EN_STOCK"))}
-                  </span>
-                </Badge>
+                {tire.centroAlmacenamiento ? (
+                  <Badge variant="outline" className="max-w-32 shrink-0">
+                    <span className="truncate">
+                      {tire.centroAlmacenamiento}
+                    </span>
+                  </Badge>
+                ) : null}
               </label>
             )
           })}
@@ -255,9 +300,9 @@ export function TirePicker({ selected, onSelect, onConfirm }: TirePickerProps) {
             page: data.page.number + 1,
             pages: Math.max(data.page.totalPages, 1),
           })}
-          onPageChange={setPage}
+          onPageChange={onPageChange}
         />
       ) : null}
-    </div>
+    </>
   )
 }

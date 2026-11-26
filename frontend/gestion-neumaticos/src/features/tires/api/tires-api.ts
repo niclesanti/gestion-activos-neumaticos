@@ -63,7 +63,8 @@ export type TiresQuery = {
   /** `publicId` de un centro de almacenamiento; null = todos. */
   centro?: string | null
   page: number
-  size: number
+  /** Sin `size` se usa el tamaño por defecto del backend. */
+  size?: number
   direction: "asc" | "desc"
 }
 

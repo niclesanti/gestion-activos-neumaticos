@@ -22,7 +22,7 @@ Precisiones verificables:
 
 - Hoy no existe vínculo entre conductor y unidad: "el conductor de esa unidad" se elige entre todos los conductores activos.
 - "Disponible" = activo (sin baja lógica ni estado "De baja") con situación "En stock" o "En espera".
-- El buscador permite filtrar por número de serie y por origen: todos los disponibles, en espera, en stock de cualquier centro o de un centro en particular.
+- El buscador permite filtrar por número de serie y separa los disponibles en "en espera" y "en stock" (de cualquier centro o de uno en particular).
 - El desmontaje como operación independiente es HU-32; acá solo ocurre como parte del reemplazo (CA3).
 - Fuera de alcance: kilometraje al montar/desmontar y consultar el historial (HU-33).
 - Sin runner de tests en el frontend: CA1, CA3 (advertencia) y CA10 (UI) se verifican con lint + typecheck + build y prueba en navegador.

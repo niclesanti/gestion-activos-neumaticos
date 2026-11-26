@@ -106,12 +106,82 @@ Para tener en cuenta:
 - El panel no modal se renderiza dentro del `DialogContent` (modal) de la ficha, como popup anidado de Base UI. Conviene confirmar en el navegador que el foco y los clics dentro del panel funcionan con la ficha abierta.
 - Al cerrarse después de un éxito, el título del panel puede pasar un instante a "Reemplazar" mientras corre la animación, porque la ficha ya llegó actualizada.
 
-verify.sh: [OK]
+## verify.sh (primer ciclo)
 
-## Prueba en el stack real
+[OK]
+
+## Prueba en el stack real (primer ciclo)
 
 2026-11-25, `docker compose up -d --build`, Claude in Chrome (sin capturas de pantalla: el renderer no respondió a `captureScreenshot`; se verificó por árbol de accesibilidad, DOM y base de datos). Datos: dos neumáticos pasados a `EN_STOCK` en "Deposito Santa Fe" por SQL.
 - Editor, montaje (CA1, CA2, CA6): popover de E1-IZQ vacía → "Montar neumático"; drawer a la derecha y ficha corrida a la izquierda (sin solaparse), foco en la búsqueda; Origen lista centros con su stock y filtra por centro (2 resultados); clic avanza a Conductor; combobox busca en servidor; resumen correcto; "Confirmar montaje" deshabilitado hasta el checkbox. Toast "Neumático montado", slot ocupado. BD: `MONTADO`, sin centro, stock 2 → 1, evento `ASIGNACION` con unidad, posición, conductor y usuario. OK.
 - Editor, reemplazo (CA3, CA7): popover ocupado → "Reemplazar neumático"; aviso del saliente en paso 1; el montado no figura como disponible; "Omitir" conductor; paso 3 muestra el saliente, checkbox específico y "Confirmar reemplazo". BD: saliente `EN_ESPERA`, eventos `DESASIGNACION` + `ASIGNACION`. OK.
 - Lector (CA10): popovers sin acciones. OK.
 - Consola sin errores. No verificado visualmente: anillo/pulso del slot y vista mobile.
+
+## Cambios de diseño (2026-11-26)
+
+Segundo ciclo, solo frontend (el backend no cambió), por los pedidos del humano tras probar la HU. Lo descrito arriba sobre el select "Origen", el `Combobox` de conductor y la paginación de a 6 queda reemplazado por esto:
+
+1. **Scroll**: el cuerpo del `MountTireDrawer` (entre la cabecera y el pie fijos) es un `ScrollArea` de `components/ui/scroll-area.tsx`, con el mismo patrón flex que los dialogs de alta. Las listas de neumáticos y de conductores fluyen dentro de ese único scroll: no hay barras nativas ni scrolls anidados.
+2. **`TirePicker` con `Tabs`**: la búsqueda por número de serie queda arriba y aplica a la pestaña activa. Debajo están las pestañas "En espera" (la que abre por defecto) y "En stock". "En stock" agrega un select "Centro de almacenamiento", con "Todos los centros" por defecto y cada centro con su stock. Cada pestaña muestra su lista `RadioGroup` con `TablePagination`.
+   - La petición ya no manda `size`, así que usa el tamaño por defecto del backend (`TiresQuery.size` pasó a ser opcional). El orden sigue siendo por número de serie.
+   - Si se vuelve al paso 1 con un neumático ya elegido, abre en la pestaña de ese neumático.
+   - Los estados vacíos distinguen "No hay neumáticos en espera" y "No hay neumáticos en stock" de "sin resultados" (cuando hay búsqueda o centro elegido).
+3. **Conductor sin `Combobox`**: el paso tiene un campo "Buscar conductor" (con debounce sobre `q`) y debajo una lista `RadioGroup` paginada con el tamaño por defecto del backend. `searchDrivers(q, page)` ya no manda `size`.
+   - Al entrar se ve la primera página ordenada por apellido y nombre. Cada fila muestra "Apellido, Nombre" y el DNI.
+   - Un clic o Enter elige y avanza a Confirmar; las flechas solo marcan.
+   - La elección aparece en un recuadro con el botón "Quitar selección". "Omitir" y "Continuar" se mantienen.
+   - Tiene estados de carga, sin conductores, sin resultados y error con reintento.
+   - Borré `components/ui/combobox.tsx` y `input-group.tsx`, que quedaron sin uso.
+4. **Toasts al frente**: el `ToastViewport` (`components/ui/toast.tsx`) pasó de `z-50` a `z-100`. El portal de los toasts se monta antes que los de dialogs, drawers y sheets, así que con el mismo `z-50` quedaba tapado. El cambio vale para todas las toasts de la app.
+
+Textos es/en actualizados: `tires.json` (`picker.tabs.*`, `picker.center.*`, `picker.empty.*`) y `transport-units.json` (`mount.steps.driver.*`, con el título "¿Asociar un conductor?").
+
+### verify.sh (segundo ciclo)
+
+`./verify.sh --frontend`: [OK] en la coherencia de `feature_list.json`, lint, typecheck, build y `npm audit`. No lo corrí sobre el backend porque no lo toqué.
+
+### Pasos para el navegador (segundo ciclo)
+
+Como `victoria.editor` / `Editor.1234`, en `/transport-units`: abrir la ficha, tocar una rueda y elegir "Montar neumático".
+
+1. **Pestañas (punto 2)**:
+   - "En espera" aparece seleccionada al abrir y lista neumáticos en espera ordenados por serie, con paginación de 10 por página. La petición no lleva `size` y sí `situacion=EN_ESPERA`.
+   - En "En stock" aparece el select de centro con "Todos los centros" y cada centro con su stock. Elegir un centro filtra la lista (`situacion=EN_STOCK&centro=…`).
+   - La búsqueda por serie filtra la pestaña activa.
+   - Elegir un neumático de stock, avanzar y volver con "Atrás": la pestaña "En stock" vuelve marcada con el neumático elegido.
+2. **Conductor (punto 3)**:
+   - Al entrar al paso aparece la primera página de conductores ("Apellido, Nombre" y DNI) sin haber escrito nada.
+   - Buscar por apellido o DNI filtra la lista y vuelve a la página 1. Paginar funciona.
+   - Elegir uno (clic o Enter): pasa a Confirmar. Volver con "Atrás", tocar "Quitar selección" y comprobar que reaparece "Omitir".
+   - Con un término sin coincidencias se ve "No encontramos conductores".
+3. **Scroll (punto 1)**: con una lista que no entra en el panel (en mobile, < 768 px, o en una ventana baja), el contenido scrollea con la barra fina del `ScrollArea`. La cabecera con los pasos y el pie con los botones quedan fijos.
+4. **Toasts (punto 4)**:
+   - Con la ficha (dialog modal) abierta, confirmar un montaje: el toast "Neumático montado" se ve por encima del overlay de la ficha.
+   - Para ver un toast de error con el panel abierto: mientras el panel está en el paso 3, revocar el permiso no es práctico; alcanza con apagar el backend y confirmar, que da "error inesperado".
+   - Revisar también un alta de Configuración (dialog) y el logout (`AlertDialog`).
+   - **Riesgo a comprobar**: Base UI marca como "afuera" los portales que existían al abrir un dialog modal, así que hacer clic en la X de un toast con la ficha abierta podría cerrar la ficha. Si pasa, la solución sería cancelar ese cierre en el `onOpenChange` de los dialogs cuando el evento viene del toast. No lo hice porque cambia todos los dialogs y queda fuera de lo pedido.
+5. **Lector**: `victoria.lector` / `Lector.1234` sigue sin ver "Montar" ni "Reemplazar" en los popovers.
+
+verify.sh (segundo ciclo, leader, completo): [OK] (primero falló por clases de test compiladas con Java 25 en `target/`; `mvnw clean` y verde)
+
+### Prueba en el stack real (segundo ciclo, leader, 2026-11-26)
+
+Claude in Chrome, `victoria.editor`, unidad AB456EF (verificación por DOM/accesibilidad).
+- Pestañas: "En espera" seleccionada al abrir, 10 por página, `GET /neumaticos?situacion=EN_ESPERA&page=0&sort=numeroSerie,asc` (sin `size`); "En stock" con select "Todos los centros" + centros, lista filtrada. OK.
+- ScrollArea presente en el cuerpo del drawer. OK (barra no vista: sin capturas).
+- Conductor: sin combobox; primera página sin escribir (`/conductores?page=0`, 10 por página, "Apellido, Nombre"; DNI solo si existe); búsqueda filtra; vacío "No encontramos conductores"; "Quitar selección" vuelve a mostrar "Omitir". OK.
+- Toast "Neumático montado" es el elemento superior en su posición (z 1000 sobre dialog/drawer z 50); cerrarlo con la X no cierra la ficha. OK.
+- Defecto: el texto de ayuda del paso 1 seguía diciendo "filtrá por origen" → devuelto al implementer.
+- Observación (fuera de alcance): la búsqueda de conductores distingue acentos ("gomez" no encuentra "Gómez").
+
+## Arreglo: texto de ayuda del paso 1 (2026-11-26)
+
+- Defecto de la prueba en navegador: el paso 1 del `MountTireDrawer` todavía nombraba el filtro de origen, que ya no existe. Ahora el paso tiene las pestañas "En espera" / "En stock".
+- Cambié `mount.steps.tire.hint` en `transport-units.json`:
+  - es: "Buscá por número de serie o elegí la pestaña En espera o En stock. Elegilo con un clic o con Enter."
+  - en: "Search by serial number or pick the Waiting or In stock tab. Pick it with a click or Enter."
+- Revisé las claves `mount.*` (transport-units) y `picker.*` (tires) en es/en contra el código: no quedan claves sin uso. Las `picker.origin.*` y las viejas del paso conductor ya se habían eliminado en este ciclo, y las `mount.steps.*.label` se arman de forma dinámica.
+- `npm run typecheck` y `npm run lint` pasan.
+
+verify.sh --frontend (tras el arreglo de texto, leader): [OK]

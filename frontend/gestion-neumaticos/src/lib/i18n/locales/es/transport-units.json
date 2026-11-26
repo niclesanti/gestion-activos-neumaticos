@@ -144,17 +144,34 @@
       "tire": {
         "label": "Neumático",
         "heading": "¿Qué neumático vas a montar?",
-        "hint": "Buscá por número de serie o filtrá por origen. Elegilo con un clic o con Enter."
+        "hint": "Buscá por número de serie o elegí la pestaña En espera o En stock. Elegilo con un clic o con Enter."
       },
       "driver": {
         "label": "Conductor",
-        "heading": "¿Querés asociar un conductor al evento?",
+        "heading": "¿Asociar un conductor?",
         "hint": "Es opcional: queda registrado en el historial del neumático. Si no corresponde, tocá Omitir.",
+        "searchLabel": "Buscar conductor",
         "placeholder": "Buscá por apellido, nombre o DNI",
-        "loading": "Buscando conductores…",
-        "empty": "No encontramos conductores con ese apellido, nombre o DNI",
-        "error": "No pudimos cargar los conductores. Podés omitir este paso",
-        "dni": "DNI {{dni}}"
+        "listLabel": "Conductores activos",
+        "empty": {
+          "title": "No hay conductores activos",
+          "description": "Podés omitir este paso y continuar sin conductor."
+        },
+        "noResults": {
+          "title": "No encontramos conductores",
+          "description": "Probá con otro apellido, nombre o DNI."
+        },
+        "error": {
+          "title": "No pudimos cargar los conductores",
+          "description": "Reintentá o omití este paso.",
+          "retry": "Reintentar"
+        },
+        "clear": "Quitar selección",
+        "dni": "DNI {{dni}}",
+        "pagination": {
+          "summary_one": "{{count}} conductor · página {{page}} de {{pages}}",
+          "summary_other": "{{count}} conductores · página {{page}} de {{pages}}"
+        }
       },
       "confirm": {
         "label": "Confirmar",

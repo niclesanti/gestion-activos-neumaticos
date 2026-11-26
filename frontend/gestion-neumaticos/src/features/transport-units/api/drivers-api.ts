@@ -9,11 +9,14 @@ export type DriverOption = {
   dni: string | null
 }
 
-/** Conductores activos por apellido, nombre o DNI (paginado, orden por apellido). */
-export async function searchDrivers(q: string, size: number) {
+/**
+ * Conductores activos por apellido, nombre o DNI, paginados con el tamaño por
+ * defecto del backend (que siempre ordena por apellido y nombre).
+ */
+export async function searchDrivers(q: string, page: number) {
   const { data } = await apiClient.get<Page<DriverOption>>(
     "/api/v1/conductores",
-    { params: { q: q || undefined, page: 0, size } }
+    { params: { q: q || undefined, page } }
   )
   return data
 }

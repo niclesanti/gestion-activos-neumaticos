@@ -144,17 +144,34 @@
       "tire": {
         "label": "Tire",
         "heading": "Which tire are you mounting?",
-        "hint": "Search by serial number or filter by origin. Pick it with a click or Enter."
+        "hint": "Search by serial number or pick the Waiting or In stock tab. Pick it with a click or Enter."
       },
       "driver": {
         "label": "Driver",
-        "heading": "Do you want to link a driver to the event?",
+        "heading": "Link a driver?",
         "hint": "Optional: it is recorded in the tire history. If it does not apply, choose Skip.",
+        "searchLabel": "Search driver",
         "placeholder": "Search by last name, first name or ID",
-        "loading": "Searching drivers…",
-        "empty": "No drivers match that name or ID",
-        "error": "We could not load the drivers. You can skip this step",
-        "dni": "ID {{dni}}"
+        "listLabel": "Active drivers",
+        "empty": {
+          "title": "There are no active drivers",
+          "description": "You can skip this step and continue without a driver."
+        },
+        "noResults": {
+          "title": "No drivers found",
+          "description": "Try another last name, first name or ID."
+        },
+        "error": {
+          "title": "We could not load the drivers",
+          "description": "Retry or skip this step.",
+          "retry": "Retry"
+        },
+        "clear": "Clear selection",
+        "dni": "ID {{dni}}",
+        "pagination": {
+          "summary_one": "{{count}} driver · page {{page}} of {{pages}}",
+          "summary_other": "{{count}} drivers · page {{page}} of {{pages}}"
+        }
       },
       "confirm": {
         "label": "Confirm",

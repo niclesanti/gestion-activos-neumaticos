@@ -8,7 +8,7 @@
 - [x] T6 — Eventos `NeumaticoAsignado`/`NeumaticoDesasignado`, servicio `asignarNeumatico` y endpoint `PUT`. Archivos: `unidades_transporte/**`, `exception/{PosicionOcupadaException,ControllerAdvisor}.java`. Cubre: CA2, CA3, CA5, CA7, CA8, CA9, CA10.
 - [x] T7 — Subtipos y listener de trazabilidad. Archivos: `trazabilidad/**`. Cubre: CA2, CA7.
 - [x] T8 — Tests backend (fixtures, unitarios, `@WebMvcTest` + REST Docs, integración con roles reales, `ModularityTests`). Archivos: `src/test/java/**`. Cubre: CA2 a CA10.
-- [x] T9 — Instalar `drawer`, `combobox`, `radio-group`, `checkbox`, `alert`. Archivos: `components/ui/*`. Cubre: CA1.
+- [x] T9 — Instalar `drawer`, `radio-group`, `checkbox`, `alert` (`combobox` se quitó en el 2.º ciclo). Archivos: `components/ui/*`. Cubre: CA1.
 - [x] T10 — Requests y hooks (búsqueda ampliada, centros, conductores, asignar) y acción `transportUnits.assignTire`. Archivos: `features/tires/{api,hooks}/*`, `features/transport-units/{api,hooks}/*`, `lib/access.ts`. Cubre: CA1, CA2, CA10.
 - [x] T11 — `TirePicker` y contrato `lib/tire-picker.ts`, compuesto desde `router.tsx`. Archivos: `features/tires/components/{tire-picker,tire-filters}.tsx`, `lib/tire-picker.ts`, `app/router.tsx`, `features/transport-units/pages/transport-units-page.tsx`. Cubre: CA1.
 - [x] T12 — Acción en el popover y `MountTireDrawer` de 3 pasos (neumático, conductor, confirmación inmutable con reemplazo), resaltado del slot y errores. Archivos: `features/transport-units/components/*`. Cubre: CA1, CA2, CA3, CA10.

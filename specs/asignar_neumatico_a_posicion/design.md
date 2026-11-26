@@ -14,12 +14,12 @@
 **Frontend — montaje guiado en 3 pasos**:
 - Popover del slot en la ficha, si `canPerform('transportUnits.assignTire')`: acción "Montar neumático" (vacío) o "Reemplazar neumático" (ocupado). Lector: sin acciones.
 - `MountTireDrawer`: **`drawer` no modal** (derecha en escritorio, abajo en mobile); el slot destino se resalta (anillo + pulso `motion-safe`) vía render-prop de `AxleDiagram`. Cabecera fija "AB123CD · E2-IZQ-EXT · Tracción" + indicador Neumático → Conductor → Confirmar (volver conserva lo elegido). Pie fijo Atrás/Continuar.
-  1. **Neumático**: "Buscá por número de serie o filtrá por origen", foco en la búsqueda; elegir (clic o Enter) avanza. Si reemplaza, aviso del saliente.
-  2. **Conductor**: "¿Querés asociar un conductor al evento?"; `Combobox` con búsqueda en servidor; "Continuar" u "Omitir".
+  1. **Neumático**: "Buscá por serie o elegí la pestaña", foco en la búsqueda; elegir (clic o Enter) avanza. Si reemplaza, aviso del saliente.
+  2. **Conductor**: "¿Asociar un conductor?"; campo de búsqueda + lista paginada `RadioGroup` (1.ª página al abrir, por apellido/nombre); "Continuar" u "Omitir".
   3. **Confirmar**: resumen origen → destino (+ conductor y saliente), cada bloque con "Cambiar". `alert`: "queda registrado en el historial de forma inmutable"; `checkbox` "Entiendo…" (texto de reemplazo si aplica: es la advertencia de CA3, envía `reemplazar=true`) habilita "Confirmar montaje".
 - Éxito: refresca la ficha, invalida `["tires"]`, `notify`, cierra. 409 ocupada (carrera) → refetch y vuelve al paso 3 como reemplazo; 409 no disponible / 404 → paso 1 con aviso inline y refetch.
-- `TirePicker` (feature `tires`; reutiliza `useTires`, la búsqueda y `FilterSelect`): select "Origen" (disponibles / en espera / en stock / un centro), lista `RadioGroup` (serie, marca, estado, "En espera" o centro), `TablePagination`. Lo compone `router.tsx` por el prop `renderTirePicker` de `TransportUnitsPage` (como `catalogs`); contrato en `lib/tire-picker.ts`.
-- Reutiliza `popover`, `badge`, `select`, `input`, `empty`. **A instalar**: `npx shadcn@latest add drawer combobox radio-group checkbox alert`.
+- `TirePicker` (feature `tires`; reutiliza `useTires`, la búsqueda y `FilterSelect`): `tabs` "En espera" (por defecto) / "En stock" (+ select de centro), con lista `RadioGroup` y `TablePagination` (tamaño por defecto del backend). Lo inyecta `router.tsx` (`renderTirePicker`, contrato en `lib/tire-picker.ts`).
+- Reutiliza `popover`, `select`, `input`, `empty`, `tabs`, `scroll-area`. **A instalar**: `drawer radio-group checkbox alert`. Toasts sobre dialogs y drawer.
 
 ## 2. Archivos
 
