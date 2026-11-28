@@ -81,6 +81,8 @@ export const ACTION_ACCESS = {
   "transportUnits.create": ADMIN_AND_EDITOR,
   // Montar o reemplazar el neumático de una posición desde la ficha (HU-31).
   "transportUnits.assignTire": ADMIN_AND_EDITOR,
+  // Desmontar el neumático de una posición desde la ficha (HU-32).
+  "transportUnits.unassignTire": ADMIN_AND_EDITOR,
   "storageCenters.create": ADMIN_AND_EDITOR,
 } as const satisfies Record<string, readonly AccessLevel[]>
 

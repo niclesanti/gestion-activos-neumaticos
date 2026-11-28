@@ -54,6 +54,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.conductores.api.ConductorApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.NeumaticoNoDisponibleException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionLibreException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionOcupadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.event.NeumaticoAsignado;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.event.NeumaticoDesasignado;
@@ -280,6 +281,93 @@ class UnidadTransporteServiceImplTest {
 
             assertThatThrownBy(() -> servicio.asignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, asignacionRequest(),
                     USUARIO)).isInstanceOf(PosicionOcupadaException.class)
+                    .hasCauseInstanceOf(DataIntegrityViolationException.class);
+
+            verifyNoInteractions(eventPublisher);
+        }
+
+    }
+
+    @Nested
+    @DisplayName("desasignarNeumatico")
+    class DesasignarNeumatico {
+
+        private UnidadTransporte unidad;
+
+        @BeforeEach
+        void unidadEncontrada() {
+            unidad = unidadVacia();
+            lenient().when(unidadTransporteRepository.findBloqueadaByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.of(unidad));
+            lenient().when(neumaticoApi.buscarMontadosPorIds(any())).thenReturn(Map.of());
+        }
+
+        @Test
+        @DisplayName("CA2/CA5/CA6: desmonta, libera la posición, firma la unidad y publica la desasignación")
+        void desmonta() {
+            unidad.getSlots().get(0).setNeumaticoActualId(NEUMATICO_MONTADO_ID);
+            Long slotId = unidad.getSlots().get(0).getId();
+            when(neumaticoApi.desmontar(NEUMATICO_MONTADO_ID)).thenReturn(neumaticoSaliente());
+
+            UnidadTransporteDetalleDTO detalle = servicio.desasignarNeumatico(UNIDAD_PUBLIC_ID, "e1-izq", USUARIO);
+
+            assertThat(detalle.slots().get(0).ocupado()).isFalse();
+            assertThat(unidad.getSlots().get(0).getNeumaticoActualId()).isNull();
+            assertThat(unidad.getUpdatedAt()).isNotNull();
+            verify(unidadTransporteRepository).flush();
+            verify(neumaticoApi, never()).montar(any(), any());
+            ArgumentCaptor<Object> eventos = ArgumentCaptor.forClass(Object.class);
+            verify(eventPublisher, times(1)).publishEvent(eventos.capture());
+            NeumaticoDesasignado evento = (NeumaticoDesasignado) eventos.getValue();
+            assertThat(evento.neumaticoId()).isEqualTo(NEUMATICO_MONTADO_ID);
+            assertThat(evento.numeroSerie()).isEqualTo(neumaticoSaliente().numeroSerie());
+            assertThat(evento.unidadId()).isEqualTo(unidad.getId());
+            assertThat(evento.patente()).isEqualTo(PATENTE);
+            assertThat(evento.slotId()).isEqualTo(slotId);
+            assertThat(evento.posicion()).isEqualTo(CODIGO_SLOT);
+            assertThat(evento.usuario()).isEqualTo(USUARIO);
+            assertThat(evento.fecha()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("CA7: posición libre: 409 sin desmontar ni publicar")
+        void posicionLibre() {
+            assertThatThrownBy(() -> servicio.desasignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, USUARIO))
+                    .isInstanceOf(PosicionLibreException.class)
+                    .hasMessage("La posición E1-IZQ no tiene un neumático montado");
+
+            verify(neumaticoApi, never()).desmontar(any());
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("CA8: unidad inexistente o de baja, o posición ajena: 404 sin cambios")
+        void noEncontrados() {
+            when(unidadTransporteRepository.findBloqueadaByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.empty());
+            assertThatThrownBy(() -> servicio.desasignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, USUARIO))
+                    .isInstanceOf(EntidadNoEncontradaException.class)
+                    .hasMessage(UnidadTransporteServiceImpl.MENSAJE_UNIDAD_INEXISTENTE);
+
+            when(unidadTransporteRepository.findBloqueadaByPublicIdAndDeletedAtIsNull(UNIDAD_PUBLIC_ID))
+                    .thenReturn(Optional.of(unidad));
+            assertThatThrownBy(() -> servicio.desasignarNeumatico(UNIDAD_PUBLIC_ID, "E9-IZQ", USUARIO))
+                    .isInstanceOf(EntidadNoEncontradaException.class)
+                    .hasMessage("La posición indicada no pertenece a la unidad");
+
+            verify(neumaticoApi, never()).desmontar(any());
+            verifyNoInteractions(eventPublisher);
+        }
+
+        @Test
+        @DisplayName("un conflicto de la base al liberar responde 409 de posición libre, sin evento")
+        void carrera() {
+            unidad.getSlots().get(0).setNeumaticoActualId(NEUMATICO_MONTADO_ID);
+            when(neumaticoApi.desmontar(NEUMATICO_MONTADO_ID)).thenReturn(neumaticoSaliente());
+            doThrow(new DataIntegrityViolationException("conflicto")).when(unidadTransporteRepository).flush();
+
+            assertThatThrownBy(() -> servicio.desasignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, USUARIO))
+                    .isInstanceOf(PosicionLibreException.class)
                     .hasCauseInstanceOf(DataIntegrityViolationException.class);
 
             verifyNoInteractions(eventPublisher);

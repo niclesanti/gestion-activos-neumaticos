@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -180,6 +181,36 @@ public class UnidadTransporteController {
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(unidadTransporteService.asignarNeumatico(publicId, codigo, request,
                 jwt.getSubject()));
+    }
+
+    @DeleteMapping("/{publicId}/slots/{codigo}/neumatico")
+    @PreAuthorize("hasRole('EDITOR')")
+    @Operation(
+            summary = "Desmontar el neumático de una posición",
+            description = "Desmonta el neumático montado en la posición indicada por su código (ej. `E2-IZQ-EXT`) "
+                    + "(HU-32): la posición queda libre y el neumático en espera, sin unidad ni posición. "
+                    + "Registra la desasignación en el historial de forma asíncrona. Responde 200 con la ficha "
+                    + "actualizada de la unidad. Solo editores y administradores.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Neumático desmontado; ficha actualizada de la unidad"),
+            @ApiResponse(responseCode = "400", description = "El identificador no es un UUID",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, inválido, expirado o revocado",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "403", description = "El usuario no es editor ni administrador",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "404", description = "La unidad no existe o está dada de baja, o la "
+                    + "posición no es de la unidad",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class))),
+            @ApiResponse(responseCode = "409", description = "La posición ya está libre",
+                    content = @Content(schema = @Schema(implementation = ExceptionInfo.class)))
+    })
+    public ResponseEntity<UnidadTransporteDetalleDTO> desasignarNeumatico(
+            @PathVariable UUID publicId,
+            @PathVariable String codigo,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(unidadTransporteService.desasignarNeumatico(publicId, codigo, jwt.getSubject()));
     }
 
     @GetMapping("/auditoria")

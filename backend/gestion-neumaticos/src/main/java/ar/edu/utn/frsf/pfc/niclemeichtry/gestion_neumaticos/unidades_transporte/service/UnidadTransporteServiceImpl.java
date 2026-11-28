@@ -25,6 +25,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDup
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.NeumaticoNoDisponibleException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionLibreException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionOcupadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoApi;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.neumaticos.api.NeumaticoMontadoDTO;
@@ -58,6 +59,7 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
     static final String MENSAJE_UNIDAD_INEXISTENTE = "La unidad de transporte indicada no existe";
     static final String MENSAJE_CONFIGURACION_INEXISTENTE = "La configuración de unidad indicada no existe";
     private static final String MENSAJE_POSICION_OCUPADA = "La posición %s ya tiene un neumático montado";
+    private static final String MENSAJE_POSICION_LIBRE = "La posición %s no tiene un neumático montado";
 
     private final EnsambladorAuditoria ensamblador;
     private final UnidadTransporteRepository unidadTransporteRepository;
@@ -169,7 +171,7 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
                         slot.getCodigo(), publicId);
                 throw new PosicionOcupadaException(MENSAJE_POSICION_OCUPADA.formatted(slot.getCodigo()));
             }
-            saliente = neumaticoApi.desmontar(slot.getNeumaticoActualId());
+            saliente = desmontarDelSlot(slot);
             if (saliente.publicId().equals(request.neumaticoPublicId())) {
                 log.warn("Montaje rechazado: el neumático {} ya está en la posición {} de la unidad {}",
                         saliente.publicId(), slot.getCodigo(), publicId);
@@ -192,8 +194,7 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
         }
 
         if (saliente != null) {
-            eventPublisher.publishEvent(new NeumaticoDesasignado(saliente.id(), saliente.numeroSerie(),
-                    unidad.getId(), unidad.getPatente(), slot.getId(), slot.getCodigo(), usuario, fecha));
+            eventPublisher.publishEvent(eventoDesasignacion(unidad, slot, saliente, usuario, fecha));
         }
         eventPublisher.publishEvent(new NeumaticoAsignado(entrante.id(), entrante.numeroSerie(), unidad.getId(),
                 unidad.getPatente(), slot.getId(), slot.getCodigo(),
@@ -204,6 +205,57 @@ public class UnidadTransporteServiceImpl implements UnidadTransporteService {
                 unidad.getPatente(), slot.getCodigo(), usuario, saliente == null ? null : saliente.publicId(),
                 conductor == null ? null : conductor.publicId());
         return armarDetalle(unidad);
+    }
+
+    @Override
+    @Transactional
+    public UnidadTransporteDetalleDTO desasignarNeumatico(UUID publicId, String codigo, String usuario) {
+        log.debug("Desmontando neumático: unidad={}, posicion={}, usuario={}", publicId, codigo, usuario);
+        UnidadTransporte unidad = unidadTransporteRepository.findBloqueadaByPublicIdAndDeletedAtIsNull(publicId)
+                .orElseThrow(() -> {
+                    log.warn("Desmontaje rechazado: la unidad de transporte {} no existe o está dada de baja",
+                            publicId);
+                    return new EntidadNoEncontradaException(MENSAJE_UNIDAD_INEXISTENTE);
+                });
+        SlotUnidadTransporte slot = unidad.buscarSlot(codigo)
+                .orElseThrow(() -> {
+                    log.warn("Desmontaje rechazado: la posición {} no es de la unidad {}", codigo, publicId);
+                    return new EntidadNoEncontradaException("La posición indicada no pertenece a la unidad");
+                });
+        if (!slot.estaOcupado()) {
+            log.warn("Desmontaje rechazado: la posición {} de la unidad {} ya está libre", slot.getCodigo(),
+                    publicId);
+            throw new PosicionLibreException(MENSAJE_POSICION_LIBRE.formatted(slot.getCodigo()));
+        }
+        Instant fecha = Instant.now();
+
+        NeumaticoMontajeDTO saliente = desmontarDelSlot(slot);
+        try {
+            slot.liberar();
+            // El slot es un hijo del agregado: se toca la raíz para que la unidad quede firmada (HU-43).
+            unidad.registrarModificacion(fecha);
+            unidadTransporteRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Desmontaje rechazado por la base: la posición {} de la unidad {} cambió en paralelo "
+                    + "(usuario {})", slot.getCodigo(), publicId, usuario);
+            throw new PosicionLibreException(MENSAJE_POSICION_LIBRE.formatted(slot.getCodigo()), ex);
+        }
+
+        eventPublisher.publishEvent(eventoDesasignacion(unidad, slot, saliente, usuario, fecha));
+        log.info("Neumático {} desmontado de {} {} por {}", saliente.publicId(), unidad.getPatente(),
+                slot.getCodigo(), usuario);
+        return armarDetalle(unidad);
+    }
+
+    /** Desmonta el neumático que ocupa el slot: pasa a espera, sin posición; no toca el slot. */
+    private NeumaticoMontajeDTO desmontarDelSlot(SlotUnidadTransporte slot) {
+        return neumaticoApi.desmontar(slot.getNeumaticoActualId());
+    }
+
+    private NeumaticoDesasignado eventoDesasignacion(UnidadTransporte unidad, SlotUnidadTransporte slot,
+            NeumaticoMontajeDTO saliente, String usuario, Instant fecha) {
+        return new NeumaticoDesasignado(saliente.id(), saliente.numeroSerie(), unidad.getId(), unidad.getPatente(),
+                slot.getId(), slot.getCodigo(), usuario, fecha);
     }
 
     /** El conductor es opcional: null si no se indicó, error si se indicó uno inexistente o dado de baja. */

@@ -9,6 +9,12 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +31,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.TestcontainersConfiguration;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.NeumaticoNoDisponibleException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionLibreException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionOcupadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.AsignacionNeumaticoRequestDTO;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.unidades_transporte.domain.dto.SlotDetalleDTO;
@@ -272,6 +279,96 @@ class AsignacionNeumaticoIntegrationTests {
 
 		assertThat(neumatico(entrante).get("situacion_operativa_vigente")).isEqualTo("EN_STOCK");
 		assertThat(stockDelCentro()).isOne();
+	}
+
+	@Test
+	@DisplayName("HU-32 CA2/CA5/CA6: desmonta, deja el neumático en espera sin centro ni posición, libera la "
+			+ "posición, firma la unidad y registra la desasignación; la posición se puede volver a montar")
+	void desmonta() {
+		UUID montado = neumaticoYaMontado("MON-010");
+		UUID otro = insertarNeumatico("ESP-010", "NUEVO_USADO", "EN_ESPERA", false);
+
+		UnidadTransporteDetalleDTO detalle = unidadTransporteService.desasignarNeumatico(unidad, "e1-izq",
+				editor.toString());
+
+		SlotDetalleDTO slot = detalle.slots().stream().filter(s -> s.codigo().equals("E1-IZQ")).findFirst()
+				.orElseThrow();
+		assertThat(slot.ocupado()).isFalse();
+		assertThat(slot.neumatico()).isNull();
+		Map<String, Object> desmontado = neumatico(montado);
+		assertThat(desmontado.get("situacion_operativa_vigente")).isEqualTo("EN_ESPERA");
+		assertThat(desmontado.get("en_espera")).isEqualTo(true);
+		assertThat(desmontado.get("slot_montado_id")).isNull();
+		assertThat(desmontado.get("centro_almacenamiento_id")).isNull();
+		assertThat(owner.queryForObject("SELECT neumatico_actual_id FROM unidades_transporte.slots_unidad_transporte "
+				+ "WHERE nro_eje = 1", Long.class)).isNull();
+		assertThat(owner.queryForObject("SELECT updated_by FROM unidades_transporte.unidades_transporte "
+				+ "WHERE public_id = ?", UUID.class, unidad)).isEqualTo(editor);
+		assertThat(eventos(montado, 1)).singleElement().satisfies(evento -> {
+			assertThat(evento.get("tipo")).isEqualTo("DESASIGNACION");
+			assertThat(evento.get("numero_serie_neumatico")).isEqualTo("MON-010");
+			assertThat(evento.get("patente_unidad")).isEqualTo("AB123CD");
+			assertThat(evento.get("posicion_slot")).isEqualTo("E1-IZQ");
+			assertThat(evento.get("usuario")).isEqualTo(editor.toString());
+		});
+
+		unidadTransporteService.asignarNeumatico(unidad, "E1-IZQ",
+				new AsignacionNeumaticoRequestDTO(otro, null, null), editor.toString());
+		assertThat(neumatico(otro).get("slot_montado_id")).isEqualTo(slotE1());
+	}
+
+	@Test
+	@DisplayName("HU-32 CA7/CA8: posición libre: 409 sin eventos; unidad de baja o posición ajena: 404")
+	void desmontajeRechazado() {
+		UUID dadaDeBaja = UUID.randomUUID();
+		insertarUnidad("XYZ789", dadaDeBaja, true);
+
+		assertThatThrownBy(() -> unidadTransporteService.desasignarNeumatico(unidad, "E1-IZQ", editor.toString()))
+				.isInstanceOf(PosicionLibreException.class);
+		assertThatThrownBy(() -> unidadTransporteService.desasignarNeumatico(dadaDeBaja, "E1-IZQ",
+				editor.toString())).isInstanceOf(EntidadNoEncontradaException.class);
+		assertThatThrownBy(() -> unidadTransporteService.desasignarNeumatico(unidad, "E3-IZQ-EXT",
+				editor.toString())).isInstanceOf(EntidadNoEncontradaException.class);
+		assertThatThrownBy(() -> unidadTransporteService.desasignarNeumatico(UUID.randomUUID(), "E1-IZQ",
+				editor.toString())).isInstanceOf(EntidadNoEncontradaException.class);
+
+		assertThat(owner.queryForObject("SELECT count(*) FROM trazabilidad.eventos_neumatico", Integer.class))
+				.isZero();
+	}
+
+	@Test
+	@DisplayName("HU-32: dos desmontajes simultáneos de la misma posición: uno gana y el otro recibe 409, con un "
+			+ "solo evento")
+	void desmontajeDoble() throws Exception {
+		UUID montado = neumaticoYaMontado("MON-011");
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			CountDownLatch salida = new CountDownLatch(1);
+			Callable<Object> desmontaje = () -> {
+				SecurityContextHolder.getContext().setAuthentication(autenticacion(editor, NivelAcceso.ROLE_EDITOR));
+				try {
+					salida.await();
+					return unidadTransporteService.desasignarNeumatico(unidad, "E1-IZQ", editor.toString());
+				} catch (PosicionLibreException ex) {
+					return ex;
+				} finally {
+					SecurityContextHolder.clearContext();
+				}
+			};
+			Future<Object> primero = pool.submit(desmontaje);
+			Future<Object> segundo = pool.submit(desmontaje);
+			salida.countDown();
+
+			List<Object> resultados = List.of(primero.get(30, TimeUnit.SECONDS), segundo.get(30, TimeUnit.SECONDS));
+
+			assertThat(resultados).filteredOn(r -> r instanceof UnidadTransporteDetalleDTO).hasSize(1);
+			assertThat(resultados).filteredOn(r -> r instanceof PosicionLibreException).hasSize(1);
+		} finally {
+			pool.shutdownNow();
+		}
+		assertThat(neumatico(montado).get("situacion_operativa_vigente")).isEqualTo("EN_ESPERA");
+		assertThat(eventos(montado, 1)).singleElement()
+				.satisfies(evento -> assertThat(evento.get("tipo")).isEqualTo("DESASIGNACION"));
 	}
 
 }

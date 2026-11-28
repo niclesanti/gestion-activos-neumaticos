@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { ArrowLeftRightIcon, PlusIcon } from "lucide-react"
+import { ArrowLeftRightIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
@@ -19,16 +19,19 @@ import { cn } from "@/lib/utils"
  * pantalla) y abre, también al pasar el mouse, los datos del neumático
  * montado o la indicación de que está vacía. Con `onMount` (editor y
  * administrador, HU-31) suma la acción de montar o reemplazar el neumático;
- * sin ella (lector) solo muestra los datos.
+ * sin ella (lector) solo muestra los datos. Con `onUnmount` (HU-32), en una
+ * posición ocupada suma la acción de desmontar el neumático.
  */
 export function SlotPopover({
   slot,
   className,
   onMount,
+  onUnmount,
 }: {
   slot: UnitSlotDetail
   className: string
   onMount?: (slot: UnitSlotDetail) => void
+  onUnmount?: (slot: UnitSlotDetail) => void
 }) {
   const { t } = useTranslation("transport-units")
   const [open, setOpen] = React.useState(false)
@@ -70,6 +73,20 @@ export function SlotPopover({
               <PlusIcon data-icon="inline-start" />
             )}
             {slot.ocupado ? t("mount.replaceAction") : t("mount.mountAction")}
+          </Button>
+        ) : null}
+        {onUnmount && slot.ocupado ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setOpen(false)
+              onUnmount(slot)
+            }}
+          >
+            <Trash2Icon data-icon="inline-start" />
+            {t("unmount.action")}
           </Button>
         ) : null}
       </PopoverContent>

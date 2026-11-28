@@ -38,6 +38,7 @@ import type {
 import { AxleDiagram } from "@/features/transport-units/components/axle-diagram"
 import { MountTireDrawer } from "@/features/transport-units/components/mount-tire-drawer"
 import { SlotPopover } from "@/features/transport-units/components/slot-popover"
+import { UnassignTireDialog } from "@/features/transport-units/components/unassign-tire-dialog"
 import { useTransportUnit } from "@/features/transport-units/hooks/use-transport-unit"
 import { canPerform, useAccessLevel } from "@/lib/access"
 import { getHttpStatus } from "@/lib/api/client"
@@ -61,14 +62,26 @@ export function TransportUnitDetailDialog({
   const { t } = useTranslation("transport-units")
   const { data, isPending, isError, error, refetch } =
     useTransportUnit(publicId)
-  const canMount = canPerform(useAccessLevel(), "transportUnits.assignTire")
+  const level = useAccessLevel()
+  const canMount = canPerform(level, "transportUnits.assignTire")
+  const canUnmount = canPerform(level, "transportUnits.unassignTire")
   // Posición del montaje en curso; se conserva al cerrar para la animación.
   const [mountSlot, setMountSlot] = React.useState<string | null>(null)
   const [mounting, setMounting] = React.useState(false)
+  // Posición del desmontaje en curso; se conserva al cerrar para la animación.
+  const [unmountSlot, setUnmountSlot] = React.useState<UnitSlotDetail | null>(
+    null
+  )
+  const [unmounting, setUnmounting] = React.useState(false)
 
   function startMount(slot: UnitSlotDetail) {
     setMountSlot(slot.codigo)
     setMounting(true)
+  }
+
+  function startUnmount(slot: UnitSlotDetail) {
+    setUnmountSlot(slot)
+    setUnmounting(true)
   }
 
   return (
@@ -77,6 +90,7 @@ export function TransportUnitDetailDialog({
       onOpenChange={(open) => {
         if (!open) {
           setMounting(false)
+          setUnmounting(false)
           onClose()
         }
       }}
@@ -134,8 +148,15 @@ export function TransportUnitDetailDialog({
             ) : (
               <UnitDetail
                 unit={data}
-                highlightedSlot={mounting ? mountSlot : null}
+                highlightedSlot={
+                  mounting
+                    ? mountSlot
+                    : unmounting
+                      ? (unmountSlot?.codigo ?? null)
+                      : null
+                }
                 onMount={canMount ? startMount : undefined}
+                onUnmount={canUnmount ? startUnmount : undefined}
               />
             )}
           </div>
@@ -147,6 +168,16 @@ export function TransportUnitDetailDialog({
             open={mounting}
             onOpenChange={setMounting}
             onRefreshUnit={async () => (await refetch()).data}
+          />
+        ) : null}
+        {canUnmount && data ? (
+          <UnassignTireDialog
+            unitPublicId={data.publicId}
+            plate={data.patente}
+            slot={unmountSlot}
+            open={unmounting}
+            onOpenChange={setUnmounting}
+            onRefreshUnit={refetch}
           />
         ) : null}
       </DialogContent>
@@ -167,12 +198,15 @@ function UnitDetail({
   unit,
   highlightedSlot,
   onMount,
+  onUnmount,
 }: {
   unit: TransportUnitDetail
   /** Posición destino del montaje en curso: se resalta en el chasis. */
   highlightedSlot: string | null
   /** Sin ella (lector) las posiciones solo muestran sus datos. */
   onMount?: (slot: UnitSlotDetail) => void
+  /** Sin ella (lector) no se ofrece desmontar. */
+  onUnmount?: (slot: UnitSlotDetail) => void
 }) {
   const { t } = useTranslation("transport-units")
   const { configuracion } = unit
@@ -194,6 +228,7 @@ function UnitDetail({
       <SlotPopover
         slot={slot}
         onMount={onMount}
+        onUnmount={onUnmount}
         className={cn(
           className,
           code === highlightedSlot &&

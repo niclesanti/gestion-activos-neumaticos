@@ -32,6 +32,7 @@ import static org.springframework.restdocs.request.RequestDocumentation.paramete
 import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -73,6 +74,7 @@ import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.CorsConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.config.PaginacionConfig;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.NeumaticoNoDisponibleException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.ParametroInvalidoException;
+import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionLibreException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionOcupadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadDuplicadaException;
 import ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException;
@@ -555,6 +557,98 @@ class UnidadTransporteControllerTest {
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.status").value(409))
                     .andExpect(jsonPath("$.message").value("no disponible"));
+        }
+
+    }
+
+    @Nested
+    @DisplayName("DELETE /api/v1/unidades-transporte/{publicId}/slots/{codigo}/neumatico")
+    class DesasignarNeumatico {
+
+        private static final String DESMONTAJE = UNIDADES + "/{publicId}/slots/{codigo}/neumatico";
+
+        private UnidadTransporteDetalleDTO detalle() {
+            return mapper.toDetalleDTO(unidadConNeumaticoMontado(),
+                    Map.of(NEUMATICO_MONTADO_ID, neumaticoMontado()));
+        }
+
+        @Test
+        @DisplayName("CA5: 200 con la ficha actualizada; el usuario es el sub del token")
+        void desmontaConEditor() throws Exception {
+            when(unidadTransporteService.desasignarNeumatico(UNIDAD_PUBLIC_ID, CODIGO_SLOT, USUARIO.toString()))
+                    .thenReturn(detalle());
+
+            mockMvc.perform(delete(DESMONTAJE, UNIDAD_PUBLIC_ID, CODIGO_SLOT).with(usuario("ROLE_EDITOR")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.publicId").value(UNIDAD_PUBLIC_ID.toString()))
+                    .andExpect(jsonPath("$.slots[0].codigo").value(CODIGO_SLOT))
+                    .andDo(document("unidad-transporte-desmontar-neumatico",
+                            preprocessResponse(prettyPrint()),
+                            pathParameters(
+                                    parameterWithName("publicId").description("Identificador público de la unidad"),
+                                    parameterWithName("codigo").description("Código de la posición (E1-IZQ, "
+                                            + "E2-DER-INT, AUX-1…)"))));
+        }
+
+        @Test
+        @DisplayName("el administrador también puede desmontar")
+        void desmontaConAdministrador() throws Exception {
+            when(unidadTransporteService.desasignarNeumatico(eq(UNIDAD_PUBLIC_ID), eq(CODIGO_SLOT), anyString()))
+                    .thenReturn(detalle());
+
+            mockMvc.perform(delete(DESMONTAJE, UNIDAD_PUBLIC_ID, CODIGO_SLOT).with(usuario("ROLE_ADMINISTRADOR")))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("CA9: 403 para el lector, sin llegar al servicio")
+        void lectorNoDesmonta() throws Exception {
+            mockMvc.perform(delete(DESMONTAJE, UNIDAD_PUBLIC_ID, CODIGO_SLOT).with(usuario("ROLE_LECTOR")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.status").value(403));
+
+            verifyNoInteractions(unidadTransporteService);
+        }
+
+        @Test
+        @DisplayName("401 sin token")
+        void sinToken() throws Exception {
+            mockMvc.perform(delete(DESMONTAJE, UNIDAD_PUBLIC_ID, CODIGO_SLOT))
+                    .andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(unidadTransporteService);
+        }
+
+        @Test
+        @DisplayName("400 si el identificador de la unidad no es un UUID")
+        void idInvalido() throws Exception {
+            mockMvc.perform(delete(DESMONTAJE, "no-es-uuid", CODIGO_SLOT).with(usuario("ROLE_EDITOR")))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(unidadTransporteService);
+        }
+
+        @Test
+        @DisplayName("CA8: 404 si la unidad no existe o la posición no es de la unidad")
+        void noEncontrado() throws Exception {
+            when(unidadTransporteService.desasignarNeumatico(any(), any(), anyString()))
+                    .thenThrow(new EntidadNoEncontradaException("La posición indicada no pertenece a la unidad"));
+
+            mockMvc.perform(delete(DESMONTAJE, UNIDAD_PUBLIC_ID, "E9-IZQ").with(usuario("ROLE_EDITOR")))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("La posición indicada no pertenece a la unidad"));
+        }
+
+        @Test
+        @DisplayName("CA7: 409 con ExceptionInfo si la posición ya está libre")
+        void libre() throws Exception {
+            when(unidadTransporteService.desasignarNeumatico(any(), any(), anyString()))
+                    .thenThrow(new PosicionLibreException("La posición E1-IZQ no tiene un neumático montado"));
+
+            mockMvc.perform(delete(DESMONTAJE, UNIDAD_PUBLIC_ID, CODIGO_SLOT).with(usuario("ROLE_EDITOR")))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.status").value(409))
+                    .andExpect(jsonPath("$.message").value("La posición E1-IZQ no tiene un neumático montado"));
         }
 
     }

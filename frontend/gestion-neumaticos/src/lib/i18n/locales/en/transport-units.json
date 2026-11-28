@@ -224,5 +224,23 @@
       "forbidden": "You do not have permission to mount tires",
       "unexpected": "We could not mount the tire. Try again in a few minutes"
     }
+  },
+  "unmount": {
+    "action": "Unmount tire",
+    "title": "Unmount the tire?",
+    "description": "Tire {{serial}} will be unmounted from position {{position}}. It goes back to waiting and the unmounting is recorded in the history.",
+    "cancel": "Cancel",
+    "confirm": "Unmount",
+    "submitting": "Unmounting…",
+    "feedback": {
+      "done": "Tire unmounted",
+      "description": "{{serial}} was removed from {{plate}} ({{position}}) and is now waiting."
+    },
+    "errors": {
+      "alreadyFree": "The position was already free. We refreshed the unit.",
+      "notFound": "The unit or the position no longer exist. We refreshed the unit.",
+      "forbidden": "You don't have permission to unmount tires",
+      "unexpected": "We couldn't unmount the tire. Try again in a few minutes"
+    }
   }
 }

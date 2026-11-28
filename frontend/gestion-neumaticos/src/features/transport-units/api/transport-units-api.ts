@@ -150,3 +150,11 @@ export async function assignTire(
   )
   return data
 }
+
+/** Desmonta el neumático de la posición y devuelve la ficha actualizada (HU-32). */
+export async function unassignTire(unitPublicId: string, slotCode: string) {
+  const { data } = await apiClient.delete<TransportUnitDetail>(
+    `/api/v1/unidades-transporte/${unitPublicId}/slots/${encodeURIComponent(slotCode)}/neumatico`
+  )
+  return data
+}

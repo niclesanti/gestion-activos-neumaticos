@@ -74,6 +74,22 @@ public interface UnidadTransporteService {
     UnidadTransporteDetalleDTO asignarNeumatico(UUID publicId, String codigo, AsignacionNeumaticoRequestDTO request,
             String usuario);
 
+    /**
+     * Desmonta el neumático de una posición de la unidad (HU-32), en una sola transacción y con la unidad
+     * bloqueada: el neumático queda en espera, la posición libre, la unidad firmada y se publica el evento
+     * de desasignación para trazabilidad.
+     *
+     * @param publicId identificador público de la unidad.
+     * @param codigo   código de la posición (ej. "E2-IZQ-EXT").
+     * @param usuario  identificador público del usuario que desmonta.
+     * @return la ficha de la unidad actualizada.
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.EntidadNoEncontradaException
+     *         si la unidad no existe o está dada de baja, o la posición no es de la unidad.
+     * @throws ar.edu.utn.frsf.pfc.niclemeichtry.gestion_neumaticos.exception.PosicionLibreException
+     *         si la posición no tiene neumático (o la liberó otro desmontaje concurrente).
+     */
+    UnidadTransporteDetalleDTO desasignarNeumatico(UUID publicId, String codigo, String usuario);
+
     /** Las configuraciones precargadas, con sus ejes en orden. */
     List<ConfiguracionUnidadDTO> listarConfiguraciones();
 

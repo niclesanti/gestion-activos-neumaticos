@@ -90,6 +90,11 @@ public class SlotUnidadTransporte {
         this.neumaticoActualId = neumaticoId;
     }
 
+    /** Libera la posición: queda sin neumático. */
+    public void liberar() {
+        this.neumaticoActualId = null;
+    }
+
     public boolean estaOcupado() {
         return neumaticoActualId != null;
     }

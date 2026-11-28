@@ -224,5 +224,23 @@
       "forbidden": "No tenés permisos para montar neumáticos",
       "unexpected": "No pudimos montar el neumático. Intentá de nuevo en unos minutos"
     }
+  },
+  "unmount": {
+    "action": "Desmontar neumático",
+    "title": "¿Desmontar el neumático?",
+    "description": "Se va a desmontar el neumático {{serial}} de la posición {{position}}. Queda en espera y el desmontaje se registra en el historial.",
+    "cancel": "Cancelar",
+    "confirm": "Desmontar",
+    "submitting": "Desmontando…",
+    "feedback": {
+      "done": "Neumático desmontado",
+      "description": "{{serial}} salió de {{plate}} ({{position}}) y quedó en espera."
+    },
+    "errors": {
+      "alreadyFree": "La posición ya estaba libre. Actualizamos la ficha.",
+      "notFound": "La unidad o la posición ya no existen. Actualizamos la ficha.",
+      "forbidden": "No tenés permisos para desmontar neumáticos",
+      "unexpected": "No pudimos desmontar el neumático. Intentá de nuevo en unos minutos"
+    }
   }
 }
